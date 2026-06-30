@@ -58,8 +58,8 @@ AI features process **YouTube transcript text only** — not raw video frames.
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/Shemsanofly/Coding_Platform.git
-cd Coding_Platform
+git clone https://github.com/Shemsanofly/Coding-Platform.git
+cd Coding-Platform
 ```
 
 ### 2. Backend setup
