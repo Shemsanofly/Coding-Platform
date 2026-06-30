@@ -1,0 +1,66 @@
+# ============================================================
+#  AI E-LEARNING PLATFORM — CURSOR RULES
+# ============================================================
+
+## IDENTITY
+Django 5 + DRF backend. React 18 + Vite frontend.
+Auth: JWT access token in memory + refresh in httpOnly cookie.
+Database: SQLite (dev) → PostgreSQL (prod).
+
+## FILE LOCATIONS (never deviate)
+models.py · serializers.py · views.py · urls.py · tasks.py
+permissions.py · signals.py · apps.py · admin.py
+src/api/ · src/context/ · src/shared/ · src/student/ · src/admin/ · src/store/
+
+## BACKEND — MANDATORY PATTERNS
+- Always define __str__, Meta(ordering, verbose_name) on every model
+- Use db_index=True on every FK used in filter/join
+- unique_together in Meta — never rely on application logic
+- Serializers: always ModelSerializer, never fields="__all__"
+- Views: always ViewSets via DefaultRouter; explicit permission_classes on every view
+- ORM: select_related() for FK, prefetch_related() for reverse FK
+- Celery: @shared_task only; import models inside task function, not at module level
+- Permissions: role field only — never is_staff or is_superuser
+
+## FRONTEND — MANDATORY PATTERNS
+- ALL HTTP calls through src/api/*.js — never fetch/axios in components
+- All server state via React Query (useQuery/useMutation)
+- Quiz session state via Zustand (src/store/quizStore.js only)
+- No inline styles except dynamic values — Tailwind classes only
+- Protected routes via AuthGuard; admin routes via RoleGuard — never check roles in pages
+
+## NAMING CONVENTIONS
+Django: PascalCase models, ModelSerializer, ModelViewSet, snake_case tasks
+React: PascalCase components/pages, useCamelCase hooks, camelCase api functions
+
+## WHAT CURSOR MUST NEVER DO
+- Raw SQL (cursor.execute)
+- localStorage/sessionStorage for tokens
+- fields = "__all__" in serializers
+- Import Celery app in tasks — use @shared_task
+- Write CSS files — Tailwind only
+- Add unapproved packages silently
+- Put business logic in views — use service functions or tasks
+- Call axios/fetch directly in components
+
+## APPROVED PACKAGES
+Backend: django, djangorestframework, djangorestframework-simplejwt,
+  celery, redis, django-cors-headers, dj-database-url,
+  requests, beautifulsoup4, spacy, youtube-transcript-api,
+  django-ratelimit, argon2-cffi, psycopg2-binary, python-decouple
+Frontend: react, react-dom, react-router-dom, @tanstack/react-query,
+  axios, recharts, zustand, react-hot-toast, vite
+
+## SCOPE GUARD
+If a request would add a new model, new package, new route, or
+architectural change not in the existing plan — respond:
+"This is outside current MVP scope. Confirm before proceeding."
+Do not silently expand scope.
+
+## PROMPT FORMAT — HOW TO GET BEST RESULTS
+Every prompt must state:
+1. Target file path
+2. Current state ("does not exist" or "already has X — do not modify")
+3. Specific class/function/component name
+4. Inputs and outputs (request body → response shape, or props → rendered output)
+5. One rule from these rules that applies
