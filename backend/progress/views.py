@@ -47,48 +47,9 @@ class EnrollmentListView(APIView):
     permission_classes = STUDENT_ACCESS
 
     def get(self, request):
-        course_ids = list(
-            Enrollment.objects.filter(user=request.user).values_list("course_id", flat=True)
-        )
-        if not course_ids:
-            return Response([])
+        from progress.services.student_dashboard import build_student_enrollments
 
-        courses = (
-            Course.objects.filter(id__in=course_ids)
-            .annotate(lesson_count=Count("lessons", distinct=True))
-            .order_by("-created_at")
-        )
-
-        quiz_results = (
-            QuizResult.objects.filter(user=request.user, quiz__lesson__course_id__in=course_ids)
-            .select_related("quiz__lesson__course")
-            .order_by("-taken_at")
-        )
-        by_course = {}
-        for result in quiz_results:
-            cid = result.quiz.lesson.course_id
-            if cid not in by_course:
-                by_course[cid] = []
-            by_course[cid].append(result)
-
-        payload = []
-        for course in courses:
-            rows = by_course.get(course.id, [])
-            completed = len({row.quiz.lesson_id for row in rows})
-            avg_score = round(sum(row.score for row in rows) / len(rows), 1) if rows else 0.0
-            lesson_count = course.lesson_count or 0
-            progress = round((completed / lesson_count) * 100, 1) if lesson_count else 0.0
-            payload.append(
-                {
-                    "id": course.id,
-                    "title": course.title,
-                    "level": course.level,
-                    "lesson_count": lesson_count,
-                    "lessons_completed": completed,
-                    "avg_quiz_score": avg_score,
-                    "progress": progress,
-                }
-            )
+        payload = build_student_enrollments(request.user)
         return Response(EnrollmentSerializer(payload, many=True).data)
 
 
@@ -258,49 +219,19 @@ class StudentAnalyticsSummaryView(APIView):
     permission_classes = STUDENT_ACCESS
 
     def get(self, request):
-        from ai_engine.models import Recommendation
+        from progress.services.student_dashboard import build_student_analytics_summary
 
-        user = request.user
-        enrolled_course_ids = list(
-            Enrollment.objects.filter(user=user).values_list("course_id", flat=True)
-        )
-        lesson_ids = list(
-            Lesson.objects.filter(course_id__in=enrolled_course_ids).values_list("id", flat=True)
-        )
-        lessons_passed_quiz = sum(
-            1 for lid in lesson_ids if quiz_passed_for_lesson(user.id, lid)
-        )
-
-        quiz_rows = QuizResult.objects.filter(user=user).select_related("quiz__lesson")
-        attempts = quiz_rows.count()
-        avg_score = quiz_rows.aggregate(value=Avg("score"))["value"] or 0
-        recent_rows = quiz_rows.order_by("-taken_at")[:8]
-        recent_quiz_scores = [
-            {
-                "score": row.score,
-                "taken_at": row.taken_at,
-                "lesson_title": (row.quiz.lesson.title if row.quiz and row.quiz.lesson else "") or "",
-            }
-            for row in recent_rows
-        ]
-
-        weak_tracked = WeakTopic.objects.filter(user=user).count()
-        active_recs = Recommendation.objects.filter(user=user, status="active").count()
-        total_lessons = len(lesson_ids)
-
-        payload = {
-            "enrolled_course_count": len(set(enrolled_course_ids)),
-            "total_lessons_in_enrolled_courses": total_lessons,
-            "lessons_passed_quiz": lessons_passed_quiz,
-            "lessons_remaining": max(0, total_lessons - lessons_passed_quiz),
-            "quiz_attempts_total": attempts,
-            "avg_quiz_score": round(float(avg_score), 1),
-            "weak_topics_tracked": weak_tracked,
-            "active_recommendations_count": active_recs,
-            "learning_level": getattr(user, "experience_level", None),
-            "recent_quiz_scores": recent_quiz_scores,
-        }
+        payload = build_student_analytics_summary(request.user)
         return Response(StudentAnalyticsSummarySerializer(payload).data)
+
+
+class StudentDashboardView(APIView):
+    permission_classes = STUDENT_ACCESS
+
+    def get(self, request):
+        from progress.services.student_dashboard import build_student_dashboard_payload
+
+        return Response(build_student_dashboard_payload(request.user))
 
 
 class StudentPracticeLeaderboardView(APIView):

@@ -172,6 +172,9 @@ export default function LessonDetail() {
 
   const ytEmbed = (lesson.youtube_embed_url || "").trim();
   const ytVideoId = extractYoutubeVideoId(ytEmbed);
+  const resourceUrl = (lesson.resource_url || "").trim();
+  const sourceType = lesson.source_type || "youtube";
+  const isYoutubeLesson = sourceType === "youtube";
   const summaryText = (lesson.summary || lesson.content || "").trim();
   const learningObjectives = Array.isArray(lesson.learning_objectives)
     ? lesson.learning_objectives
@@ -193,7 +196,7 @@ export default function LessonDetail() {
   const notesActivity = lessonNotes?.activity || {};
 
   return (
-    <div className="space-y-6 overflow-x-hidden p-4 pb-24 md:pb-6 md:p-6">
+    <div className="space-y-6 overflow-x-hidden p-4 md:p-6">
       <header className="rounded-2xl border border-ocean-600/10 bg-white p-4 shadow-lg dark:border-line/40 dark:bg-ocean-950/50 dark:backdrop-blur-xl">
         <p className="text-xs font-semibold uppercase tracking-widest text-ocean-800 dark:text-reef">
           {lesson.course_title}
@@ -245,24 +248,29 @@ export default function LessonDetail() {
           <div className="rounded-xl bg-sand px-3 py-2 dark:bg-black/20">
             <p className="font-semibold text-ocean-800 dark:text-reef">Engaged time</p>
             <p className="mt-1 text-ink dark:text-sand">
-              {Math.round(engaged / 60)} / {Math.max(1, Math.round(requiredSec / 60))} min target (~70%)
+              {Math.round(engaged / 60)} / {Math.max(1, Math.round(requiredSec / 60))} min goal
             </p>
           </div>
           <div className="rounded-xl bg-sand px-3 py-2 dark:bg-black/20">
-            <p className="font-semibold text-ocean-800 dark:text-reef">Video watched</p>
-            <p className="mt-1 text-ink dark:text-sand">{lesson.video_watch_pct ?? 0}% (API)</p>
+            <p className="font-semibold text-ocean-800 dark:text-reef">
+              {isYoutubeLesson ? "Video watched" : "Time on lesson"}
+            </p>
+            <p className="mt-1 text-ink dark:text-sand">{lesson.video_watch_pct ?? 0}%</p>
           </div>
           <div className="rounded-xl bg-sand px-3 py-2 dark:bg-black/20">
-            <p className="font-semibold text-ocean-800 dark:text-reef">Official completion</p>
+            <p className="font-semibold text-ocean-800 dark:text-reef">Lesson complete</p>
             <p className="mt-1 text-ink dark:text-sand">
-              {lesson.lesson_officially_completed ? "Met (quiz + engagement)" : "Requires quiz pass + engagement"}
+              {lesson.lesson_officially_completed
+                ? "Done — quiz passed and engagement met"
+                : "Pass the quiz and spend enough time on the lesson"}
             </p>
           </div>
         </div>
 
         <p className="mb-4 text-sm text-muted dark:text-muted">
-          Watch the YouTube lesson below or read AI-generated PDF study notes from the transcript. Your watch time and
-          quiz results feed adaptive analytics — lessons are not marked complete from a single click.
+          {isYoutubeLesson
+            ? "Watch the YouTube lesson below or read AI-generated PDF study notes from the transcript. Your watch time and quiz results feed adaptive analytics — lessons are not marked complete from a single click."
+            : "Open the lesson resource below and spend time engaging with the material. Quiz results and study activity feed your personalized analytics."}
         </p>
 
         <div className="mb-4 flex flex-wrap gap-2">
@@ -275,7 +283,7 @@ export default function LessonDetail() {
                 : "border border-line text-ocean-800 hover:bg-sand dark:border-line/40 dark:text-sand dark:hover:bg-ocean-900/50"
             }`}
           >
-            Watch Video
+            {isYoutubeLesson ? "Watch Video" : "Lesson resource"}
           </button>
           {hasPdfNotes ? (
             <button
@@ -294,14 +302,14 @@ export default function LessonDetail() {
 
         {contentTab === "video" ? (
         <div className="min-h-[320px] overflow-hidden rounded-xl border border-line bg-sand dark:border-line/20 dark:bg-black/30">
-          {ytEmbed && ytVideoId ? (
+          {isYoutubeLesson && ytEmbed && ytVideoId ? (
             <LessonYouTubeEmbed
               key={`yt-${lesson.id}`}
               videoId={ytVideoId}
               title={lesson.title}
               onWatchPercent={onYoutubeWatchPct}
             />
-          ) : ytEmbed ? (
+          ) : isYoutubeLesson && ytEmbed ? (
             <iframe
               title={lesson.title}
               src={ytEmbed}
@@ -309,9 +317,57 @@ export default function LessonDetail() {
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
               allowFullScreen
             />
+          ) : sourceType === "pdf" && resourceUrl ? (
+            <div className="space-y-4 p-6">
+              <p className="text-sm text-muted dark:text-muted">Read the PDF lesson material.</p>
+              <a
+                href={resourceUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex min-h-10 items-center rounded-xl bg-ocean-600 px-4 text-sm font-semibold text-white hover:bg-ocean-700"
+              >
+                Open PDF
+              </a>
+              <iframe title={lesson.title} src={resourceUrl} className="h-[480px] w-full rounded-lg border border-line bg-white" />
+            </div>
+          ) : sourceType === "internal" ? (
+            <div className="space-y-4 p-6">
+              {summaryText ? (
+                <div className="prose prose-sm max-w-none whitespace-pre-wrap text-ink dark:text-sand">{summaryText}</div>
+              ) : (
+                <p className="text-sm text-muted dark:text-muted">Lesson content is being prepared.</p>
+              )}
+              {resourceUrl ? (
+                <a
+                  href={resourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex text-sm font-semibold text-ocean-800 underline dark:text-reef"
+                >
+                  Open reference link
+                </a>
+              ) : null}
+            </div>
+          ) : resourceUrl ? (
+            <div className="space-y-4 p-6">
+              <p className="text-sm text-muted dark:text-muted">
+                Open the {sourceType === "webpage" ? "web page" : "external resource"} for this lesson.
+              </p>
+              <a
+                href={resourceUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex min-h-10 items-center rounded-xl bg-ocean-600 px-4 text-sm font-semibold text-white hover:bg-ocean-700"
+              >
+                Open resource
+              </a>
+              {sourceType === "webpage" ? (
+                <iframe title={lesson.title} src={resourceUrl} className="h-[480px] w-full rounded-lg border border-line bg-white" />
+              ) : null}
+            </div>
           ) : (
             <p className="p-6 text-sm text-muted dark:text-muted">
-              No YouTube URL configured for this lesson. Ask your instructor to add a valid video link.
+              No resource configured for this lesson yet. Check back later.
             </p>
           )}
         </div>
@@ -397,12 +453,12 @@ export default function LessonDetail() {
 
       {quizProcessing ? (
         <p className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900 dark:border-blue-400/40 dark:bg-blue-500/10 dark:text-blue-100">
-          Quiz is being generated from the video transcript ({aiStatus} / {quizStatus})…
+          Your quiz is being prepared — check back in a moment.
         </p>
       ) : null}
       {quizFailed ? (
         <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-400/40 dark:bg-red-500/10 dark:text-red-100">
-          Quiz generation failed. {lesson.quiz_generation_error || "Contact your instructor."}
+          Quiz generation failed. {lesson.quiz_generation_error || "The quiz is not ready yet — try again later."}
         </p>
       ) : null}
 
@@ -436,13 +492,6 @@ export default function LessonDetail() {
             Continue to next lesson
           </button>
         ) : null}
-        <button
-          type="button"
-          onClick={() => flushProgress(0)}
-          className="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-line px-4 py-2 text-sm font-medium text-ink hover:bg-sand dark:border-line/40 dark:text-sand dark:hover:bg-ocean-900/50"
-        >
-          Sync progress
-        </button>
         <Link
           to={`/courses/${lesson.course_id}`}
           className="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-line px-4 py-2 text-sm font-medium text-ink hover:bg-sand dark:border-line/40 dark:text-sand dark:hover:bg-white/20"

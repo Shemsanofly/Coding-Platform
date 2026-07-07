@@ -1,6 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { getAdminCourses, updateAdminCourse } from "@/api/adminCourses";
+import toast from "react-hot-toast";
+import { deleteAdminCourse, getAdminCourses, updateAdminCourse } from "@/api/adminCourses";
 import AdminTable from "@/admin/components/AdminTable";
 import CourseStatusBadge from "@/admin/components/CourseStatusBadge";
 import EmptyState from "@/admin/components/EmptyState";
@@ -26,10 +27,44 @@ export default function CourseList() {
   const publishMutation = useMutation({
     mutationFn: ({ courseId, status }) => updateAdminCourse(courseId, { status }),
     onSuccess: () => {
+      toast.success("Course published.", { id: "course-publish-ok" });
       queryClient.invalidateQueries({ queryKey: ["admin-courses"] });
       queryClient.invalidateQueries({ queryKey: ["admin-dashboard-summary"] });
     },
+    onError: () => {
+      toast.error("Could not publish course.", { id: "course-publish-err" });
+    },
   });
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteAdminCourse,
+    onSuccess: () => {
+      toast.success("Course deleted.", { id: "course-delete-ok" });
+      queryClient.invalidateQueries({ queryKey: ["admin-courses"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-dashboard-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["course-catalog"] });
+    },
+    onError: (error) => {
+      const detail = error?.response?.data?.detail;
+      toast.error(typeof detail === "string" ? detail : "Could not delete course.", {
+        id: "course-delete-err",
+      });
+    },
+  });
+
+  const handleDeleteCourse = (course) => {
+    const studentCount = course.enrolled_students ?? 0;
+    const studentNote =
+      studentCount > 0
+        ? `\n\n${studentCount} enrolled student${studentCount === 1 ? "" : "s"} will lose access to this course and its progress.`
+        : "";
+    const confirmed = window.confirm(
+      `Permanently delete "${course.title}"?\n\nThis removes all lessons, quizzes, and enrollments.${studentNote}\n\nThis cannot be undone.`,
+    );
+    if (confirmed) {
+      deleteMutation.mutate(course.id);
+    }
+  };
 
   const courses = Array.isArray(data) ? data : data?.results || [];
 
@@ -111,7 +146,7 @@ export default function CourseList() {
           <button
             type="button"
             onClick={() => navigate(`/admin/courses/${row.id}/setup`)}
-            className="inline-flex min-h-9 items-center rounded-lg border border-emerald-200 px-2.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50"
+            className="inline-flex min-h-9 items-center rounded-lg border border-ocean-600/20 px-2.5 text-xs font-semibold text-ocean-800 hover:bg-reef/40"
           >
             Setup
           </button>
@@ -120,7 +155,7 @@ export default function CourseList() {
               type="button"
               disabled={publishMutation.isPending}
               onClick={() => publishMutation.mutate({ courseId: row.id, status: "published" })}
-              className="inline-flex min-h-9 items-center rounded-lg bg-emerald-600 px-2.5 text-xs font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
+              className="lc-btn-primary min-h-9 px-2.5 text-xs disabled:opacity-50"
             >
               Publish
             </button>
@@ -131,6 +166,14 @@ export default function CourseList() {
           >
             Analytics
           </Link>
+          <button
+            type="button"
+            disabled={deleteMutation.isPending}
+            onClick={() => handleDeleteCourse(row)}
+            className="inline-flex min-h-9 items-center rounded-lg border border-red-200 px-2.5 text-xs font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50"
+          >
+            Delete
+          </button>
         </div>
       ),
     },
@@ -143,14 +186,14 @@ export default function CourseList() {
 
   return (
     <div className="space-y-5 p-4 md:p-6">
-      <header className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-100 bg-white/90 p-4 shadow-lg backdrop-blur">
+      <header className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-ocean-600/10 bg-white/90 p-4 shadow-panel backdrop-blur">
         <div>
           <h1 className="text-xl font-semibold text-ink">Courses</h1>
           <p className="mt-1 text-sm text-muted">Status, quiz pipeline, enrollments, and quick actions.</p>
         </div>
         <Link
           to="/admin/courses/new"
-          className="inline-flex min-h-10 items-center rounded-xl bg-emerald-600 px-4 text-sm font-semibold text-white hover:bg-emerald-500"
+          className="lc-btn-primary inline-flex min-h-10 items-center px-4 text-sm"
         >
           Create course
         </Link>
@@ -170,7 +213,7 @@ export default function CourseList() {
           }
         />
       ) : (
-        <section className="overflow-hidden rounded-2xl border border-emerald-100 bg-white/90 shadow-lg backdrop-blur">
+        <section className="overflow-hidden rounded-2xl border border-ocean-600/10 bg-white/90 shadow-panel backdrop-blur">
           <AdminTable columns={columns} rows={tableRows} emptyMessage="No courses found." />
         </section>
       )}

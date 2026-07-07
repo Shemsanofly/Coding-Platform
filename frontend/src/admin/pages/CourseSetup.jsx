@@ -16,14 +16,13 @@ import EmptyState from "@/admin/components/EmptyState";
 import LessonAIStatusPanel from "@/admin/components/LessonAIStatusPanel";
 import LoadingState from "@/admin/components/LoadingState";
 import PipelineStatus from "@/admin/components/PipelineStatus";
+import { getLessonSourceOption, LESSON_SOURCE_OPTIONS } from "@/shared/constants/lessonSources";
 
 const LEVEL_OPTIONS = [
   { value: "beginner", label: "Beginner" },
   { value: "intermediate", label: "Intermediate" },
   { value: "advanced", label: "Advanced" },
 ];
-
-const LESSON_SOURCE_OPTIONS = [{ value: "youtube", label: "YouTube" }];
 
 function normalizeCourseLevel(raw) {
   const tier = String(raw ?? "")
@@ -72,6 +71,7 @@ export default function CourseSetup() {
   const [formError, setFormError] = useState("");
   const [lessonTitle, setLessonTitle] = useState("");
   const [lessonSource, setLessonSource] = useState("youtube");
+  const selectedSource = getLessonSourceOption(lessonSource);
   const [lessonUrl, setLessonUrl] = useState("");
   const [lessonContent, setLessonContent] = useState("");
   const [lessonMinutes, setLessonMinutes] = useState(20);
@@ -189,8 +189,12 @@ export default function CourseSetup() {
       setLessonFormError("Lesson title is required.");
       return;
     }
-    if (!lessonUrl.trim()) {
-      setLessonFormError("A YouTube URL is required for each lesson.");
+    if (selectedSource.requiresUrl && !lessonUrl.trim()) {
+      setLessonFormError(`${selectedSource.urlLabel} is required for this source type.`);
+      return;
+    }
+    if (!selectedSource.requiresUrl && !lessonUrl.trim() && !lessonContent.trim()) {
+      setLessonFormError("Add lesson content or an optional reference URL.");
       return;
     }
     const tags = lessonTags
@@ -337,7 +341,10 @@ export default function CourseSetup() {
 
         <section className="rounded-2xl border border-line bg-white/95 p-5 shadow-lg backdrop-blur">
           <h2 className="text-lg font-semibold text-gray-900">Add lesson</h2>
-          <p className="mt-1 text-sm text-gray-600">YouTube URL, objectives, and tags trigger AI quiz generation.</p>
+          <p className="mt-1 text-sm text-gray-600">
+            Choose a source type (YouTube, PDF, web page, link, or platform content). AI quiz generation
+            applies to YouTube lessons.
+          </p>
 
           <form className="mt-6 space-y-4" onSubmit={handleLessonSubmit}>
             <div className="grid gap-4 md:grid-cols-2">
@@ -363,17 +370,30 @@ export default function CourseSetup() {
                     </option>
                   ))}
                 </select>
+                <p className="mt-1 text-xs text-gray-500">{selectedSource.help}</p>
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">YouTube URL</label>
+                <label className="mb-1 block text-sm font-medium text-gray-700">{selectedSource.urlLabel}</label>
                 <input
                   value={lessonUrl}
                   onChange={(e) => setLessonUrl(e.target.value)}
-                  placeholder="https://www.youtube.com/watch?v=..."
-                  required
+                  placeholder={selectedSource.placeholder}
+                  required={selectedSource.requiresUrl}
                   className="w-full rounded-xl border border-line px-3 py-2 text-sm"
                 />
               </div>
+              {lessonSource === "internal" ? (
+                <div className="md:col-span-2">
+                  <label className="mb-1 block text-sm font-medium text-gray-700">Lesson content</label>
+                  <textarea
+                    value={lessonContent}
+                    onChange={(e) => setLessonContent(e.target.value)}
+                    rows={4}
+                    placeholder="Write the lesson text students will read on the platform."
+                    className="w-full rounded-xl border border-line px-3 py-2 text-sm"
+                  />
+                </div>
+              ) : null}
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700">Estimated minutes</label>
                 <input
@@ -425,7 +445,7 @@ export default function CourseSetup() {
             <h3 className="text-sm font-semibold text-gray-900">Lessons & AI status</h3>
             {lessonsLoading ? <LoadingState label="Loading lessons…" rows={2} /> : null}
             {!lessonsLoading && lessonRows.length === 0 ? (
-              <p className="mt-3 text-sm text-gray-500">No lessons yet. Add a YouTube lesson above.</p>
+              <p className="mt-3 text-sm text-gray-500">No lessons yet. Add a lesson above.</p>
             ) : null}
             <ul className="mt-3 space-y-3">
               {lessonRows.map((row) => (

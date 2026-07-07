@@ -2,29 +2,27 @@ import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthProvider";
 import UserAvatar from "@/shared/components/UserAvatar";
+import BrandMark from "@/shared/components/BrandMark";
 import { getDisplayName } from "@/shared/utils/userDisplay";
 
 const THEME_STORAGE_KEY = "learncode.theme";
 
 const navItems = [
   { to: "/", label: "Dashboard", end: true },
-  { to: "/playground", label: "Playground" },
   { to: "/catalog", label: "Courses" },
-  { to: "/learning-path", label: "Learning Path" },
-  { to: "/recommendations", label: "Recommendations" },
-  { to: "/weakness", label: "Weak Topics" },
+  { to: "/learning-path", label: "Study Plan" },
+  { to: "/playground", label: "Playground" },
+  { to: "/analytics", label: "Analytics" },
   { to: "/profile", label: "Profile" },
-  { to: "/settings", label: "Settings" },
 ];
 
 const mobileNavItems = [
-  { to: "/", label: "Home", end: true },
-  { to: "/playground", label: "Play", end: false },
-  { to: "/catalog", label: "Courses" },
-  { to: "/learning-path", label: "Path" },
-  { to: "/recommendations", label: "Recs" },
-  { to: "/weakness", label: "Weak" },
-  { to: "/profile", label: "Profile" },
+  { to: "/", label: "Home", end: true, icon: "home" },
+  { to: "/catalog", label: "Courses", icon: "courses" },
+  { to: "/learning-path", label: "Plan", icon: "plan" },
+  { to: "/playground", label: "Play", icon: "play" },
+  { to: "/analytics", label: "Stats", icon: "stats" },
+  { to: "/profile", label: "Profile", icon: "profile" },
 ];
 
 const sidebarLinkClass =
@@ -53,24 +51,48 @@ const mobileLinkClass =
           : "text-reef/90 hover:bg-ocean-900/60"
     }`;
 
-const mobileIcons = {
-  Home: "⌂",
-  Play: "⌨",
-  Courses: "▦",
-  Path: "↗",
-  Recs: "★",
-  Weak: "!",
-  Profile: "◎",
-};
-
-function BrandMark() {
-  return (
-    <span className="lc-brand-icon" aria-hidden="true">
-      <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current">
-        <path d="M8 6.5a1.5 1.5 0 0 1 1.5-1.5h7A2.5 2.5 0 0 1 19 7.5v9a2.5 2.5 0 0 1-2.5 2.5h-7A1.5 1.5 0 0 1 8 17.5v-11Zm2 0v11h7a.5.5 0 0 0 .5-.5v-9a.5.5 0 0 0-.5-.5h-7ZM6 8a1 1 0 0 1 1 1v8a2 2 0 0 0 2 2h8a1 1 0 1 1 0 2H9a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1Z" />
-      </svg>
-    </span>
-  );
+function MobileNavIcon({ name }) {
+  const className = "h-5 w-5";
+  switch (name) {
+    case "home":
+      return (
+        <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+          <path d="M3 10.5 12 4l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-9.5Z" strokeLinejoin="round" />
+        </svg>
+      );
+    case "courses":
+      return (
+        <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+          <path d="M4 6h16M4 12h16M4 18h7" strokeLinecap="round" />
+        </svg>
+      );
+    case "plan":
+      return (
+        <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+          <path d="m4 6 8-2 8 2M6 8v11l6 2 6-2V8" strokeLinejoin="round" />
+        </svg>
+      );
+    case "play":
+      return (
+        <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+          <path d="M8 9l3 2-3 2V9Zm5 0h3m-3 4h3M6 5h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z" strokeLinecap="round" />
+        </svg>
+      );
+    case "stats":
+      return (
+        <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+          <path d="M5 19V9m7 10V5m7 14v-7" strokeLinecap="round" />
+        </svg>
+      );
+    case "profile":
+      return (
+        <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+          <path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Zm0 2c-4 0-7 2-7 4v1h14v-1c0-2-3-4-7-4Z" strokeLinejoin="round" />
+        </svg>
+      );
+    default:
+      return null;
+  }
 }
 
 export default function StudentLayout() {
@@ -112,6 +134,9 @@ export default function StudentLayout() {
                 {item.label}
               </NavLink>
             ))}
+            <NavLink to="/settings" className={sidebarLinkClass(isLight)}>
+              Settings
+            </NavLink>
           </nav>
 
           <div className="mt-auto grid gap-2 border-t border-ocean-600/10 pt-4">
@@ -174,9 +199,7 @@ export default function StudentLayout() {
           <div className="mx-auto flex max-w-6xl items-stretch justify-start gap-0.5 overflow-x-auto px-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {mobileNavItems.map((item) => (
               <NavLink key={item.to} to={item.to} end={item.end} className={mobileLinkClass(isLight)}>
-                <span aria-hidden="true" className="text-base leading-none">
-                  {mobileIcons[item.label] ?? "•"}
-                </span>
+                <MobileNavIcon name={item.icon} />
                 <span>{item.label}</span>
               </NavLink>
             ))}

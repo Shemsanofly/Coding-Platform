@@ -7,6 +7,9 @@ import {
 import DashboardAnalytics from "@/student/components/DashboardAnalytics";
 import LoadingState from "@/student/components/LoadingState";
 import SectionHeader from "@/student/components/SectionHeader";
+import PageHeader from "@/shared/components/ui/PageHeader";
+import Card from "@/shared/components/ui/Card";
+import ErrorState from "@/shared/components/ErrorState";
 
 export default function Analytics() {
   const analyticsQuery = useQuery({ queryKey: ["analytics-summary"], queryFn: getAnalyticsSummary });
@@ -15,45 +18,53 @@ export default function Analytics() {
 
   const isLoading =
     analyticsQuery.isLoading || enrollmentsQuery.isLoading || weaknessesQuery.isLoading;
+  const isError =
+    analyticsQuery.isError || enrollmentsQuery.isError || weaknessesQuery.isError;
+
+  const refetchAll = () => {
+    void analyticsQuery.refetch();
+    void enrollmentsQuery.refetch();
+    void weaknessesQuery.refetch();
+  };
 
   return (
-    <div className="space-y-6 overflow-x-hidden p-4 pb-24 md:pb-6 md:p-6">
-      <header className="min-w-0">
-        <h1 className="text-2xl font-bold text-ink dark:text-sand">Analytics</h1>
-        <p className="mt-1 text-sm text-muted dark:text-muted">
-          Quiz trends, completion, and weak-topic breakdown across your courses.
-        </p>
-      </header>
+    <div className="space-y-6 overflow-x-hidden p-4 md:p-6">
+      <PageHeader
+        title="Analytics"
+        subtitle="Quiz trends, completion, and weak-topic breakdown across your courses."
+      />
 
-      {isLoading ? (
+      {isError ? (
+        <ErrorState message="Could not load analytics." onRetry={refetchAll} />
+      ) : isLoading ? (
         <LoadingState label="Loading analytics…" rows={4} />
       ) : (
         <>
           <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <article className="rounded-xl border border-ocean-600/10 bg-white p-3 dark:border-line/30 dark:bg-ocean-950/40">
+            <Card padding="sm">
               <p className="text-xs text-muted dark:text-reef/80">Avg quiz score</p>
               <p className="mt-1 text-xl font-bold text-ink dark:text-sand">
                 {Math.round(Number(analyticsQuery.data?.avg_quiz_score) || 0)}%
               </p>
-            </article>
-            <article className="rounded-xl border border-ocean-600/10 bg-white p-3 dark:border-line/30 dark:bg-ocean-950/40">
+            </Card>
+            <Card padding="sm">
               <p className="text-xs text-muted dark:text-reef/80">Quiz attempts</p>
               <p className="mt-1 text-xl font-bold text-ink dark:text-sand">
                 {analyticsQuery.data?.quiz_attempts_total ?? 0}
               </p>
-            </article>
-            <article className="rounded-xl border border-ocean-600/10 bg-white p-3 dark:border-line/30 dark:bg-ocean-950/40">
+            </Card>
+            <Card padding="sm">
               <p className="text-xs text-muted dark:text-reef/80">Lessons passed</p>
               <p className="mt-1 text-xl font-bold text-ink dark:text-sand">
                 {analyticsQuery.data?.lessons_passed_quiz ?? 0}
               </p>
-            </article>
-            <article className="rounded-xl border border-ocean-600/10 bg-white p-3 dark:border-line/30 dark:bg-ocean-950/40">
+            </Card>
+            <Card padding="sm">
               <p className="text-xs text-muted dark:text-reef/80">Weak topics</p>
               <p className="mt-1 text-xl font-bold text-ink dark:text-sand">
                 {analyticsQuery.data?.weak_topics_tracked ?? weaknessesQuery.data?.topics?.length ?? 0}
               </p>
-            </article>
+            </Card>
           </section>
 
           <DashboardAnalytics
@@ -62,7 +73,7 @@ export default function Analytics() {
             enrollments={enrollmentsQuery.data ?? []}
           />
 
-          <section className="rounded-2xl border border-ocean-600/10 bg-white p-4 dark:border-line/30 dark:bg-ocean-950/40">
+          <Card>
             <SectionHeader title="Recent quiz activity" subtitle="Latest submissions." />
             {(analyticsQuery.data?.recent_quiz_scores ?? []).length === 0 ? (
               <p className="text-sm text-muted dark:text-muted">No quiz attempts yet.</p>
@@ -88,7 +99,7 @@ export default function Analytics() {
                 ))}
               </ul>
             )}
-          </section>
+          </Card>
         </>
       )}
     </div>

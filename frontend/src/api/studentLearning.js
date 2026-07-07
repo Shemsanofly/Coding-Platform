@@ -1,7 +1,11 @@
 import client from "./client";
 
-export const getCourseCatalog = async () => {
-  const { data } = await client.get("/api/catalog/courses/");
+export const getCourseCatalog = async ({ level } = {}) => {
+  const params = {};
+  if (level) {
+    params.level = level;
+  }
+  const { data } = await client.get("/api/catalog/courses/", { params });
   return Array.isArray(data) ? data : [];
 };
 

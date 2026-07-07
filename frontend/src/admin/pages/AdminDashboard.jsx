@@ -6,6 +6,8 @@ import AdminMetricCard from "@/admin/components/AdminMetricCard";
 import EmptyState from "@/admin/components/EmptyState";
 import ErrorState from "@/admin/components/ErrorState";
 import LoadingState from "@/admin/components/LoadingState";
+import PageHeader from "@/shared/components/ui/PageHeader";
+import Card from "@/shared/components/ui/Card";
 
 const formatDateTime = (value) => {
   if (!value) return "—";
@@ -64,9 +66,24 @@ export default function AdminDashboard() {
   const weakTopics = data?.top_weak_topics || [];
   const activity = data?.recent_activity || [];
   const hasCourses = (data?.total_courses ?? 0) > 0;
+  const pendingApprovals = data?.pending_quiz_approvals ?? 0;
 
   return (
     <div className="space-y-6 p-4 md:p-6">
+      {pendingApprovals > 0 ? (
+        <section className="rounded-2xl border border-amber-200 bg-amber-50/90 p-4 shadow-panel">
+          <h2 className="text-base font-semibold text-amber-950">
+            {pendingApprovals} quiz{pendingApprovals === 1 ? "" : "zes"} awaiting approval
+          </h2>
+          <p className="mt-1 text-sm text-amber-900/90">
+            Review and publish AI-generated questions before students can take these quizzes.
+          </p>
+          <Link to="/admin/courses" className="lc-btn-primary mt-3 inline-flex">
+            Review courses
+          </Link>
+        </section>
+      ) : null}
+
       {!hasCourses ? (
         <section className="rounded-2xl border border-ocean-200 bg-reef/40 p-5 shadow-panel">
           <h2 className="text-lg font-semibold text-ocean-950">No courses yet</h2>
@@ -84,45 +101,33 @@ export default function AdminDashboard() {
         </section>
       ) : null}
 
-      <header className="rounded-2xl border border-ocean-600/10 bg-white/90 p-5 shadow-panel backdrop-blur">
-        <h1 className="text-xl font-semibold text-ink">Admin dashboard</h1>
-        <p className="mt-1 text-sm text-muted">
-          Course management, AI quiz pipeline, student progress, and system health at a glance.
-        </p>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <Link
-            to="/admin/courses"
-            className="inline-flex min-h-10 items-center rounded-xl bg-emerald-600 px-4 text-sm font-semibold text-white hover:bg-emerald-500"
-          >
-            Manage courses
-          </Link>
-          <Link
-            to="/admin/users"
-            className="inline-flex min-h-10 items-center rounded-xl border border-line px-4 text-sm font-semibold text-ocean-800 hover:bg-cream"
-          >
-            View students
-          </Link>
-          <Link
-            to="/admin/analytics"
-            className="inline-flex min-h-10 items-center rounded-xl border border-line px-4 text-sm font-semibold text-ocean-800 hover:bg-cream"
-          >
-            Analytics
-          </Link>
-        </div>
-      </header>
+      <PageHeader
+        title="Admin dashboard"
+        subtitle="Course management, AI quiz pipeline, student progress, and system health at a glance."
+        actions={
+          <>
+            <Link to="/admin/courses" className="lc-btn-primary">
+              Manage courses
+            </Link>
+            <Link to="/admin/users" className="lc-btn-ghost">
+              View students
+            </Link>
+            <Link to="/admin/analytics" className="lc-btn-ghost">
+              Analytics
+            </Link>
+          </>
+        }
+      />
 
-      <section className="rounded-2xl border border-emerald-100 bg-white/90 p-5 shadow-lg backdrop-blur">
+      <Card variant="subtle">
         <h2 className="text-lg font-semibold text-ink">Reports Center</h2>
         <p className="mt-1 text-sm text-muted">
           Download official platform, course, student, weakness, and AI generation reports.
         </p>
-        <Link
-          to="/admin/reports"
-          className="mt-4 inline-flex min-h-10 items-center rounded-xl border border-emerald-200 px-4 text-sm font-semibold text-emerald-700 hover:bg-emerald-50"
-        >
+        <Link to="/admin/reports" className="lc-btn-ghost mt-4 inline-flex">
           Open Reports
         </Link>
-      </section>
+      </Card>
 
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {metrics.map((metric) => (
@@ -131,7 +136,7 @@ export default function AdminDashboard() {
       </section>
 
       <section className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        <article className="rounded-2xl border border-emerald-100 bg-white/90 p-4 shadow-lg backdrop-blur">
+        <Card variant="subtle">
           <h2 className="text-lg font-semibold text-ink">Top weak topics</h2>
           <p className="mt-1 text-sm text-muted">Across all students on the platform.</p>
           {weakTopics.length === 0 ? (
@@ -151,9 +156,9 @@ export default function AdminDashboard() {
               ))}
             </ul>
           )}
-        </article>
+        </Card>
 
-        <article className="rounded-2xl border border-emerald-100 bg-white/90 p-4 shadow-lg backdrop-blur">
+        <Card variant="subtle">
           <h2 className="text-lg font-semibold text-ink">Recent activity</h2>
           <p className="mt-1 text-sm text-muted">Latest quiz attempts in your courses.</p>
           {activity.length === 0 ? (
@@ -175,7 +180,7 @@ export default function AdminDashboard() {
               ))}
             </ul>
           )}
-        </article>
+        </Card>
       </section>
 
       {(data?.pending_quiz_approvals ?? 0) > 0 ? (

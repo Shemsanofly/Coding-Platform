@@ -3,6 +3,15 @@ from rest_framework import serializers
 from courses.models import Course, CourseSource, Lesson
 from progress.services import engagement_met, engagement_threshold_seconds
 
+LESSON_SOURCE_TYPES_REQUIRING_URL = frozenset(
+    {
+        Lesson.SourceType.YOUTUBE,
+        Lesson.SourceType.PDF,
+        Lesson.SourceType.WEBPAGE,
+        Lesson.SourceType.LINK,
+    }
+)
+
 
 class CourseSourceWriteSerializer(serializers.ModelSerializer):
     type = serializers.ChoiceField(
@@ -19,10 +28,9 @@ class CourseSourceWriteSerializer(serializers.ModelSerializer):
         source_type = attrs.get("source_type") or attrs.get("type")
         if not source_type:
             raise serializers.ValidationError({"source_type": "This field is required."})
-        if source_type != CourseSource.SourceType.YOUTUBE:
-            raise serializers.ValidationError(
-                {"source_type": "Only YouTube course sources are supported."}
-            )
+        valid_types = {choice for choice, _ in CourseSource.SourceType.choices}
+        if source_type not in valid_types:
+            raise serializers.ValidationError({"source_type": f"Unsupported source type: {source_type}"})
         attrs["source_type"] = source_type
         attrs.pop("type", None)
         return attrs
@@ -192,13 +200,22 @@ class AdminLessonSerializer(serializers.ModelSerializer):
         else:
             resource_url = ""
 
-        if source_type != Lesson.SourceType.YOUTUBE:
+        content = attrs.get("content")
+        if content is None and self.instance:
+            content = self.instance.content or ""
+        content = (content or "").strip()
+
+        valid_types = {choice for choice, _ in Lesson.SourceType.choices}
+        if source_type not in valid_types:
+            raise serializers.ValidationError({"source_type": f"Unsupported source type: {source_type}"})
+
+        if source_type in LESSON_SOURCE_TYPES_REQUIRING_URL and not resource_url:
             raise serializers.ValidationError(
-                {"source_type": "Only YouTube lessons are supported."}
+                {"resource_url": "A resource URL is required for this source type."}
             )
-        if not resource_url:
+        if source_type == Lesson.SourceType.INTERNAL and not resource_url and not content:
             raise serializers.ValidationError(
-                {"resource_url": "A YouTube video URL is required for each lesson."}
+                {"content": "Provide lesson content or an optional reference URL for platform content."}
             )
 
         course = self.context.get("course")

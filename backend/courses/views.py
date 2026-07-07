@@ -1,4 +1,4 @@
-from django.db.models import Count, Max
+from django.db.models import Count, Max, Q
 from django.shortcuts import get_object_or_404
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -239,10 +239,23 @@ class StudentCourseCatalogView(APIView):
         visible = Course.objects.filter(status__in=[Course.Status.READY, Course.Status.PUBLISHED]).annotate(
             lesson_count=Count("lessons", distinct=True)
         )
-        enroll_map = {
-            row["course_id"]: True
-            for row in Enrollment.objects.filter(user=request.user).values("course_id")
-        }
+        enrolled_ids = list(
+            Enrollment.objects.filter(user=request.user).values_list("course_id", flat=True)
+        )
+        level_param = (request.query_params.get("level") or "").strip().lower()
+        valid_levels = {choice for choice, _ in Course.Level.choices}
+
+        if level_param == "all":
+            level_filter = None
+        elif level_param in valid_levels:
+            level_filter = level_param
+        else:
+            level_filter = getattr(request.user, "experience_level", None)
+
+        if level_filter:
+            visible = visible.filter(Q(level=level_filter) | Q(id__in=enrolled_ids))
+
+        enroll_map = {course_id: True for course_id in enrolled_ids}
         serializer = StudentCourseCatalogSerializer(
             visible.order_by("-created_at"),
             many=True,

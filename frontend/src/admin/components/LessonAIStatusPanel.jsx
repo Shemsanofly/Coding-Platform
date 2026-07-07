@@ -109,7 +109,12 @@ export default function LessonAIStatusPanel({ courseId, lesson, onEdit }) {
   });
 
   if (!isYoutube) {
-    return <p className="text-xs text-muted">AI pipeline applies to YouTube lessons only.</p>;
+    return (
+      <p className="text-xs text-muted">
+        AI quiz pipeline applies to YouTube lessons. Students open{" "}
+        <span className="font-medium capitalize">{lesson?.source_type}</span> resources from the lesson page.
+      </p>
+    );
   }
 
   const canApprove =

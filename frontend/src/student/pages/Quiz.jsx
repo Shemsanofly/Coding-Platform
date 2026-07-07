@@ -4,20 +4,32 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { getLessonQuiz, submitQuizAttempt } from "@/api/quiz";
 import useQuizStore from "@/store/quizStore";
+import Button from "@/shared/components/ui/Button";
+import Card from "@/shared/components/ui/Card";
+import ProgressBar from "@/student/components/ProgressBar";
 
-function QuizCard({ question, selectedAnswer, onSelect }) {
+function QuizCard({ question, selectedAnswer, onSelect, questionNumber, totalQuestions }) {
   const options = question?.options ?? [];
 
   return (
-    <div className="rounded-2xl border border-ocean-600/10 bg-white p-6 shadow-lg dark:border-line/40 dark:bg-ocean-950/50 dark:shadow-xl dark:backdrop-blur-xl">
-      <h2 className="text-lg font-semibold text-ink dark:text-sand">{question?.text ?? "Question"}</h2>
-      <div className="mt-4 space-y-3">
+    <Card variant="elevated" padding="lg">
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted dark:text-muted">
+        Question {questionNumber} of {totalQuestions}
+      </p>
+      <h2 className="mt-2 text-lg font-semibold text-ink dark:text-sand">{question?.text ?? "Question"}</h2>
+      <div
+        className="mt-4 space-y-3"
+        role="radiogroup"
+        aria-label={`Question ${questionNumber}`}
+      >
         {options.map((option, index) => {
           const isSelected = selectedAnswer === index;
           return (
             <button
               key={`${question?.id}-${index}`}
               type="button"
+              role="radio"
+              aria-checked={isSelected}
               onClick={() => onSelect(question?.id, index)}
               className={`w-full rounded-xl border p-3 text-left transition ${
                 isSelected
@@ -30,7 +42,7 @@ function QuizCard({ question, selectedAnswer, onSelect }) {
           );
         })}
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -72,6 +84,7 @@ export default function Quiz() {
     onSuccess: (result) => {
       submitQuiz(result);
       const lid = Number(lessonId);
+      queryClient.invalidateQueries({ queryKey: ["student-dashboard"] });
       queryClient.invalidateQueries({ queryKey: ["enrollments"] });
       queryClient.invalidateQueries({ queryKey: ["weaknesses"] });
       queryClient.invalidateQueries({ queryKey: ["recommendations"] });
@@ -101,7 +114,7 @@ export default function Quiz() {
   const canSubmitFinal =
     isLastQuestion && hasAllAnswersSelected() && Boolean(quizData?.id ?? quizData?.quiz_id);
   const progressPercent = questions.length
-    ? ((currentIndex + 1) / questions.length) * 100
+    ? Math.round(((currentIndex + 1) / questions.length) * 100)
     : 0;
 
   const handleNext = () => {
@@ -128,7 +141,7 @@ export default function Quiz() {
   if (isLoading) {
     return (
       <div className="p-6">
-        <div className="h-48 animate-pulse rounded-2xl bg-reef/50 dark:bg-white/20" />
+        <div className="h-48 animate-pulse rounded-2xl bg-reef/50 dark:bg-ocean-950/60" />
       </div>
     );
   }
@@ -136,49 +149,44 @@ export default function Quiz() {
   if (!currentQuestion) {
     return (
       <div className="p-6">
-        <div className="rounded-2xl border border-ocean-600/10 bg-white p-6 text-muted shadow-lg dark:border-line/40 dark:bg-ocean-950/50 dark:text-reef dark:shadow-xl dark:backdrop-blur-xl">
+        <Card variant="elevated" padding="lg" className="text-muted dark:text-reef">
           No quiz questions available for this lesson.
-        </div>
+        </Card>
       </div>
     );
   }
 
   return (
     <div className="mx-auto max-w-3xl space-y-4 overflow-x-hidden p-4 pb-8 md:p-6">
-      <div className="rounded-2xl border border-ocean-600/10 bg-white p-4 shadow-lg dark:border-line/40 dark:bg-ocean-950/50 dark:shadow-xl dark:backdrop-blur-xl">
-        <div className="mb-2 flex items-center justify-between text-sm text-muted dark:text-muted">
-          <span>Progress</span>
-          <span>
-            {currentIndex + 1} / {questions.length}
-          </span>
-        </div>
-        <div className="h-2 w-full rounded-full bg-reef/50 dark:bg-white/20">
-          <div
-            className="h-2 rounded-full bg-gradient-to-r from-coral to-ocean-600 transition-all"
-            style={{ width: `${progressPercent}%` }}
-          />
-        </div>
-      </div>
+      <Card variant="elevated" padding="md">
+        <ProgressBar
+          value={progressPercent}
+          label={`Question ${currentIndex + 1} of ${questions.length}`}
+          size="sm"
+        />
+      </Card>
 
       <QuizCard
         question={currentQuestion}
         selectedAnswer={selectedAnswers[currentQuestion.id]}
         onSelect={selectAnswer}
+        questionNumber={currentIndex + 1}
+        totalQuestions={questions.length}
       />
 
       <div className="flex justify-end">
-        <button
-          type="button"
-          onClick={handleNext}
+        <Button
+          variant="gradient"
+          size="lg"
+          loading={isLastQuestion && submitMutation.isPending}
           disabled={
             (!hasSelectedAnswer && !isLastQuestion) ||
-            (isLastQuestion && !canSubmitFinal) ||
-            submitMutation.isPending
+            (isLastQuestion && !canSubmitFinal && !submitMutation.isPending)
           }
-          className="min-h-[44px] rounded-xl bg-gradient-to-r from-coral to-ocean-600 px-5 py-2.5 text-sm font-medium text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+          onClick={handleNext}
         >
-          {isLastQuestion ? (submitMutation.isPending ? "Submitting..." : "Submit") : "Next"}
-        </button>
+          {isLastQuestion ? "Submit quiz" : "Next question"}
+        </Button>
       </div>
     </div>
   );

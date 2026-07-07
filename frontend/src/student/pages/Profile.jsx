@@ -10,6 +10,8 @@ import {
 } from "@/api/reports";
 import LoadingState from "@/student/components/LoadingState";
 import UserAvatar from "@/shared/components/UserAvatar";
+import PageHeader from "@/shared/components/ui/PageHeader";
+import Card from "@/shared/components/ui/Card";
 import { getDisplayName } from "@/shared/utils/userDisplay";
 import { triggerBlobDownload } from "@/shared/utils/downloadBlob";
 
@@ -42,21 +44,18 @@ export default function Profile() {
   const learningLevel = formatLevel(analyticsQuery.data?.learning_level);
 
   return (
-    <div className="space-y-6 overflow-x-hidden p-4 pb-24 md:pb-6 md:p-6">
-      <header className="min-w-0 flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-ink dark:text-sand">Profile</h1>
-          <p className="mt-1 text-sm text-muted dark:text-muted">Your account and learning level.</p>
-        </div>
-        <Link
-          to="/settings"
-          className="inline-flex min-h-10 items-center rounded-xl border border-ocean-200 px-4 text-sm font-semibold text-ocean-800 hover:bg-reef/40 dark:border-ocean-600/40 dark:text-reef dark:hover:bg-ocean-600/10"
-        >
-          Edit settings
-        </Link>
-      </header>
+    <div className="space-y-6 overflow-x-hidden p-4 md:p-6">
+      <PageHeader
+        title="Profile"
+        subtitle="Your account and learning level."
+        actions={
+          <Link to="/settings" className="lc-btn-ghost">
+            Edit settings
+          </Link>
+        }
+      />
 
-      <section className="rounded-2xl border border-ocean-600/10 bg-white p-5 shadow-sm dark:border-line/30 dark:bg-ocean-950/40">
+      <Card>
         <div className="flex flex-wrap items-center gap-4">
           <UserAvatar user={user} size="md" />
           <div className="min-w-0">
@@ -64,30 +63,30 @@ export default function Profile() {
             <p className="text-sm text-muted dark:text-muted">{user?.email}</p>
           </div>
         </div>
-      </section>
+      </Card>
 
       {analyticsQuery.isLoading ? (
         <LoadingState rows={2} />
       ) : (
         <section className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <article className="rounded-xl border border-ocean-600/10 bg-white p-4 dark:border-line/30 dark:bg-ocean-950/40">
+          <Card padding="sm">
             <p className="text-xs font-medium uppercase tracking-wide text-muted dark:text-reef/80">
               Learning level
             </p>
             <p className="mt-2 text-lg font-semibold text-ink dark:text-sand">{learningLevel}</p>
-          </article>
-          <article className="rounded-xl border border-ocean-600/10 bg-white p-4 dark:border-line/30 dark:bg-ocean-950/40">
+          </Card>
+          <Card padding="sm">
             <p className="text-xs font-medium uppercase tracking-wide text-muted dark:text-reef/80">
               Enrolled courses
             </p>
             <p className="mt-2 text-lg font-semibold text-ink dark:text-sand">
               {analyticsQuery.data?.enrolled_course_count ?? "—"}
             </p>
-          </article>
+          </Card>
         </section>
       )}
 
-      <section className="rounded-2xl border border-ocean-600/10 bg-white p-5 shadow-sm dark:border-line/30 dark:bg-ocean-950/40">
+      <Card>
         <h2 className="text-lg font-semibold text-ink dark:text-sand">Reports</h2>
         <p className="mt-1 text-sm text-muted dark:text-muted">
           Download PDF summaries of your learning progress and quiz performance.
@@ -105,7 +104,7 @@ export default function Profile() {
             </button>
           ))}
         </div>
-      </section>
+      </Card>
     </div>
   );
 }

@@ -128,7 +128,7 @@ export default function ProfileSettings({ heading = "Settings", description = "U
   const showRemovePhoto = hasExistingPhoto && !selectedFile;
 
   return (
-    <div className="space-y-6 overflow-x-hidden p-4 pb-24 md:pb-6 md:p-6">
+    <div className="space-y-6 overflow-x-hidden p-4 md:p-6">
       <header className="min-w-0">
         <h1 className="text-2xl font-bold text-ink dark:text-sand">{heading}</h1>
         <p className="mt-1 text-sm text-muted dark:text-muted">{description}</p>

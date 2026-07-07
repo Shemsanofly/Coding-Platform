@@ -1,5 +1,10 @@
 import client from "./client";
 
+export const getStudentDashboard = async () => {
+  const response = await client.get("/api/dashboard/");
+  return response.data ?? {};
+};
+
 export const getAnalyticsSummary = async () => {
   const response = await client.get("/api/analytics/summary/");
   return response.data ?? {};

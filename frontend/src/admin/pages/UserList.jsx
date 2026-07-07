@@ -13,6 +13,8 @@ import EmptyState from "@/admin/components/EmptyState";
 import ErrorState from "@/admin/components/ErrorState";
 import LoadingState from "@/admin/components/LoadingState";
 import StatusBadge from "@/admin/components/StatusBadge";
+import PageHeader from "@/shared/components/ui/PageHeader";
+import Card from "@/shared/components/ui/Card";
 
 const WEAKNESS_LEVEL_OPTIONS = [
   { value: "", label: "All levels" },
@@ -270,21 +272,23 @@ export default function UserList() {
 
   return (
     <div className="space-y-5 p-4 md:p-6">
-      <header className="space-y-3 rounded-2xl border border-emerald-100 bg-white/90 p-4 shadow-lg backdrop-blur">
-        <h1 className="text-xl font-semibold text-ink">Students</h1>
-        <p className="text-sm text-muted">Progress, weaknesses, and quiz performance across your platform.</p>
+      <PageHeader
+        title="Students"
+        subtitle="Progress, weaknesses, and quiz performance across your platform."
+      />
+      <Card variant="subtle" padding="sm">
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           <input
             type="text"
             placeholder="Search by name or email"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            className="w-full rounded-xl border border-line bg-white px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
+            className="lc-input"
           />
           <select
             value={weaknessLevel}
             onChange={(event) => setWeaknessLevel(event.target.value)}
-            className="w-full rounded-xl border border-line bg-white px-3 py-2 text-sm"
+            className="lc-input"
             aria-label="Filter by weakness level"
           >
             {WEAKNESS_LEVEL_OPTIONS.map((option) => (
@@ -296,7 +300,7 @@ export default function UserList() {
           <select
             value={ordering}
             onChange={(event) => setOrdering(event.target.value)}
-            className="w-full rounded-xl border border-line bg-white px-3 py-2 text-sm"
+            className="lc-input"
           >
             {SORT_OPTIONS.map((option) => (
               <option key={option.value || "default"} value={option.value}>
@@ -305,7 +309,7 @@ export default function UserList() {
             ))}
           </select>
         </div>
-      </header>
+      </Card>
 
       {showLoading ? (
         <LoadingState label="Loading students…" />
@@ -314,7 +318,7 @@ export default function UserList() {
       ) : users.length === 0 ? (
         <EmptyState title="No students found" message="Try adjusting search or weakness filters." />
       ) : (
-        <section className="overflow-hidden rounded-2xl border border-emerald-100 bg-white/90 shadow-lg backdrop-blur">
+        <section className="overflow-hidden rounded-2xl border border-ocean-600/10 bg-white/90 shadow-panel backdrop-blur">
           <AdminTable
             columns={columns}
             rows={tableRows}

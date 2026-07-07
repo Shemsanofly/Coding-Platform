@@ -3,18 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthProvider";
 import { getDisplayName } from "@/shared/utils/userDisplay";
-import {
-  getAnalyticsSummary,
-  getEnrollments,
-  getLearningPath,
-  getRecommendations,
-  getWeaknesses,
-} from "@/api/studentDashboard";
+import { getStudentDashboard } from "@/api/studentDashboard";
 import MetricCard from "@/student/components/MetricCard";
 import SectionHeader from "@/student/components/SectionHeader";
 import LoadingState from "@/student/components/LoadingState";
 import ProgressBar from "@/student/components/ProgressBar";
-import Playground from "@/student/components/Playground";
+import Button from "@/shared/components/ui/Button";
+import ErrorState from "@/shared/components/ErrorState";
 
 const normalizeNumber = (value) => {
   const number = Number(value);
@@ -67,13 +62,13 @@ function PathProgressPreview({ steps }) {
   if (!steps.length) {
     return (
       <p className="text-sm text-muted dark:text-muted">
-        Complete a quiz to generate your learning path.
+        Complete a quiz to generate your study plan.
       </p>
     );
   }
 
   return (
-    <ul className="space-y-2" aria-label="Learning path progress">
+    <ul className="space-y-2" aria-label="Study plan progress">
       {steps.map((step) => (
         <li
           key={`${step.step}-${step.lesson_id}`}
@@ -102,52 +97,21 @@ function PathProgressPreview({ steps }) {
   );
 }
 
-const primaryButtonClass =
-  "min-h-[48px] w-full rounded-xl bg-gradient-to-r from-coral to-ocean-600 px-6 py-3 text-sm font-semibold text-white shadow-md transition hover:brightness-110 sm:w-auto sm:min-w-[180px]";
-
-const linkButtonClass =
-  "text-sm font-medium text-ocean-800 underline-offset-2 hover:underline dark:text-reef";
-
-const formatTopicLabel = (tag) => String(tag || "").replace(/_/g, " ");
-
-const featureLinks = [
-  { to: "/playground", label: "Playground", description: "AI coding challenges, XP, and leaderboard" },
-  { to: "/catalog", label: "Courses", description: "Browse and enroll in lessons" },
-  { to: "/learning-path", label: "Learning path", description: "See your next recommended steps" },
-  { to: "/recommendations", label: "Recommendations", description: "Personalized focus areas" },
-  { to: "/weakness", label: "Weak topics", description: "Review topics to improve" },
-  { to: "/analytics", label: "Analytics", description: "Track quiz and progress stats" },
-  { to: "/profile", label: "Profile", description: "Account and learning level" },
-];
-
 export default function Dashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  const enrollmentsQuery = useQuery({ queryKey: ["enrollments"], queryFn: getEnrollments });
-  const analyticsQuery = useQuery({ queryKey: ["analytics-summary"], queryFn: getAnalyticsSummary });
-  const recommendationsQuery = useQuery({
-    queryKey: ["recommendations"],
-    queryFn: () => getRecommendations(),
+  const dashboardQuery = useQuery({
+    queryKey: ["student-dashboard"],
+    queryFn: getStudentDashboard,
   });
-  const weaknessesQuery = useQuery({
-    queryKey: ["weaknesses"],
-    queryFn: () => getWeaknesses(),
-  });
-  const learningPathQuery = useQuery({ queryKey: ["learning-path"], queryFn: () => getLearningPath() });
 
-  const enrollments = enrollmentsQuery.data ?? [];
-  const analytics = analyticsQuery.data ?? {};
-  const recommendations = recommendationsQuery.data ?? [];
-  const weaknessPayload = weaknessesQuery.data ?? {};
-  const learningPath = learningPathQuery.data ?? {};
+  const enrollments = dashboardQuery.data?.enrollments ?? [];
+  const analytics = dashboardQuery.data?.analytics ?? {};
+  const learningPath = dashboardQuery.data?.learning_path ?? {};
 
-  const isLoading =
-    enrollmentsQuery.isLoading ||
-    analyticsQuery.isLoading ||
-    recommendationsQuery.isLoading ||
-    weaknessesQuery.isLoading ||
-    learningPathQuery.isLoading;
+  const isLoading = dashboardQuery.isLoading;
+  const isError = dashboardQuery.isError;
 
   const displayName = getDisplayName(user) || "Learner";
   const learningLevel = formatLevel(analytics.learning_level);
@@ -206,33 +170,6 @@ export default function Dashboard() {
     return null;
   }, [learningPath, enrollments]);
 
-  const topFocusArea = useMemo(() => {
-    const lessonGroups = weaknessPayload.lesson_groups ?? [];
-    if (lessonGroups.length) {
-      const group = lessonGroups[0];
-      const weakTopic = group.weak_topics?.[0];
-      const recommended = group.recommended_lessons?.[0] ?? recommendations[0];
-      return {
-        focusLabel: formatTopicLabel(weakTopic?.topic_tag),
-        fromLesson: group.lesson?.title,
-        recommendedTitle: recommended?.title ?? recommended?.lesson_title,
-        recommendedLessonId: recommended?.lesson_id ?? recommended?.lesson?.id,
-      };
-    }
-
-    const topRec = recommendations[0];
-    if (topRec) {
-      return {
-        focusLabel: topRec.focus_area || formatTopicLabel(topRec.weak_topic_tag),
-        fromLesson: topRec.related_lessons_taken?.[0]?.title,
-        recommendedTitle: topRec.lesson?.title ?? topRec.lesson_title,
-        recommendedLessonId: topRec.lesson?.id ?? topRec.lesson_id,
-      };
-    }
-
-    return null;
-  }, [weaknessPayload, recommendations]);
-
   const pathPreviewSteps = useMemo(() => {
     const path = learningPath?.learning_path ?? [];
     if (!path.length) return [];
@@ -249,15 +186,14 @@ export default function Dashboard() {
   }, [learningPath]);
 
   const motivationalMessage = useMemo(() => {
-    if (!enrollments.length) return "Enroll in a course to start your personalized path.";
+    if (!enrollments.length) return "Enroll in a course to start your personalized study plan.";
     if (stats.avgQuizScore >= 80) return "Excellent work — keep building on your momentum.";
-    if (stats.weakTopicCount > 0) return "Focus on your next lesson — small steps add up.";
+    if (stats.weakTopicCount > 0) return "Your study plan has focus areas ready — pick up where you left off.";
     return "Keep going — you're making great progress.";
   }, [enrollments.length, stats.avgQuizScore, stats.weakTopicCount]);
 
   return (
-    <div className="space-y-5 p-4 pb-24 md:space-y-6 md:pb-6 md:p-6">
-      {/* Section 1 — Welcome */}
+    <div className="space-y-5 p-4 md:space-y-6 md:p-6">
       <header className="rounded-2xl border border-ocean-600/10 bg-white px-4 py-4 shadow-sm dark:border-line/30 dark:bg-ocean-950/40">
         <p className="text-xs font-medium uppercase tracking-wide text-muted dark:text-reef/80">
           {getGreeting()}
@@ -267,29 +203,19 @@ export default function Dashboard() {
         </h1>
         {learningLevel ? (
           <p className="mt-1 text-sm text-ocean-800 dark:text-reef">
-            You are currently at <span className="font-semibold">{learningLevel} Level</span>.
+            You are currently at <span className="font-semibold">{learningLevel} level</span>.
           </p>
         ) : null}
         <p className="mt-1 text-sm text-muted dark:text-muted/90">{motivationalMessage}</p>
       </header>
 
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-label="Platform features">
-        {featureLinks.map((item) => (
-          <button
-            key={item.to}
-            type="button"
-            onClick={() => navigate(item.to)}
-            className="rounded-2xl border border-ocean-600/10 bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-ocean-600/25 hover:shadow-panel dark:border-line/30 dark:bg-ocean-950/50"
-          >
-            <p className="font-semibold text-ocean-800 dark:text-reef">{item.label}</p>
-            <p className="mt-1 text-sm text-muted dark:text-muted/90">{item.description}</p>
-          </button>
-        ))}
-      </section>
+      {isError ? (
+        <ErrorState
+          message="Could not load your dashboard. Check that the backend is running."
+          onRetry={() => void dashboardQuery.refetch()}
+        />
+      ) : null}
 
-      <Playground compact />
-
-      {/* Section 2 — Continue Learning (priority 1) */}
       <section className="rounded-2xl border-2 border-ocean-200/50 bg-gradient-to-br from-reef/40 via-white to-sand p-5 shadow-lg dark:border-ocean-600/25 dark:from-ocean-600/10 dark:via-ocean-950/30 dark:to-coral/10 md:p-6">
         <p className="text-xs font-semibold uppercase tracking-widest text-ocean-800 dark:text-reef">
           Continue learning
@@ -307,31 +233,31 @@ export default function Dashboard() {
               <p className="mt-1 text-sm text-ocean-800 dark:text-reef">{continueLearning.lessonTitle}</p>
             </div>
             <ProgressBar value={continueLearning.progressPercent} label="Progress" size="lg" />
-            <button
-              type="button"
+            <Button
+              variant="gradient"
+              size="lg"
+              className="w-full sm:w-auto sm:min-w-[180px]"
               onClick={() =>
                 continueLearning.lessonId
                   ? navigate(`/lessons/${continueLearning.lessonId}`)
                   : navigate(`/courses/${continueLearning.courseId}`)
               }
-              className={primaryButtonClass}
             >
               {continueLearning.lessonId ? "Resume lesson" : "Open course"}
-            </button>
+            </Button>
           </div>
         ) : (
           <div className="mt-4 space-y-4">
             <p className="text-sm text-muted dark:text-muted">
-              No active lesson yet. Browse courses to begin.
+              No active lesson yet. Browse the catalog to get started.
             </p>
-            <button type="button" onClick={() => navigate("/catalog")} className={primaryButtonClass}>
+            <Button variant="gradient" size="lg" className="w-full sm:w-auto sm:min-w-[180px]" onClick={() => navigate("/catalog")}>
               Browse courses
-            </button>
+            </Button>
           </div>
         )}
       </section>
 
-      {/* Section 3 — Learning Overview (4 metrics) */}
       <section aria-labelledby="overview-heading">
         <h2 id="overview-heading" className="sr-only">
           Learning overview
@@ -357,68 +283,38 @@ export default function Dashboard() {
         </div>
       </section>
 
-      {/* Section 4 — Top focus area */}
       <section className="rounded-2xl border border-amber-200/70 bg-amber-50/50 p-4 shadow-sm dark:border-amber-400/25 dark:bg-amber-500/10 md:p-5">
-        <SectionHeader title="Top focus area" />
-        {isLoading ? (
-          <LoadingState rows={2} />
-        ) : topFocusArea?.focusLabel ? (
-          <div className="space-y-3">
-            <p className="text-sm text-ocean-800 dark:text-muted">
-              You are currently weak in:{" "}
-              <span className="font-semibold text-ink dark:text-sand">{topFocusArea.focusLabel}</span>
-            </p>
-            {topFocusArea.fromLesson ? (
-              <p className="text-sm text-muted dark:text-muted">
-                From: <span className="font-medium">{topFocusArea.fromLesson}</span>
-              </p>
-            ) : null}
-            {topFocusArea.recommendedTitle ? (
-              <p className="text-sm text-muted dark:text-muted">
-                Recommended:{" "}
-                <span className="font-medium text-ink dark:text-sand">{topFocusArea.recommendedTitle}</span>
-              </p>
-            ) : null}
-            <button
-              type="button"
-              onClick={() =>
-                topFocusArea.recommendedLessonId
-                  ? navigate(`/lessons/${topFocusArea.recommendedLessonId}`)
-                  : navigate("/recommendations")
-              }
-              className={primaryButtonClass}
-            >
-              Continue
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            <p className="text-sm text-muted dark:text-muted">
-              Finish a quiz to unlock your top focus area.
-            </p>
-            <button type="button" onClick={() => navigate("/recommendations")} className={linkButtonClass}>
-              View recommendations
-            </button>
-          </div>
-        )}
+        <SectionHeader
+          title="Your study plan"
+          subtitle={
+            stats.weakTopicCount > 0
+              ? `${stats.weakTopicCount} topic${stats.weakTopicCount === 1 ? "" : "s"} need attention — review weak areas and suggested lessons.`
+              : "Complete a quiz to unlock personalized suggestions."
+          }
+        />
+        <Button variant="primary" onClick={() => navigate("/learning-path")}>
+          Open study plan
+        </Button>
       </section>
 
-      {/* Section 5 — Learning path progress (priority 4) */}
       <section className="rounded-2xl border border-ocean-600/10 bg-white p-4 shadow-sm dark:border-line/30 dark:bg-ocean-950/40">
-        <SectionHeader title="Learning path" subtitle="Current step" />
-        {learningPathQuery.isLoading ? (
+        <SectionHeader title="Up next in your plan" subtitle="Current sequence" />
+        {isLoading ? (
           <LoadingState rows={2} />
         ) : (
           <>
             <PathProgressPreview steps={pathPreviewSteps} />
-            <button type="button" onClick={() => navigate("/learning-path")} className={`mt-4 ${linkButtonClass}`}>
-              View full learning path
+            <button
+              type="button"
+              onClick={() => navigate("/learning-path")}
+              className="mt-4 text-sm font-medium text-ocean-800 underline-offset-2 hover:underline dark:text-reef"
+            >
+              View full study plan
             </button>
           </>
         )}
       </section>
 
-      {/* Section 6 — Performance snapshot (priority 5) */}
       <section className="rounded-2xl border border-ocean-600/10 bg-white p-4 shadow-sm dark:border-line/30 dark:bg-ocean-950/40">
         <SectionHeader title="Performance snapshot" />
         {isLoading ? (
@@ -433,6 +329,13 @@ export default function Dashboard() {
             />
           </div>
         )}
+      </section>
+
+      <section className="rounded-2xl border border-ocean-600/10 bg-white p-4 shadow-sm dark:border-line/30 dark:bg-ocean-950/40">
+        <SectionHeader title="Coding playground" subtitle="Practice challenges and earn XP on the leaderboard." />
+        <Button variant="ghost" onClick={() => navigate("/playground")}>
+          Open playground
+        </Button>
       </section>
     </div>
   );

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { getEnrollments, getLearningPath } from "@/api/studentDashboard";
 import CourseFilterSelect from "@/student/components/CourseFilterSelect";
@@ -10,11 +10,21 @@ import SeverityBadge from "@/student/components/SeverityBadge";
 import ProgressBar from "@/student/components/ProgressBar";
 import LoadingState from "@/student/components/LoadingState";
 import EmptyState from "@/student/components/EmptyState";
+import ErrorState from "@/shared/components/ErrorState";
+import PageHeader from "@/shared/components/ui/PageHeader";
+import Tabs from "@/shared/components/ui/Tabs";
+import Button from "@/shared/components/ui/Button";
+import WeakAreasPanel from "@/student/components/studyPlan/WeakAreasPanel";
+import SuggestionsPanel from "@/student/components/studyPlan/SuggestionsPanel";
 
-export default function LearningPath() {
+const STUDY_TABS = [
+  { id: "overview", label: "Overview" },
+  { id: "weak", label: "Weak areas" },
+  { id: "suggestions", label: "Suggestions" },
+];
+
+function PathOverviewPanel({ courseFilter, onCourseFilterChange }) {
   const navigate = useNavigate();
-  const [courseFilter, setCourseFilter] = useState("");
-
   const enrollmentsQuery = useQuery({ queryKey: ["enrollments"], queryFn: getEnrollments });
 
   const { data, isLoading, isPending, isError, refetch, isFetching } = useQuery({
@@ -32,42 +42,22 @@ export default function LearningPath() {
   const currentStepNumber = progress.current_step ?? nextStep?.step ?? 0;
   const hasPath = path.length > 0;
   const courses = enrollmentsQuery.data ?? [];
-  const pageTitle = data?.course_title
-    ? `Learning path for ${data.course_title}`
-    : "Personalized learning path";
 
   return (
-    <div className="space-y-6 overflow-x-hidden p-4 pb-24 md:pb-6 md:p-6">
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="text-2xl font-bold text-ink dark:text-sand">{pageTitle}</h1>
-          <p className="mt-1 text-sm text-muted dark:text-muted">
-            A guided study plan from your weak topics, quiz history, and recommendations.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => void refetch()}
-          disabled={isFetching}
-          className="min-h-[44px] rounded-xl border border-line px-4 py-2 text-sm font-medium text-ink transition hover:bg-sand disabled:opacity-50 dark:border-line/40 dark:text-sand dark:hover:bg-ocean-900/50"
-        >
-          {isFetching ? "Refreshing…" : "Refresh"}
-        </button>
-      </header>
-
+    <div className="space-y-6">
       <CourseFilterSelect
         courses={courses}
         value={courseFilter}
-        onChange={setCourseFilter}
+        onChange={onCourseFilterChange}
         className="max-w-md"
       />
 
-      {showLoading ? <LoadingState label="Building your learning path…" rows={4} /> : null}
+      {showLoading ? <LoadingState label="Building your study plan…" rows={4} /> : null}
 
       {!showLoading && isError ? (
-        <EmptyState
-          title="Could not load your learning path"
-          message="Check your connection and try refreshing the page."
+        <ErrorState
+          message="Could not load your study plan. Check your connection and try again."
+          onRetry={() => void refetch()}
         />
       ) : null}
 
@@ -86,24 +76,24 @@ export default function LearningPath() {
               helper={hasPath ? `${progress.path_steps ?? path.length} steps in your path` : "No steps yet"}
               color="green"
             />
-            <article className="rounded-2xl border border-emerald-200/50 bg-emerald-50/80 p-4 shadow-lg dark:border-emerald-400/30 dark:bg-emerald-500/10">
-              <p className="text-xs font-medium uppercase tracking-wide text-emerald-800 dark:text-emerald-100/90">
+            <article className="rounded-2xl border border-ocean-600/10 bg-white p-4 shadow-md dark:border-line/40 dark:bg-ocean-950/50">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted dark:text-muted">
                 Next lesson
               </p>
               {nextStep ? (
                 <>
                   <p className="mt-2 text-lg font-bold text-ink dark:text-sand">{nextStep.lesson_title}</p>
-                  <button
-                    type="button"
+                  <Button
+                    variant="gradient"
+                    className="mt-3 w-full sm:w-auto"
                     onClick={() => navigate(`/lessons/${nextLessonId ?? nextStep.lesson_id}`)}
-                    className="mt-3 min-h-[44px] w-full rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-500 sm:w-auto"
                   >
                     Start next lesson
-                  </button>
+                  </Button>
                 </>
               ) : (
                 <p className="mt-2 text-sm text-muted dark:text-muted">
-                  Take more quizzes to build your personalized learning path.
+                  Take more quizzes to build your personalized study plan.
                 </p>
               )}
             </article>
@@ -111,7 +101,7 @@ export default function LearningPath() {
 
           <ProgressBar value={progress.percent_complete} label="Overall completion" size="lg" />
 
-          <section className="rounded-2xl border border-ocean-600/10 bg-white p-4 shadow-lg dark:border-line/40 dark:bg-ocean-950/50 dark:shadow-xl dark:backdrop-blur-xl md:p-5">
+          <section className="rounded-2xl border border-ocean-600/10 bg-white p-4 shadow-lg dark:border-line/40 dark:bg-ocean-950/50 md:p-5">
             <SectionHeader
               title="Weak topics driving your path"
               subtitle="These topics influence lesson ordering."
@@ -143,12 +133,12 @@ export default function LearningPath() {
             )}
           </section>
 
-          <section className="rounded-2xl border border-ocean-600/10 bg-white p-4 shadow-lg dark:border-line/40 dark:bg-ocean-950/50 dark:shadow-xl dark:backdrop-blur-xl md:p-5">
+          <section className="rounded-2xl border border-ocean-600/10 bg-white p-4 shadow-lg dark:border-line/40 dark:bg-ocean-950/50 md:p-5">
             <SectionHeader title="Your study sequence" subtitle="Up next, then upcoming steps." />
             {!hasPath ? (
               <EmptyState
                 title="No path steps yet"
-                message="Take more quizzes to build your personalized learning path."
+                message="Take more quizzes to build your personalized study plan."
               />
             ) : (
               <ol className="space-y-3">
@@ -164,7 +154,7 @@ export default function LearningPath() {
           </section>
 
           {recommended.length > 0 ? (
-            <section className="rounded-2xl border border-ocean-600/10 bg-white p-4 shadow-lg dark:border-line/40 dark:bg-ocean-950/50 dark:shadow-xl dark:backdrop-blur-xl md:p-5">
+            <section className="rounded-2xl border border-ocean-600/10 bg-white p-4 shadow-lg dark:border-line/40 dark:bg-ocean-950/50 md:p-5">
               <SectionHeader title="Also recommended" />
               <ul className="divide-y divide-line dark:divide-line/30">
                 {recommended.slice(0, 6).map((item) => (
@@ -182,7 +172,47 @@ export default function LearningPath() {
               </ul>
             </section>
           ) : null}
+
+          <div className="flex justify-end">
+            <Button variant="ghost" disabled={isFetching} onClick={() => void refetch()}>
+              {isFetching ? "Refreshing…" : "Refresh plan"}
+            </Button>
+          </div>
         </>
+      ) : null}
+    </div>
+  );
+}
+
+export default function LearningPath() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [courseFilter, setCourseFilter] = useState("");
+
+  const activeTab = STUDY_TABS.some((tab) => tab.id === searchParams.get("tab"))
+    ? searchParams.get("tab")
+    : "overview";
+
+  const handleTabChange = (tabId) => {
+    setSearchParams(tabId === "overview" ? {} : { tab: tabId });
+  };
+
+  return (
+    <div className="space-y-6 overflow-x-hidden p-4 md:p-6">
+      <PageHeader
+        title="Study plan"
+        subtitle="Your learning path, weak areas, and suggested next lessons in one place."
+      />
+
+      <Tabs tabs={STUDY_TABS} activeTab={activeTab} onChange={handleTabChange} />
+
+      {activeTab === "overview" ? (
+        <PathOverviewPanel courseFilter={courseFilter} onCourseFilterChange={setCourseFilter} />
+      ) : null}
+      {activeTab === "weak" ? (
+        <WeakAreasPanel courseFilter={courseFilter} onCourseFilterChange={setCourseFilter} />
+      ) : null}
+      {activeTab === "suggestions" ? (
+        <SuggestionsPanel courseFilter={courseFilter} onCourseFilterChange={setCourseFilter} />
       ) : null}
     </div>
   );

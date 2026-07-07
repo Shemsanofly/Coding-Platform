@@ -15,6 +15,8 @@ import {
 import { getAdminAnalyticsOverview } from "@/api/adminCourses";
 import ErrorState from "@/admin/components/ErrorState";
 import LoadingState from "@/admin/components/LoadingState";
+import PageHeader from "@/shared/components/ui/PageHeader";
+import Card from "@/shared/components/ui/Card";
 
 const BUCKET_COLORS = ["#94a3b8", "#f59e0b", "#3b82f6", "#10b981"];
 
@@ -82,24 +84,24 @@ export default function AdminAnalytics() {
 
   return (
     <div className="space-y-6 p-4 md:p-6">
-      <header className="rounded-2xl border border-emerald-100 bg-white/90 p-5 shadow-lg backdrop-blur">
-        <h1 className="text-xl font-semibold text-ink">Learning analytics</h1>
-        <p className="mt-1 text-sm text-muted">Completion, weaknesses, quiz performance, and AI pipeline health.</p>
-      </header>
+      <PageHeader
+        title="Learning analytics"
+        subtitle="Completion, weaknesses, quiz performance, and AI pipeline health."
+      />
 
       <div className="grid grid-cols-3 gap-3">
-        <div className="rounded-xl border border-emerald-100 bg-white p-4 text-center">
+        <Card padding="sm" className="text-center">
           <p className="text-xs text-muted">AI success</p>
-          <p className="mt-1 text-2xl font-bold text-emerald-700">{aiCounts.success ?? 0}</p>
-        </div>
-        <div className="rounded-xl border border-red-100 bg-white p-4 text-center">
+          <p className="mt-1 text-2xl font-bold text-ocean-700">{aiCounts.success ?? 0}</p>
+        </Card>
+        <Card padding="sm" className="text-center">
           <p className="text-xs text-muted">AI failed</p>
           <p className="mt-1 text-2xl font-bold text-red-600">{aiCounts.failed ?? 0}</p>
-        </div>
-        <div className="rounded-xl border border-blue-100 bg-white p-4 text-center">
+        </Card>
+        <Card padding="sm" className="text-center">
           <p className="text-xs text-muted">AI in progress</p>
-          <p className="mt-1 text-2xl font-bold text-blue-700">{aiCounts.pending ?? 0}</p>
-        </div>
+          <p className="mt-1 text-2xl font-bold text-ocean-600">{aiCounts.pending ?? 0}</p>
+        </Card>
       </div>
 
       <section className="grid grid-cols-1 gap-5 lg:grid-cols-2">
@@ -169,11 +171,11 @@ export default function AdminAnalytics() {
 
 function ChartCard({ title, children, empty }) {
   return (
-    <article className="rounded-2xl border border-emerald-100 bg-white/90 p-4 shadow-lg backdrop-blur">
+    <Card variant="subtle">
       <h2 className="text-base font-semibold text-ink">{title}</h2>
       <div className="mt-4">
         {empty ? <p className="text-sm text-muted">Not enough data yet.</p> : children}
       </div>
-    </article>
+    </Card>
   );
 }

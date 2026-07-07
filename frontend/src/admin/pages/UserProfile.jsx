@@ -40,8 +40,8 @@ function LevelBadge({ level }) {
   const styles = {
     HIGH: "bg-red-100 text-red-700 border-red-200",
     MEDIUM: "bg-amber-100 text-amber-700 border-amber-200",
-    LOW: "bg-blue-100 text-blue-700 border-blue-200",
-    NONE: "bg-gray-100 text-gray-600 border-gray-200",
+    LOW: "bg-reef text-ocean-800 border-ocean-200",
+    NONE: "bg-cream text-muted border-line",
   };
 
   return (
@@ -55,7 +55,7 @@ function LevelBadge({ level }) {
 
 function AdminWeaknessMap({ topics }) {
   if (!topics.length) {
-    return <p className="text-sm text-gray-500">No weakness topics available.</p>;
+    return <p className="text-sm text-muted">No weakness topics available.</p>;
   }
 
   return (
@@ -68,12 +68,12 @@ function AdminWeaknessMap({ topics }) {
         return (
           <article
             key={topic.id ?? `${topic.topic_tag || "topic"}-${index}`}
-            className="rounded-lg border border-gray-100 p-3"
+            className="rounded-xl border border-ocean-600/10 bg-white p-3 dark:border-line/40 dark:bg-ocean-950/40"
           >
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-sm font-semibold text-gray-900">{topic.topic_tag || "Unknown topic"}</p>
-                <p className="mt-1 text-xs text-gray-600">
+                <p className="text-sm font-semibold text-ink">{topic.topic_tag || "Unknown topic"}</p>
+                <p className="mt-1 text-xs text-muted">
                   {attempts} attempts · {accuracy}% accuracy
                 </p>
               </div>
@@ -88,7 +88,7 @@ function AdminWeaknessMap({ topics }) {
 
 function RecommendationsList({ items }) {
   if (!items.length) {
-    return <p className="text-sm text-gray-500">No recommendations available.</p>;
+    return <p className="text-sm text-muted">No recommendations available.</p>;
   }
 
   return (
@@ -96,9 +96,9 @@ function RecommendationsList({ items }) {
       {items.map((item, index) => (
         <li
           key={item.id ?? `${item.lesson_title || "lesson"}-${index}`}
-          className="rounded-lg border border-gray-100 p-3"
+          className="rounded-xl border border-ocean-600/10 bg-white p-3 dark:border-line/40 dark:bg-ocean-950/40"
         >
-          <p className="text-sm font-semibold text-gray-900">{item.lesson_title || item.title || "Untitled lesson"}</p>
+          <p className="text-sm font-semibold text-ink">{item.lesson_title || item.title || "Untitled lesson"}</p>
           <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
             <span className="rounded-full bg-reef/50 px-2 py-1 font-medium text-ocean-800">
               Triggered by: {item.triggered_by || "weakness"}
@@ -143,14 +143,14 @@ function QuizAttemptLog({ attempts }) {
   }, [attempts, sortKey, sortOrder]);
 
   return (
-    <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+    <section className="rounded-2xl border border-ocean-600/10 bg-white/90 p-4 shadow-panel backdrop-blur">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold text-gray-900">Quiz attempt log</h2>
+        <h2 className="text-lg font-semibold text-ink">Quiz attempt log</h2>
         <div className="flex items-center gap-2">
           <select
             value={sortKey}
             onChange={(event) => setSortKey(event.target.value)}
-            className="rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs outline-none transition focus:border-ocean-600 focus:ring-2 focus:ring-ocean-200"
+            className="lc-input py-1.5 text-xs"
           >
             <option value="taken_at">Sort by date</option>
             <option value="score">Sort by score</option>
@@ -159,7 +159,7 @@ function QuizAttemptLog({ attempts }) {
           <select
             value={sortOrder}
             onChange={(event) => setSortOrder(event.target.value)}
-            className="rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs outline-none transition focus:border-ocean-600 focus:ring-2 focus:ring-ocean-200"
+            className="lc-input py-1.5 text-xs"
           >
             <option value="desc">Descending</option>
             <option value="asc">Ascending</option>
@@ -168,37 +168,37 @@ function QuizAttemptLog({ attempts }) {
       </div>
 
       <div className="hidden overflow-x-auto md:block">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+        <table className="min-w-full divide-y divide-line">
+          <thead className="bg-reef/60">
             <tr>
-              <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
+              <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-muted">
                 Quiz
               </th>
-              <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
+              <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-muted">
                 Score
               </th>
-              <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
+              <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-muted">
                 Accuracy
               </th>
-              <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
+              <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-muted">
                 Taken at
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100 bg-white">
+          <tbody className="divide-y divide-line/70 bg-white">
             {sortedAttempts.length === 0 ? (
               <tr>
-                <td className="px-3 py-6 text-sm text-gray-500" colSpan={4}>
+                <td className="px-3 py-6 text-sm text-muted" colSpan={4}>
                   No quiz attempts yet.
                 </td>
               </tr>
             ) : (
               sortedAttempts.map((attempt, index) => (
                 <tr key={attempt.id ?? `${attempt.quiz_title || "quiz"}-${index}`}>
-                  <td className="px-3 py-2 text-sm text-gray-800">{attempt.quiz_title || "Quiz attempt"}</td>
-                  <td className="px-3 py-2 text-sm text-gray-700">{normalizeNumber(attempt.score)}</td>
-                  <td className="px-3 py-2 text-sm text-gray-700">{normalizeNumber(attempt.accuracy)}%</td>
-                  <td className="px-3 py-2 text-sm text-gray-500">{formatDateTime(attempt.taken_at)}</td>
+                  <td className="px-3 py-2 text-sm text-ink">{attempt.quiz_title || "Quiz attempt"}</td>
+                  <td className="px-3 py-2 text-sm text-ink">{normalizeNumber(attempt.score)}</td>
+                  <td className="px-3 py-2 text-sm text-ink">{normalizeNumber(attempt.accuracy)}%</td>
+                  <td className="px-3 py-2 text-sm text-muted">{formatDateTime(attempt.taken_at)}</td>
                 </tr>
               ))
             )}
@@ -207,15 +207,15 @@ function QuizAttemptLog({ attempts }) {
       </div>
       <div className="space-y-2 md:hidden">
         {sortedAttempts.length === 0 ? (
-          <p className="text-sm text-gray-500">No quiz attempts yet.</p>
+          <p className="text-sm text-muted">No quiz attempts yet.</p>
         ) : (
           sortedAttempts.map((attempt, index) => (
             <article
               key={attempt.id ?? `${attempt.quiz_title}-${index}`}
-              className="rounded-lg border border-gray-100 p-3 text-sm"
+              className="rounded-xl border border-ocean-600/10 bg-white p-3 text-sm dark:border-line/40 dark:bg-ocean-950/40"
             >
-              <p className="font-medium text-gray-900">{attempt.quiz_title || "Quiz attempt"}</p>
-              <p className="text-gray-600">
+              <p className="font-medium text-ink">{attempt.quiz_title || "Quiz attempt"}</p>
+              <p className="text-muted">
                 Score {normalizeNumber(attempt.score)}% · {formatDateTime(attempt.taken_at)}
               </p>
             </article>
@@ -273,7 +273,7 @@ export default function UserProfile() {
       <button
         type="button"
         onClick={() => navigate("/admin/users")}
-        className="inline-flex items-center rounded-xl border border-emerald-200 bg-white/90 px-3 py-1.5 text-sm font-medium text-ocean-800 transition hover:bg-emerald-50"
+        className="inline-flex items-center rounded-xl border border-ocean-600/20 bg-white/90 px-3 py-1.5 text-sm font-medium text-ocean-800 transition hover:bg-reef/60"
       >
         {"\u2190"} Back to users
       </button>
@@ -285,23 +285,23 @@ export default function UserProfile() {
 
       {!isLoading && !isError ? (
         <>
-          <header className="rounded-2xl border border-emerald-100 bg-white/90 p-5 shadow-lg backdrop-blur">
+          <header className="rounded-2xl border border-ocean-600/10 bg-white/90 p-5 shadow-panel backdrop-blur">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-sm font-bold text-emerald-700">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-reef text-sm font-bold text-ocean-800">
                   {getInitials(profile.name || profile.full_name)}
                 </div>
                 <div>
-                  <h1 className="text-xl font-semibold text-gray-900">
+                  <h1 className="text-xl font-semibold text-ink">
                     {profile.name || profile.full_name || "Unknown student"}
                   </h1>
-                  <p className="text-sm text-gray-600">{profile.email || "No email provided"}</p>
+                  <p className="text-sm text-muted">{profile.email || "No email provided"}</p>
                   <p className="mt-1 text-xs capitalize text-muted">
                     Learning level: {profile.learning_level || "not set"}
                   </p>
                 </div>
               </div>
-              <p className="text-sm text-gray-500">Last active: {formatDateTime(profile.last_active)}</p>
+              <p className="text-sm text-muted">Last active: {formatDateTime(profile.last_active)}</p>
             </div>
 
             <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
@@ -336,13 +336,13 @@ export default function UserProfile() {
           </header>
 
           <section className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-            <article className="rounded-2xl border border-emerald-100 bg-white/90 p-4 shadow-lg backdrop-blur">
-              <h2 className="mb-3 text-lg font-semibold text-gray-900">Weakness map</h2>
+            <article className="rounded-2xl border border-ocean-600/10 bg-white/90 p-4 shadow-panel backdrop-blur">
+              <h2 className="mb-3 text-lg font-semibold text-ink">Weakness map</h2>
               <AdminWeaknessMap topics={weaknesses} />
             </article>
 
-            <article className="rounded-2xl border border-emerald-100 bg-white/90 p-4 shadow-lg backdrop-blur">
-              <h2 className="mb-3 text-lg font-semibold text-gray-900">Recommendations</h2>
+            <article className="rounded-2xl border border-ocean-600/10 bg-white/90 p-4 shadow-panel backdrop-blur">
+              <h2 className="mb-3 text-lg font-semibold text-ink">Recommendations</h2>
               <RecommendationsList items={recommendations} />
             </article>
           </section>

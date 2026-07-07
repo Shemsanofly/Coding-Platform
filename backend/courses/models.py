@@ -37,10 +37,14 @@ class Course(models.Model):
 
 
 class CourseSource(models.Model):
-    """Ingestion source (fetch pipeline) — YouTube transcripts only."""
+    """Ingestion source for course content pipelines."""
 
     class SourceType(models.TextChoices):
         YOUTUBE = "youtube", "YouTube"
+        PDF = "pdf", "PDF"
+        WEBPAGE = "webpage", "Web page"
+        LINK = "link", "External link"
+        INTERNAL = "internal", "Platform content"
 
     class FetchStatus(models.TextChoices):
         PENDING = "pending", "Pending"
@@ -74,10 +78,14 @@ class CourseSource(models.Model):
 
 
 class Lesson(models.Model):
-    """Platform-controlled lesson shell backed by a YouTube video URL."""
+    """Platform-controlled lesson backed by a video, document, page, or internal content."""
 
     class SourceType(models.TextChoices):
         YOUTUBE = "youtube", "YouTube"
+        PDF = "pdf", "PDF"
+        WEBPAGE = "webpage", "Web page"
+        LINK = "link", "External link"
+        INTERNAL = "internal", "Platform content"
 
     class Difficulty(models.TextChoices):
         BEGINNER = "beginner", "Beginner"
@@ -87,7 +95,7 @@ class Lesson(models.Model):
     @classmethod
     def allowed_source_types_for_course_level(cls, course_level: str) -> frozenset[str]:
         _ = course_level
-        return frozenset({cls.SourceType.YOUTUBE})
+        return frozenset(choice for choice, _ in cls.SourceType.choices)
 
     course = models.ForeignKey(
         Course,

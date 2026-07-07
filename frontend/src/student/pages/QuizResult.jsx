@@ -36,6 +36,7 @@ export default function QuizResult() {
 
   useEffect(() => {
     const lid = Number(lessonId);
+    queryClient.invalidateQueries({ queryKey: ["student-dashboard"] });
     queryClient.invalidateQueries({ queryKey: ["enrollments"] });
     queryClient.invalidateQueries({ queryKey: ["weaknesses"] });
     queryClient.invalidateQueries({ queryKey: ["recommendations"] });
@@ -48,7 +49,7 @@ export default function QuizResult() {
 
   if (!result) {
     return (
-      <div className="mx-auto max-w-3xl space-y-4 p-4 pb-24 md:p-6">
+      <div className="mx-auto max-w-3xl space-y-4 p-4 md:p-6">
         <p className="text-sm text-muted dark:text-muted">No quiz result data. Take the quiz first.</p>
         <button
           type="button"
@@ -62,7 +63,7 @@ export default function QuizResult() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 overflow-x-hidden p-4 pb-24 md:pb-6 md:p-6">
+    <div className="mx-auto max-w-3xl space-y-6 overflow-x-hidden p-4 md:p-6">
       <div className="rounded-2xl border border-ocean-600/10 bg-white p-6 text-center shadow-lg dark:border-line/40 dark:bg-ocean-950/50 dark:shadow-xl dark:backdrop-blur-xl">
         <p className="text-sm uppercase tracking-wider text-muted dark:text-muted">Quiz result</p>
         <p className="mt-2 text-5xl font-bold tabular-nums text-ink dark:text-sand sm:text-6xl">{score}%</p>

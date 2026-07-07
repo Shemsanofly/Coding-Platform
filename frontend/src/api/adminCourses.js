@@ -30,6 +30,10 @@ export const updateAdminCourse = async (courseId, payload) => {
   return response.data;
 };
 
+export const deleteAdminCourse = async (courseId) => {
+  await client.delete(`/api/admin/courses/${courseId}/`);
+};
+
 /** Course metadata including `level` (used so lesson source options track DB accurately). */
 export const getAdminCourse = async (courseId) => {
   const response = await client.get(`/api/admin/courses/${courseId}/`);

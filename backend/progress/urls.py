@@ -23,11 +23,13 @@ from progress.views import (
     LessonWeaknessSummaryView,
     RecommendationListView,
     StudentAnalyticsSummaryView,
+    StudentDashboardView,
     StudentPracticeLeaderboardView,
     WeaknessListView,
 )
 
 urlpatterns = [
+    path("dashboard/", StudentDashboardView.as_view(), name="student-dashboard"),
     path("analytics/summary/", StudentAnalyticsSummaryView.as_view(), name="student-analytics-summary"),
     path("practice/leaderboard/", StudentPracticeLeaderboardView.as_view(), name="student-practice-leaderboard"),
     path("enrollments/", EnrollmentListView.as_view(), name="enrollment-list"),
