@@ -5,7 +5,7 @@ from ai_engine.services.learning_path import generate_learning_path
 from courses.models import Course, Lesson
 from progress.models import Enrollment
 from progress.serializers import EnrollmentSerializer, StudentAnalyticsSummarySerializer
-from progress.services import quiz_passed_for_lesson
+from progress.services.completion import passed_lesson_ids_for_user
 from quizzes.models import QuizResult
 
 
@@ -16,9 +16,7 @@ def build_student_analytics_summary(user):
     lesson_ids = list(
         Lesson.objects.filter(course_id__in=enrolled_course_ids).values_list("id", flat=True)
     )
-    lessons_passed_quiz = sum(
-        1 for lesson_id in lesson_ids if quiz_passed_for_lesson(user.id, lesson_id)
-    )
+    lessons_passed_quiz = len(passed_lesson_ids_for_user(user.id, lesson_ids))
 
     quiz_rows = QuizResult.objects.filter(user=user).select_related("quiz__lesson")
     attempts = quiz_rows.count()

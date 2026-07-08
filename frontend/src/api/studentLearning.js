@@ -1,12 +1,29 @@
 import client from "./client";
+import { fetchAllPages, unwrapPaginated } from "./pagination";
 
-export const getCourseCatalog = async ({ level } = {}) => {
+export const getCourseCatalog = async ({ level, page, page_size: pageSize } = {}) => {
   const params = {};
   if (level) {
     params.level = level;
   }
+  if (page) {
+    params.page = page;
+  }
+  if (pageSize) {
+    params.page_size = pageSize;
+  }
   const { data } = await client.get("/api/catalog/courses/", { params });
-  return Array.isArray(data) ? data : [];
+  if (page || pageSize) {
+    return unwrapPaginated(data);
+  }
+  if (data?.next) {
+    return fetchAllPages(({ page: p, page_size: ps }) =>
+      client
+        .get("/api/catalog/courses/", { params: { ...params, level, page: p, page_size: ps } })
+        .then((r) => r.data)
+    );
+  }
+  return unwrapPaginated(data).results;
 };
 
 export const joinCourse = async (courseId) => {

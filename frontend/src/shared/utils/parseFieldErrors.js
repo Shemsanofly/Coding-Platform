@@ -10,17 +10,24 @@ export function parseFieldErrors(error) {
     return {};
   }
 
-  if (typeof data.detail === "string") {
+  if (typeof data.detail === "string" && !data.errors) {
     return { form: data.detail };
   }
 
+  const source = data.errors && typeof data.errors === "object" ? data.errors : data;
   const fields = {};
-  for (const [key, value] of Object.entries(data)) {
+  for (const [key, value] of Object.entries(source)) {
+    if (key === "detail" || key === "errors") {
+      continue;
+    }
     if (Array.isArray(value) && value[0]) {
       fields[key] = String(value[0]);
     } else if (typeof value === "string") {
       fields[key] = value;
     }
+  }
+  if (!Object.keys(fields).length && typeof data.detail === "string") {
+    return { form: data.detail };
   }
   return fields;
 }

@@ -109,7 +109,7 @@ def test_admin_users_filter_by_weakness_level():
     response = client.get("/api/admin/users/", {"weakness_level": "HIGH"})
 
     assert response.status_code == 200
-    emails = {row["email"] for row in response.data}
+    emails = {row["email"] for row in response.data["results"]}
     assert emails == {"high-weak@example.com"}
 
 

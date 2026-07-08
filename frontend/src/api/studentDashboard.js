@@ -1,4 +1,5 @@
 import client from "./client";
+import { fetchAllPages, unwrapPaginated } from "./pagination";
 
 export const getStudentDashboard = async () => {
   const response = await client.get("/api/dashboard/");
@@ -10,9 +11,25 @@ export const getAnalyticsSummary = async () => {
   return response.data ?? {};
 };
 
-export const getEnrollments = async () => {
-  const response = await client.get("/api/enrollments/");
-  return response.data ?? [];
+export const getEnrollments = async ({ page, page_size: pageSize } = {}) => {
+  const params = {};
+  if (page) {
+    params.page = page;
+  }
+  if (pageSize) {
+    params.page_size = pageSize;
+  }
+  const response = await client.get("/api/enrollments/", { params });
+  if (page || pageSize) {
+    return unwrapPaginated(response.data);
+  }
+  const { results } = unwrapPaginated(response.data);
+  if (response.data?.next) {
+    return fetchAllPages(({ page: p, page_size: ps }) =>
+      client.get("/api/enrollments/", { params: { page: p, page_size: ps } }).then((r) => r.data)
+    );
+  }
+  return results;
 };
 
 const normalizeWeaknessPayload = (data) => {

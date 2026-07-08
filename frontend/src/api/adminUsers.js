@@ -1,4 +1,5 @@
 import client from "./client";
+import { fetchAllPages, unwrapPaginated } from "./pagination";
 
 const cleanParams = (params) => {
   const entries = Object.entries(params || {}).filter(([, value]) => {
@@ -16,9 +17,29 @@ export const getAdminUsers = async (filters = {}) => {
       search: filters.search,
       weakness_level: filters.weaknessLevel,
       ordering: filters.ordering,
+      page: filters.page,
+      page_size: filters.pageSize,
     }),
   });
-  return response.data ?? [];
+  if (filters.page || filters.pageSize) {
+    return unwrapPaginated(response.data);
+  }
+  if (response.data?.next) {
+    return fetchAllPages(({ page, page_size: pageSize }) =>
+      client
+        .get("/api/admin/users/", {
+          params: cleanParams({
+            search: filters.search,
+            weakness_level: filters.weaknessLevel,
+            ordering: filters.ordering,
+            page,
+            page_size: pageSize,
+          }),
+        })
+        .then((r) => r.data)
+    );
+  }
+  return unwrapPaginated(response.data).results;
 };
 
 export const getAdminUserProfile = async (userId) => {

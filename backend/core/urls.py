@@ -22,11 +22,10 @@ from django.urls import include, path
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('accounts.urls')),
-    path('api/', include('quizzes.urls')),
-    path('api/', include('courses.urls')),
-    path('api/', include('progress.urls')),
-    path('api/', include('ai_engine.urls')),
-    path('api/', include('playground.urls')),
+    # Versioned API (preferred for new clients)
+    path('api/v1/', include('core.api_urls')),
+    # Backward-compatible alias — same routes as /api/v1/
+    path('api/', include('core.api_urls')),
 ]
 
 if settings.DEBUG:

@@ -6,6 +6,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from core.pagination import paginate_queryset
+
 from accounts.models import User
 from accounts.permissions import STUDENT_ACCESS
 from courses.models import Course, CourseSource, Lesson
@@ -86,13 +88,8 @@ class AdminCourseViewSet(viewsets.ModelViewSet):
         return Response(row)
 
     def _course_payload(self, course):
-        annotated = (
-            Course.objects.filter(pk=course.pk)
-            .annotate(lesson_count=Count("lessons", distinct=True))
-            .first()
-        )
         return AdminCourseListSerializer(
-            annotated or course,
+            course,
             context=self.get_serializer_context(),
         ).data
 
@@ -256,12 +253,15 @@ class StudentCourseCatalogView(APIView):
             visible = visible.filter(Q(level=level_filter) | Q(id__in=enrolled_ids))
 
         enroll_map = {course_id: True for course_id in enrolled_ids}
-        serializer = StudentCourseCatalogSerializer(
-            visible.order_by("-created_at"),
+        queryset = visible.order_by("-created_at")
+        context = {"request": request, "enroll_map": enroll_map}
+        return paginate_queryset(
+            request,
+            queryset,
+            serializer=StudentCourseCatalogSerializer,
             many=True,
-            context={"request": request, "enroll_map": enroll_map},
+            context=context,
         )
-        return Response(serializer.data)
 
 
 class StudentEnrollmentView(APIView):

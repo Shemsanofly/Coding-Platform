@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from django.db.models import Max
 from django.utils import timezone
 
 from accounts.models import User
@@ -27,13 +28,36 @@ def engagement_met(lesson: Lesson, progress: LessonProgress | None) -> bool:
 
 
 def quiz_passed_for_lesson(user_id: int, lesson_id: int) -> bool:
-    quiz = Quiz.objects.filter(lesson_id=lesson_id).only("id", "passing_score", "generation_status").first()
-    if quiz is None or quiz.generation_status != Quiz.GenerationStatus.DONE:
-        return False
-    best = (
-        QuizResult.objects.filter(user_id=user_id, quiz_id=quiz.id).order_by("-score").values_list("score", flat=True).first()
+    return lesson_id in passed_lesson_ids_for_user(user_id, [lesson_id])
+
+
+def passed_lesson_ids_for_user(user_id: int, lesson_ids: list[int]) -> set[int]:
+    if not lesson_ids:
+        return set()
+
+    quizzes = {
+        quiz.lesson_id: quiz
+        for quiz in Quiz.objects.filter(
+            lesson_id__in=lesson_ids,
+            generation_status=Quiz.GenerationStatus.DONE,
+        ).only("id", "lesson_id", "passing_score")
+    }
+    if not quizzes:
+        return set()
+
+    best_scores = dict(
+        QuizResult.objects.filter(user_id=user_id, quiz_id__in=[quiz.id for quiz in quizzes.values()])
+        .values("quiz_id")
+        .annotate(best=Max("score"))
+        .values_list("quiz_id", "best")
     )
-    return best is not None and best >= quiz.passing_score
+
+    passed: set[int] = set()
+    for lesson_id, quiz in quizzes.items():
+        best = best_scores.get(quiz.id)
+        if best is not None and best >= quiz.passing_score:
+            passed.add(lesson_id)
+    return passed
 
 
 def refresh_lesson_official_completion(user_id: int, lesson_id: int) -> bool:
@@ -71,7 +95,7 @@ def student_completion_rate_percent(user_id: int) -> float | None:
     )
     if not lesson_ids:
         return None
-    passed = sum(1 for lid in lesson_ids if quiz_passed_for_lesson(user_id, lid))
+    passed = len(passed_lesson_ids_for_user(user_id, lesson_ids))
     return round(100 * passed / len(lesson_ids), 2)
 
 

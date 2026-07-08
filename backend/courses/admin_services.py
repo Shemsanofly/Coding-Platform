@@ -176,9 +176,12 @@ def admin_dashboard_summary(admin_user) -> dict:
         done_lessons = set(
             quiz_qs.filter(generation_status=Quiz.GenerationStatus.DONE).values_list("lesson_id", flat=True)
         )
-        for lid in done_lessons:
-            if Question.objects.filter(quiz__lesson_id=lid, is_published=False).exists():
-                pending_approval += 1
+        pending_approval = (
+            Question.objects.filter(quiz__lesson_id__in=done_lessons, is_published=False)
+            .values("quiz__lesson_id")
+            .distinct()
+            .count()
+        )
 
     top_weak = list(
         WeakTopic.objects.values("topic_tag")
@@ -224,18 +227,25 @@ def admin_analytics_overview(admin_user) -> dict:
     courses = Course.objects.filter(created_by=admin_user)
     course_ids = list(courses.values_list("id", flat=True))
 
+    courses_with_counts = list(courses.annotate(lesson_count=Count("lessons", distinct=True)))
+    lesson_count_by_course = {course.id: course.lesson_count or 0 for course in courses_with_counts}
+
+    passed_lessons_by_course: dict[int, set[int]] = {cid: set() for cid in course_ids}
+    if course_ids:
+        for row in (
+            QuizResult.objects.filter(quiz__lesson__course_id__in=course_ids, score__gte=60)
+            .values("quiz__lesson__course_id", "quiz__lesson_id")
+            .distinct()
+        ):
+            passed_lessons_by_course[row["quiz__lesson__course_id"]].add(row["quiz__lesson_id"])
+
     completion_buckets = {"0-25": 0, "26-50": 0, "51-75": 0, "76-100": 0}
-    for course in courses.annotate(lesson_count=Count("lessons", distinct=True)):
-        lc = course.lesson_count or 0
+    for course in courses_with_counts:
+        lc = lesson_count_by_course.get(course.id, 0)
         if lc == 0:
             completion_buckets["0-25"] += 1
             continue
-        passed_lessons = (
-            QuizResult.objects.filter(quiz__lesson__course_id=course.id, score__gte=60)
-            .values("quiz__lesson_id")
-            .distinct()
-            .count()
-        )
+        passed_lessons = len(passed_lessons_by_course.get(course.id, set()))
         pct = round((passed_lessons / lc) * 100)
         if pct <= 25:
             completion_buckets["0-25"] += 1
@@ -252,18 +262,22 @@ def admin_analytics_overview(admin_user) -> dict:
         .order_by("-student_count")[:10]
     )
 
-    avg_score_by_course = []
-    for course in courses.order_by("title"):
-        avg = QuizResult.objects.filter(quiz__lesson__course_id=course.id).aggregate(value=Avg("score"))[
-            "value"
-        ]
-        avg_score_by_course.append(
-            {
-                "course_id": course.id,
-                "course_title": course.title,
-                "avg_score": round(float(avg), 1) if avg is not None else None,
-            }
-        )
+    avg_score_map = {
+        row["quiz__lesson__course_id"]: row["avg"]
+        for row in QuizResult.objects.filter(quiz__lesson__course_id__in=course_ids)
+        .values("quiz__lesson__course_id")
+        .annotate(avg=Avg("score"))
+    }
+    avg_score_by_course = [
+        {
+            "course_id": course.id,
+            "course_title": course.title,
+            "avg_score": round(float(avg_score_map[course.id]), 1)
+            if avg_score_map.get(course.id) is not None
+            else None,
+        }
+        for course in courses.order_by("title")
+    ]
 
     lesson_ids = list(_lessons_for_courses(course_ids).values_list("id", flat=True))
     quiz_qs = Quiz.objects.filter(lesson_id__in=lesson_ids) if lesson_ids else Quiz.objects.none()

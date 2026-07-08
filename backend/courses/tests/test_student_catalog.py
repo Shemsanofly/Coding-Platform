@@ -45,7 +45,7 @@ class StudentCourseCatalogAPITests(TestCase):
         response = self.client.get(reverse("student-course-catalog"))
 
         self.assertEqual(response.status_code, 200)
-        titles = [row["title"] for row in response.data]
+        titles = [row["title"] for row in response.data["results"]]
         self.assertEqual(titles, ["Beginner Python"])
 
     def test_catalog_level_all_returns_visible_courses(self):
@@ -53,7 +53,7 @@ class StudentCourseCatalogAPITests(TestCase):
         response = self.client.get(reverse("student-course-catalog"), {"level": "all"})
 
         self.assertEqual(response.status_code, 200)
-        titles = sorted(row["title"] for row in response.data)
+        titles = sorted(row["title"] for row in response.data["results"])
         self.assertEqual(titles, ["Advanced Python", "Beginner Python"])
 
     def test_catalog_keeps_enrolled_courses_when_level_differs(self):
@@ -62,7 +62,7 @@ class StudentCourseCatalogAPITests(TestCase):
         response = self.client.get(reverse("student-course-catalog"))
 
         self.assertEqual(response.status_code, 200)
-        titles = sorted(row["title"] for row in response.data)
+        titles = sorted(row["title"] for row in response.data["results"])
         self.assertEqual(titles, ["Advanced Python", "Beginner Python"])
 
     def test_catalog_explicit_level_filter(self):
@@ -70,5 +70,5 @@ class StudentCourseCatalogAPITests(TestCase):
         response = self.client.get(reverse("student-course-catalog"), {"level": "advanced"})
 
         self.assertEqual(response.status_code, 200)
-        titles = [row["title"] for row in response.data]
+        titles = [row["title"] for row in response.data["results"]]
         self.assertEqual(titles, ["Advanced Python"])

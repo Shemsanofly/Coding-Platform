@@ -4,6 +4,7 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 
 from accounts.permissions import STUDENT_ACCESS
+from core.pagination import paginate_queryset
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -50,7 +51,12 @@ class EnrollmentListView(APIView):
         from progress.services.student_dashboard import build_student_enrollments
 
         payload = build_student_enrollments(request.user)
-        return Response(EnrollmentSerializer(payload, many=True).data)
+        return paginate_queryset(
+            request,
+            payload,
+            serializer=EnrollmentSerializer,
+            many=True,
+        )
 
 
 class WeaknessListView(APIView):
@@ -258,9 +264,34 @@ class AdminUsersView(_AdminRoleRequiredMixin, APIView):
                 | Q(first_name__icontains=search)
                 | Q(last_name__icontains=search)
             )
+        if weakness_level:
+            matching_user_ids = WeakTopic.objects.filter(
+                weakness_level=weakness_level,
+            ).values_list("user_id", flat=True)
+            queryset = queryset.filter(id__in=matching_user_ids)
 
-        users = list(queryset)
+        if ordering == "avg_score":
+            queryset = queryset.annotate(avg_score=Avg("quiz_results__score")).order_by(
+                "avg_score", "email"
+            )
+        elif ordering == "-avg_score":
+            queryset = queryset.annotate(avg_score=Avg("quiz_results__score")).order_by(
+                "-avg_score", "email"
+            )
+        else:
+            queryset = queryset.order_by("first_name", "last_name", "email")
+
+        from core.pagination import StandardPagination
+
+        paginator = StandardPagination()
+        page_users = paginator.paginate_queryset(queryset, request)
+        users = page_users if page_users is not None else list(queryset)
         user_ids = [user.id for user in users]
+
+        if not user_ids:
+            if page_users is not None:
+                return paginator.get_paginated_response([])
+            return Response([])
 
         enroll_counts = {
             row["user_id"]: row["total"]
@@ -294,14 +325,9 @@ class AdminUsersView(_AdminRoleRequiredMixin, APIView):
             .values("user_id")
             .annotate(total=Count("id"))
         }
-        weak_topics = (
-            WeakTopic.objects.filter(user_id__in=user_ids)
-            .order_by("user_id", "-last_updated")
-        )
+        weak_topics = WeakTopic.objects.filter(user_id__in=user_ids).order_by("user_id", "-last_updated")
         top_weakness_by_user = {}
         for topic in weak_topics:
-            if weakness_level and (topic.weakness_level or "").upper() != weakness_level:
-                continue
             if topic.user_id not in top_weakness_by_user:
                 top_weakness_by_user[topic.user_id] = topic
 
@@ -309,8 +335,6 @@ class AdminUsersView(_AdminRoleRequiredMixin, APIView):
         for user in users:
             full_name = f"{user.first_name} {user.last_name}".strip() or user.email.split("@")[0]
             weakness = top_weakness_by_user.get(user.id)
-            if weakness_level and not weakness:
-                continue
             payload.append(
                 {
                     "id": user.id,
@@ -329,17 +353,10 @@ class AdminUsersView(_AdminRoleRequiredMixin, APIView):
                 }
             )
 
-        if ordering == "avg_score":
-            payload.sort(key=lambda item: item["avg_score"] if item["avg_score"] is not None else -1)
-        elif ordering == "-avg_score":
-            payload.sort(
-                key=lambda item: item["avg_score"] if item["avg_score"] is not None else -1,
-                reverse=True,
-            )
-        else:
-            payload.sort(key=lambda item: item["name"].lower())
-
-        return Response(AdminUserListSerializer(payload, many=True).data)
+        serialized = AdminUserListSerializer(payload, many=True).data
+        if page_users is not None:
+            return paginator.get_paginated_response(serialized)
+        return Response(serialized)
 
 
 class AdminUserProfileView(_AdminRoleRequiredMixin, APIView):
