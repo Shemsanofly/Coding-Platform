@@ -2,10 +2,23 @@
 """Django's command-line utility for administrative tasks."""
 import os
 import sys
+from pathlib import Path
+
+
+def _reexec_from_local_venv():
+    """Prefer the project virtualenv when manage.py is launched with global Python."""
+    project_python = Path(__file__).resolve().parent / ".venv" / "Scripts" / "python.exe"
+    if not project_python.exists():
+        return
+    current_python = Path(sys.executable).resolve()
+    if current_python == project_python.resolve():
+        return
+    os.execv(str(project_python), [str(project_python), *sys.argv])
 
 
 def main():
     """Run administrative tasks."""
+    _reexec_from_local_venv()
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
     try:
         from django.core.management import execute_from_command_line

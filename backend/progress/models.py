@@ -3,6 +3,10 @@ from django.db import models
 
 
 class Enrollment(models.Model):
+    class Status(models.TextChoices):
+        ACTIVE = "ACTIVE", "Active"
+        COMPLETED = "COMPLETED", "Completed"
+
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -16,6 +20,13 @@ class Enrollment(models.Model):
         db_index=True,
     )
     enrolled_at = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(
+        max_length=16,
+        choices=Status.choices,
+        default=Status.ACTIVE,
+        db_index=True,
+    )
+    completed_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ("-enrolled_at",)
@@ -81,3 +92,54 @@ class LessonProgress(models.Model):
 
     def __str__(self):
         return f"{self.user_id}:{self.lesson_id}"
+
+
+class Certificate(models.Model):
+    class Status(models.TextChoices):
+        ACTIVE = "ACTIVE", "Active"
+        REVOKED = "REVOKED", "Revoked"
+
+    certificate_number = models.CharField(max_length=40, unique=True, db_index=True)
+    verification_code = models.CharField(max_length=80, unique=True, db_index=True)
+    student = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="certificates",
+        db_index=True,
+    )
+    course = models.ForeignKey(
+        "courses.Course",
+        on_delete=models.CASCADE,
+        related_name="certificates",
+        db_index=True,
+    )
+    enrollment = models.OneToOneField(
+        Enrollment,
+        on_delete=models.CASCADE,
+        related_name="certificate",
+    )
+    student_name = models.CharField(max_length=255)
+    course_title = models.CharField(max_length=255)
+    issue_date = models.DateTimeField()
+    file = models.FileField(upload_to="certificates/%Y/%m/", blank=True)
+    status = models.CharField(
+        max_length=16,
+        choices=Status.choices,
+        default=Status.ACTIVE,
+        db_index=True,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("-issue_date",)
+        verbose_name = "certificate"
+        verbose_name_plural = "certificates"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["enrollment"],
+                name="unique_certificate_per_enrollment",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.certificate_number} - {self.student_name}"

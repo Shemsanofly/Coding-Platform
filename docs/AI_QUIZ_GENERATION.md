@@ -39,7 +39,7 @@ sequenceDiagram
 
 ```env
 GEMINI_API_KEY=your_key
-GEMINI_MODEL=gemini-2.5-flash
+GEMINI_MODEL=gemini-3.5-flash
 CELERY_BROKER_URL=redis://localhost:6379/0
 ```
 

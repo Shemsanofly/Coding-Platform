@@ -176,7 +176,7 @@ def _gemini_summarize_chunk(chunk: str, *, default_title: str) -> StudyNotesPayl
         raise RuntimeError("Gemini API key not configured.")
 
     genai.configure(api_key=api_key)
-    model_name = getattr(settings, "GEMINI_MODEL", "gemini-2.5-flash")
+    model_name = (getattr(settings, "GEMINI_MODEL", "") or "").strip() or "gemini-3.5-flash"
     model = genai.GenerativeModel(model_name)
     prompt = (
         f"{NOTES_SYSTEM_PROMPT}\n\n"

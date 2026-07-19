@@ -94,7 +94,7 @@ Frontend runs at `http://localhost:5173/` with API requests proxied to Django (s
 | `DEBUG` | No | Enable debug mode (default: `True`) |
 | `DATABASE_URL` | No | Database URL (defaults to SQLite) |
 | `GEMINI_API_KEY` | Recommended | Google Gemini API key for quiz and PDF notes |
-| `GEMINI_MODEL` | No | Gemini model name (default: `gemini-2.5-flash`) |
+| `GEMINI_MODEL` | No | Gemini model name (default: `gemini-3.5-flash`) |
 | `ADMIN_REGISTRATION_CODE` | No | Code required for admin signup (default: `Admin2026`) |
 | `AI_GENERATION_MODE` | No | `manual` (admin-triggered) or `celery` (async) |
 | `AI_GENERATION_SYNC_FALLBACK` | No | Run generation in-process if Redis is down |

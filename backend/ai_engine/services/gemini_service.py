@@ -23,10 +23,17 @@ logger = logging.getLogger(__name__)
 INVALID_GEMINI_API_KEY_MESSAGE = (
     "Gemini API key is invalid. Please check backend/.env and restart Django."
 )
+PLACEHOLDER_API_KEY_PARTS = (
+    "replace",
+    "your_key",
+    "your_gemini_key",
+    "your_real_google_ai_studio_key",
+)
 
 MIN_QUESTIONS = 3
 MAX_QUESTIONS = 15
 TARGET_MCQ_COUNT = 8
+DEFAULT_GEMINI_MODEL = "gemini-3.5-flash"
 TRANSCRIPT_CHAR_LIMIT = 100_000
 MIN_SUMMARY_LEN = 40
 MAX_SUMMARY_LEN = 8000
@@ -107,14 +114,11 @@ class GeminiService:
     """Connect to Gemini; return validated lesson intelligence and quiz questions."""
 
     def __init__(self, *, api_key: str | None = None, model: str | None = None):
-        self.api_key = api_key or settings.GEMINI_API_KEY
+        self.api_key = api_key or configured_gemini_api_key()
         self.model_name = (
             model
-            or getattr(
-                settings,
-                "GEMINI_MODEL",
-                "gemini-2.5-flash",
-            )
+            or (getattr(settings, "GEMINI_MODEL", "") or "").strip()
+            or DEFAULT_GEMINI_MODEL
         )
         logger.info(
             "Gemini configuration loaded. API key present=%s",
@@ -122,6 +126,9 @@ class GeminiService:
         )
         if not self.api_key:
             raise GeminiQuizError("GEMINI_API_KEY is not configured.")
+
+        if api_key is None and is_placeholder_gemini_api_key(self.api_key):
+            raise GeminiQuizError(INVALID_GEMINI_API_KEY_MESSAGE)
 
     def generate_quiz(self, transcript: str, *, max_retries: int = 2) -> LessonIntelligencePayload:
         """Single Gemini request: lesson metadata + validated quiz questions."""
@@ -177,6 +184,19 @@ class GeminiService:
                     )
 
         raise GeminiQuizError(f"Quiz generation failed: {last_error}")
+
+
+def configured_gemini_api_key() -> str:
+    """Return the configured Gemini key, accepting Google's documented env names."""
+    return (
+        (getattr(settings, "GEMINI_API_KEY", "") or "").strip()
+        or (getattr(settings, "GOOGLE_API_KEY", "") or "").strip()
+    )
+
+
+def is_placeholder_gemini_api_key(value: str) -> bool:
+    normalized = (value or "").strip().strip('"').strip("'").lower()
+    return any(part in normalized for part in PLACEHOLDER_API_KEY_PARTS)
 
 
 def parse_gemini_response_json(raw: str) -> dict[str, Any]:

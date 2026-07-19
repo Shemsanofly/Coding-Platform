@@ -112,6 +112,13 @@ export default function Dashboard() {
 
   const isLoading = dashboardQuery.isLoading;
   const isError = dashboardQuery.isError;
+  const errorStatus = dashboardQuery.error?.response?.status;
+  const dashboardErrorMessage =
+    errorStatus === 401
+      ? "Your session expired. Log in again to reload your dashboard."
+      : errorStatus === 403
+        ? "This dashboard is available to student accounts only."
+        : "Could not load your dashboard. Make sure the backend is running on http://127.0.0.1:8000.";
 
   const displayName = getDisplayName(user) || "Learner";
   const learningLevel = formatLevel(analytics.learning_level);
@@ -211,7 +218,7 @@ export default function Dashboard() {
 
       {isError ? (
         <ErrorState
-          message="Could not load your dashboard. Check that the backend is running."
+          message={dashboardErrorMessage}
           onRetry={() => void dashboardQuery.refetch()}
         />
       ) : null}

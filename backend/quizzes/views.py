@@ -11,6 +11,7 @@ from ai_engine.services.task_queue import run_or_enqueue
 from ai_engine.tasks import detect_weaknesses
 from courses.services import lesson_unlocked
 from progress.services import refresh_lesson_official_completion
+from progress.services.certificates import maybe_generate_certificate_for_lesson
 from accounts.permissions import STUDENT_ACCESS
 from progress.models import Enrollment
 from quizzes.models import Quiz, QuizResult
@@ -153,6 +154,7 @@ class QuizSubmitView(APIView):
             taken_at=timezone.now(),
         )
         refresh_lesson_official_completion(request.user.pk, quiz.lesson_id)
+        maybe_generate_certificate_for_lesson(request.user, quiz.lesson_id)
         weakness_detection_triggered = run_or_enqueue(
             detect_weaknesses,
             request.user.pk,

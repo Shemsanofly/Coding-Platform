@@ -151,6 +151,30 @@ def test_gemini_service_reads_api_key_from_settings():
     assert service.api_key == "fake-key"
 
 
+@override_settings(GEMINI_API_KEY="fake-key")
+def test_gemini_service_uses_available_default_model():
+    service = GeminiService()
+    assert service.model_name == "gemini-3.5-flash"
+
+
+@override_settings(GEMINI_API_KEY="fake-key", GEMINI_MODEL="")
+def test_gemini_service_uses_available_default_model_when_setting_blank():
+    service = GeminiService()
+    assert service.model_name == "gemini-3.5-flash"
+
+
+@override_settings(GEMINI_API_KEY="", GOOGLE_API_KEY="google-key")
+def test_gemini_service_falls_back_to_google_api_key_setting():
+    service = GeminiService()
+    assert service.api_key == "google-key"
+
+
+@override_settings(GEMINI_API_KEY="replace_with_your_gemini_key")
+def test_gemini_service_rejects_placeholder_key_from_settings():
+    with pytest.raises(GeminiQuizError, match=INVALID_GEMINI_API_KEY_MESSAGE):
+        GeminiService()
+
+
 @override_settings(GEMINI_API_KEY="")
 def test_gemini_service_raises_when_settings_key_empty():
     with pytest.raises(GeminiQuizError):

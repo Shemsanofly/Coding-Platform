@@ -30,6 +30,8 @@ from courses.admin_services import (
 from courses.services import lesson_gates_for_user, lesson_unlocked
 from progress.models import Enrollment, LessonProgress
 from progress.services import apply_engagement_update
+from progress.services.certificates import check_certificate_eligibility, maybe_generate_certificate_for_lesson
+from progress.serializers import CertificateSerializer
 from quizzes.models import Quiz
 from courses.catalog_seed import seed_basic_catalog
 
@@ -299,6 +301,16 @@ class StudentCourseDetailView(APIView):
         gates = lesson_gates_for_user(course, request.user)
         gate_map = {g.lesson_id: g for g in gates}
         lessons = course.lessons.order_by("order", "pk")
+        lesson_ids = [lesson.id for lesson in lessons]
+        quiz_rows = {
+            quiz.lesson_id: quiz
+            for quiz in Quiz.objects.filter(lesson_id__in=lesson_ids)
+            .annotate(published_count=Count("questions", filter=Q(questions__is_published=True)))
+        }
+        progress_rows = {
+            row.lesson_id: row
+            for row in LessonProgress.objects.filter(user=request.user, lesson__course=course)
+        }
         payload = []
         for lesson in lessons:
             g = gate_map[lesson.id]
@@ -307,13 +319,36 @@ class StudentCourseDetailView(APIView):
             data["unlocked"] = g.unlocked
             data["quiz_passed"] = g.quiz_passed
             data["quiz_ready"] = g.quiz_ready
+            quiz = quiz_rows.get(lesson.id)
+            data["quiz_generation_status"] = quiz.generation_status if quiz else "pending"
+            data["quiz_generation_error"] = (quiz.generation_error or "") if quiz else ""
+            data["quiz_available"] = bool(
+                quiz
+                and quiz.generation_status == Quiz.GenerationStatus.DONE
+                and quiz.published_count > 0
+            )
+            data["lesson_officially_completed"] = bool(
+                progress_rows.get(lesson.id) and progress_rows[lesson.id].completed_at
+            )
             payload.append(data)
+        certificate_result = check_certificate_eligibility(request.user, course)
+        certificate_payload = (
+            CertificateSerializer(certificate_result.certificate, context={"request": request}).data
+            if certificate_result.certificate
+            else None
+        )
         return Response(
             {
                 "id": course.id,
                 "title": course.title,
                 "level": course.level,
                 "status": course.status,
+                "progress_percent": certificate_result.progress_percent,
+                "completed_lessons": certificate_result.completed_lessons,
+                "total_lessons": certificate_result.total_lessons,
+                "certificate_eligible": certificate_result.eligible,
+                "certificate_reasons": certificate_result.reasons,
+                "certificate": certificate_payload,
                 "lessons": payload,
             }
         )
@@ -397,6 +432,7 @@ class StudentLessonProgressView(APIView):
             scroll_depth_pct=scroll_depth_pct,
             video_watch_pct=video_watch_pct,
         )
+        maybe_generate_certificate_for_lesson(request.user, lesson.id)
         progress.refresh_from_db()
 
         return Response(

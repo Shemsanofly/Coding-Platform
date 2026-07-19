@@ -1,5 +1,7 @@
 from rest_framework import serializers
 
+from progress.models import Certificate
+
 
 class RecentQuizScoreSerializer(serializers.Serializer):
     score = serializers.IntegerField()
@@ -28,6 +30,55 @@ class EnrollmentSerializer(serializers.Serializer):
     lessons_completed = serializers.IntegerField()
     avg_quiz_score = serializers.FloatField()
     progress = serializers.FloatField()
+
+
+class CertificateSerializer(serializers.ModelSerializer):
+    file_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Certificate
+        fields = (
+            "id",
+            "certificate_number",
+            "verification_code",
+            "student_name",
+            "course_title",
+            "course_id",
+            "enrollment_id",
+            "issue_date",
+            "file_url",
+            "status",
+            "created_at",
+        )
+        read_only_fields = fields
+
+    def get_file_url(self, obj):
+        request = self.context.get("request")
+        if not obj.file:
+            return ""
+        if request:
+            return request.build_absolute_uri(obj.file.url)
+        return obj.file.url
+
+
+class CertificateEligibilitySerializer(serializers.Serializer):
+    eligible = serializers.BooleanField()
+    reasons = serializers.ListField(child=serializers.CharField())
+    progress_percent = serializers.FloatField()
+    completed_lessons = serializers.IntegerField()
+    total_lessons = serializers.IntegerField()
+    final_score = serializers.IntegerField(allow_null=True)
+    passing_score = serializers.IntegerField()
+    certificate = CertificateSerializer(allow_null=True)
+
+
+class PublicCertificateVerificationSerializer(serializers.Serializer):
+    valid = serializers.BooleanField()
+    student_name = serializers.CharField(allow_blank=True)
+    course_title = serializers.CharField(allow_blank=True)
+    issue_date = serializers.DateTimeField(allow_null=True)
+    certificate_number = serializers.CharField(allow_blank=True)
+    certificate_status = serializers.CharField(allow_blank=True)
 
 
 class WeakTopicCourseContextSerializer(serializers.Serializer):

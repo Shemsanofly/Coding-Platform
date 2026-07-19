@@ -33,6 +33,8 @@ SECRET_KEY = config(
 DEBUG = config('DEBUG', default=True, cast=bool)
 
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=Csv())
+if DEBUG and "testserver" not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS = [*ALLOWED_HOSTS, "testserver"]
 
 # Isolate cookies from other Django apps on the same origin during local development.
 SESSION_COOKIE_NAME = config('SESSION_COOKIE_NAME', default='ai_elearn_sessionid')
@@ -137,7 +139,14 @@ AI_GENERATION_MODE = config('AI_GENERATION_MODE', default='manual')
 AI_GENERATION_SYNC_FALLBACK = config('AI_GENERATION_SYNC_FALLBACK', default=False, cast=bool)
 
 GEMINI_API_KEY = config('GEMINI_API_KEY', default='')
-GEMINI_MODEL = config('GEMINI_MODEL', default='gemini-2.5-flash')
+GOOGLE_API_KEY = config('GOOGLE_API_KEY', default='')
+GEMINI_MODEL = config('GEMINI_MODEL', default='gemini-3.5-flash')
+
+# Public frontend URL used in certificate PDF QR codes.
+CERTIFICATE_VERIFY_BASE_URL = config(
+    'CERTIFICATE_VERIFY_BASE_URL',
+    default='http://localhost:5173/verify-certificate',
+)
 
 
 # Password validation

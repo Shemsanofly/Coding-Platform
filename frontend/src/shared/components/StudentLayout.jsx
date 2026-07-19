@@ -13,6 +13,7 @@ const navItems = [
   { to: "/learning-path", label: "Study Plan" },
   { to: "/playground", label: "Playground" },
   { to: "/analytics", label: "Analytics" },
+  { to: "/certificates", label: "Certificates" },
   { to: "/profile", label: "Profile" },
 ];
 
@@ -22,6 +23,7 @@ const mobileNavItems = [
   { to: "/learning-path", label: "Plan", icon: "plan" },
   { to: "/playground", label: "Play", icon: "play" },
   { to: "/analytics", label: "Stats", icon: "stats" },
+  { to: "/certificates", label: "Certs", icon: "certs" },
   { to: "/profile", label: "Profile", icon: "profile" },
 ];
 
@@ -82,6 +84,13 @@ function MobileNavIcon({ name }) {
       return (
         <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
           <path d="M5 19V9m7 10V5m7 14v-7" strokeLinecap="round" />
+        </svg>
+      );
+    case "certs":
+      return (
+        <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+          <path d="M7 4h10a2 2 0 0 1 2 2v14l-4-2-3 2-3-2-4 2V6a2 2 0 0 1 2-2Z" strokeLinejoin="round" />
+          <path d="M8 9h8M8 13h5" strokeLinecap="round" />
         </svg>
       );
     case "profile":

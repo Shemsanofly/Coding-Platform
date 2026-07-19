@@ -252,7 +252,7 @@ def generate_learning_path_explanation(
         import google.generativeai as genai
 
         genai.configure(api_key=api_key)
-        model_name = config("GEMINI_MODEL", default="gemini-2.5-flash")
+        model_name = (config("GEMINI_MODEL", default="") or "").strip() or "gemini-3.5-flash"
         model = genai.GenerativeModel(model_name)
         response = model.generate_content(
             prompt,

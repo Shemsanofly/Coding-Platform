@@ -21,7 +21,9 @@ const Quiz = lazy(() => import("@/student/pages/Quiz"));
 const QuizResult = lazy(() => import("@/student/pages/QuizResult"));
 const StudentAnalytics = lazy(() => import("@/student/pages/Analytics"));
 const Profile = lazy(() => import("@/student/pages/Profile"));
+const MyCertificates = lazy(() => import("@/student/pages/MyCertificates"));
 const ProfileSettings = lazy(() => import("@/shared/pages/ProfileSettings"));
+const CertificateVerification = lazy(() => import("@/shared/pages/CertificateVerification"));
 const AdminReports = lazy(() => import("@/admin/pages/AdminReports"));
 const AdminDashboard = lazy(() => import("@/admin/pages/AdminDashboard"));
 const AdminAnalytics = lazy(() => import("@/admin/pages/AdminAnalytics"));
@@ -48,6 +50,9 @@ export default function App() {
           <Route path="/register" element={<Register />} />
         </Route>
 
+        <Route path="/verify-certificate" element={<CertificateVerification />} />
+        <Route path="/verify-certificate/:verificationCode" element={<CertificateVerification />} />
+
         {/* Protected app routes: authentication is required below this boundary. */}
         <Route element={<AuthGuard />}>
           {/* Student experience routes — admins are redirected to the admin dashboard. */}
@@ -60,6 +65,7 @@ export default function App() {
             <Route path="/recommendations" element={<Recommendations />} />
             <Route path="/learning-path" element={<LearningPath />} />
             <Route path="/analytics" element={<StudentAnalytics />} />
+            <Route path="/certificates" element={<MyCertificates />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/settings" element={<ProfileSettings />} />
             <Route path="/courses/:courseId" element={<CourseDetail />} />

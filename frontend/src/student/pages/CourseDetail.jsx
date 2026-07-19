@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { joinCourse, getStudentCourse } from "@/api/studentLearning";
+import { downloadCertificate, generateCertificate } from "@/api/certificates";
 import ProgressBar from "@/student/components/ProgressBar";
 import SectionHeader from "@/student/components/SectionHeader";
 import LoadingState from "@/student/components/LoadingState";
@@ -9,9 +10,12 @@ import Button from "@/shared/components/ui/Button";
 import Card from "@/shared/components/ui/Card";
 import PageHeader from "@/shared/components/ui/PageHeader";
 import { formatSourceTypeLabel } from "@/shared/constants/lessonSources";
+import { triggerBlobDownload } from "@/shared/utils/downloadBlob";
 
 function LessonTimelineItem({ lesson, index, lessons, onStudy, onQuiz }) {
   const isLast = index === lessons.length - 1;
+  const quizAvailable = Boolean(lesson.quiz_available ?? lesson.quiz_ready);
+  const quizFailed = lesson.quiz_generation_status === "failed";
   const status = lesson.quiz_passed ? "completed" : lesson.unlocked ? "active" : "locked";
 
   const statusStyles = {
@@ -54,6 +58,11 @@ function LessonTimelineItem({ lesson, index, lessons, onStudy, onQuiz }) {
                   Quiz cleared
                 </span>
               ) : null}
+              {lesson.unlocked && !lesson.quiz_passed && !quizAvailable ? (
+                <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800 dark:bg-red-500/25 dark:text-red-100">
+                  {quizFailed ? "Quiz failed to generate" : "Quiz not ready"}
+                </span>
+              ) : null}
             </div>
             {!lesson.unlocked ? (
               <p className="mt-2 text-xs text-muted dark:text-muted/80">
@@ -68,7 +77,12 @@ function LessonTimelineItem({ lesson, index, lessons, onStudy, onQuiz }) {
               <Button variant="ghost" size="sm" onClick={() => onStudy(lesson.id)}>
                 Study
               </Button>
-              <Button variant="gradient" size="sm" onClick={() => onQuiz(lesson.id)}>
+              <Button
+                variant="gradient"
+                size="sm"
+                disabled={!quizAvailable}
+                onClick={() => onQuiz(lesson.id)}
+              >
                 Quiz
               </Button>
             </div>
@@ -110,6 +124,27 @@ export default function CourseDetail() {
       const detail = e?.response?.data?.detail;
       toast.error(typeof detail === "string" ? detail : "Enrollment failed.", { id: "cd-enroll-err" });
     },
+  });
+
+  const generateMutation = useMutation({
+    mutationFn: () => generateCertificate(id),
+    onSuccess: () => {
+      toast.success("Certificate ready.", { id: "certificate-ready" });
+      queryClient.invalidateQueries({ queryKey: ["my-certificates"] });
+      void refetch();
+    },
+    onError: (e) => {
+      const detail = e?.response?.data?.detail;
+      toast.error(typeof detail === "string" ? detail : "Certificate generation failed.", {
+        id: "certificate-error",
+      });
+    },
+  });
+
+  const downloadMutation = useMutation({
+    mutationFn: (certificateId) => downloadCertificate(certificateId),
+    onSuccess: (response) => triggerBlobDownload(response, "certificate.pdf"),
+    onError: () => toast.error("Could not download certificate.", { id: "certificate-download-error" }),
   });
 
   const status = error?.response?.status;
@@ -174,8 +209,18 @@ export default function CourseDetail() {
   }
 
   const lessons = Array.isArray(course.lessons) ? course.lessons : [];
-  const completedCount = lessons.filter((l) => l.quiz_passed).length;
-  const courseProgress = lessons.length ? Math.round((completedCount / lessons.length) * 100) : 0;
+  const completedCount =
+    Number(course.completed_lessons) || lessons.filter((l) => l.lesson_officially_completed || l.quiz_passed).length;
+  const courseProgress =
+    typeof course.progress_percent === "number"
+      ? Math.round(course.progress_percent)
+      : lessons.length
+        ? Math.round((completedCount / lessons.length) * 100)
+        : 0;
+  const certificate = generateMutation.data ?? course.certificate ?? null;
+  const certificateEligible = Boolean(course.certificate_eligible || certificate);
+  const certificateReasons = Array.isArray(course.certificate_reasons) ? course.certificate_reasons : [];
+  const issueDate = certificate?.issue_date ? new Date(certificate.issue_date).toLocaleDateString() : "";
 
   return (
     <div className="space-y-6 overflow-x-hidden p-4 md:p-6">
@@ -191,9 +236,61 @@ export default function CourseDetail() {
         <div className="mt-4">
           <ProgressBar
             value={courseProgress}
-            label={`${completedCount} of ${lessons.length} lessons quiz-cleared`}
+            label={`${completedCount} of ${lessons.length} lessons completed`}
           />
         </div>
+      </Card>
+
+      <Card variant="elevated" padding="md">
+        <SectionHeader title="Certificate" subtitle={`Course progress: ${courseProgress}%`} />
+        {certificate ? (
+          <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div className="min-w-0 space-y-1 text-sm text-muted dark:text-reef/90">
+              <p className="font-semibold text-ink dark:text-sand">Certificate of Completion</p>
+              <p>Certificate number: {certificate.certificate_number}</p>
+              <p>Issue date: {issueDate}</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="gradient"
+                loading={downloadMutation.isPending}
+                onClick={() => downloadMutation.mutate(certificate.id)}
+              >
+                Download Certificate
+              </Button>
+              <Link
+                to={`/verify-certificate/${certificate.verification_code}`}
+                className="inline-flex min-h-10 items-center rounded-xl border border-ocean-600/20 px-4 text-sm font-semibold text-ocean-800 transition hover:bg-reef/40 dark:border-line/40 dark:text-reef dark:hover:bg-ocean-900/50"
+              >
+                View Certificate
+              </Link>
+            </div>
+          </div>
+        ) : certificateEligible ? (
+          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-muted dark:text-reef/90">
+              Your course requirements are complete.
+            </p>
+            <Button
+              variant="gradient"
+              loading={generateMutation.isPending}
+              onClick={() => generateMutation.mutate()}
+            >
+              Generate Certificate
+            </Button>
+          </div>
+        ) : (
+          <div className="mt-4 space-y-2 text-sm text-muted dark:text-reef/90">
+            <p>Complete all required lessons and pass the final assessment to receive your certificate.</p>
+            {certificateReasons.length > 0 ? (
+              <ul className="list-inside list-disc">
+                {certificateReasons.map((reason) => (
+                  <li key={reason}>{reason}</li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+        )}
       </Card>
 
       <Card variant="elevated" padding="md">

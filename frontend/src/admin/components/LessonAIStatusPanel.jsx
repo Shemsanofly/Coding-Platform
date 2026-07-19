@@ -41,16 +41,20 @@ export default function LessonAIStatusPanel({ courseId, lesson, onEdit }) {
 
   const merged = {
     source_type: lesson?.source_type,
-    ai_processing_status: lesson?.ai_processing_status ?? status?.ai_processing_status,
-    quiz_generation_status: lesson?.quiz_generation_status ?? status?.quiz_generation_status,
-    transcript_status: lesson?.transcript_status ?? (status?.has_transcript ? "ready" : "pending"),
+    ai_processing_status: status?.ai_processing_status ?? lesson?.ai_processing_status,
+    quiz_generation_status: status?.quiz_generation_status ?? lesson?.quiz_generation_status,
+    transcript_status: status
+      ? status.has_transcript
+        ? "ready"
+        : "pending"
+      : lesson?.transcript_status,
     generated_question_count:
-      lesson?.generated_question_count ?? status?.question_count ?? 0,
+      status?.question_count ?? lesson?.generated_question_count ?? 0,
     published_question_count:
-      lesson?.published_question_count ?? status?.published_question_count ?? 0,
-    approval_status: lesson?.approval_status,
-    generation_error: lesson?.generation_error || status?.generation_error,
-    transcript_error: lesson?.transcript_error || status?.last_error,
+      status?.published_question_count ?? lesson?.published_question_count ?? 0,
+    approval_status: status?.approval_status ?? lesson?.approval_status,
+    generation_error: status?.generation_error || lesson?.generation_error,
+    transcript_error: status?.last_error || lesson?.transcript_error,
   };
 
   const isManualMode = (status?.ai_generation_mode ?? "manual") === "manual";
@@ -133,6 +137,10 @@ export default function LessonAIStatusPanel({ courseId, lesson, onEdit }) {
   const approvalLabel =
     merged.approval_status ||
     (merged.published_question_count > 0 ? "published" : canApprove ? "pending_approval" : "none");
+  const showTranscriptError =
+    merged.transcript_error &&
+    merged.transcript_error !== merged.generation_error &&
+    !String(merged.transcript_error).toLowerCase().includes("api key");
 
   return (
     <>
@@ -169,7 +177,7 @@ export default function LessonAIStatusPanel({ courseId, lesson, onEdit }) {
         {merged.generation_error && !isQueueFailure ? (
           <p className="text-xs text-red-600">Quiz: {merged.generation_error}</p>
         ) : null}
-        {merged.transcript_error ? (
+        {showTranscriptError ? (
           <p className="text-xs text-red-600">Transcript: {merged.transcript_error}</p>
         ) : null}
         {lesson?.has_pdf_notes ? (

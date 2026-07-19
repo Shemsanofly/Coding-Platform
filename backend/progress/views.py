@@ -1,7 +1,8 @@
 from django.contrib.auth import get_user_model
+from django.http import FileResponse
 from django.db.models import Avg, Count, Max, Q
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 
 from accounts.permissions import STUDENT_ACCESS
 from core.pagination import paginate_queryset
@@ -11,7 +12,13 @@ from rest_framework.views import APIView
 from ai_engine.models import WeakTopic
 from courses.models import Course, Lesson
 from progress.models import Enrollment, LessonProgress
+from progress.models import Certificate
 from progress.services import quiz_passed_for_lesson
+from progress.services.certificates import (
+    certificate_file_path,
+    check_certificate_eligibility,
+    generate_or_get_certificate,
+)
 from playground.serializers import PlaygroundLeaderboardSerializer
 from playground.services.leaderboard import build_playground_leaderboard
 from progress.serializers import (
@@ -19,8 +26,11 @@ from progress.serializers import (
     AdminStudentUpdateSerializer,
     AdminUserListSerializer,
     AdminUserProfileSerializer,
+    CertificateEligibilitySerializer,
+    CertificateSerializer,
     EnrollmentSerializer,
     LessonWeaknessSummarySerializer,
+    PublicCertificateVerificationSerializer,
     RecommendationSerializer,
     StudentAnalyticsSummarySerializer,
     WeaknessListResponseSerializer,
@@ -246,6 +256,130 @@ class StudentPracticeLeaderboardView(APIView):
     def get(self, request):
         payload = build_playground_leaderboard(current_user_id=request.user.id)
         return Response(PlaygroundLeaderboardSerializer(payload).data)
+
+
+def _certificate_eligibility_payload(result, request):
+    return {
+        "eligible": result.eligible,
+        "reasons": result.reasons,
+        "progress_percent": result.progress_percent,
+        "completed_lessons": result.completed_lessons,
+        "total_lessons": result.total_lessons,
+        "final_score": result.final_score,
+        "passing_score": result.passing_score,
+        "certificate": CertificateSerializer(result.certificate, context={"request": request}).data
+        if result.certificate
+        else None,
+    }
+
+
+class StudentCourseCertificateEligibilityView(APIView):
+    permission_classes = STUDENT_ACCESS
+
+    def get(self, request, course_id):
+        course = Course.objects.filter(pk=course_id).first()
+        if course is None:
+            return Response({"detail": "Course not found."}, status=status.HTTP_404_NOT_FOUND)
+        if not Enrollment.objects.filter(user=request.user, course=course).exists():
+            return Response(
+                {"detail": "You are not enrolled in this course."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        result = check_certificate_eligibility(request.user, course)
+        data = _certificate_eligibility_payload(result, request)
+        return Response(CertificateEligibilitySerializer(data).data)
+
+
+class StudentCourseCertificateView(APIView):
+    permission_classes = STUDENT_ACCESS
+
+    def post(self, request, course_id):
+        course = Course.objects.filter(pk=course_id).first()
+        if course is None:
+            return Response({"detail": "Course not found."}, status=status.HTTP_404_NOT_FOUND)
+        try:
+            certificate, created, _ = generate_or_get_certificate(request.user, course_id)
+        except PermissionError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_403_FORBIDDEN)
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            CertificateSerializer(certificate, context={"request": request}).data,
+            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
+        )
+
+
+class MyCertificatesView(APIView):
+    permission_classes = STUDENT_ACCESS
+
+    def get(self, request):
+        certificates = (
+            Certificate.objects.filter(student=request.user)
+            .select_related("course", "enrollment")
+            .order_by("-issue_date")
+        )
+        return Response(CertificateSerializer(certificates, many=True, context={"request": request}).data)
+
+
+class CertificateDownloadView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, certificate_id):
+        certificate = Certificate.objects.select_related("student").filter(pk=certificate_id).first()
+        if certificate is None:
+            return Response({"detail": "Certificate not found."}, status=status.HTTP_404_NOT_FOUND)
+        is_owner = request.user.pk == certificate.student_id
+        is_admin = getattr(request.user, "role", None) == User.Role.ADMIN
+        if not is_owner and not is_admin:
+            return Response({"detail": "Forbidden."}, status=status.HTTP_403_FORBIDDEN)
+
+        path = certificate_file_path(certificate)
+        if path is None or not path.exists():
+            return Response({"detail": "Certificate PDF not found."}, status=status.HTTP_404_NOT_FOUND)
+        response = FileResponse(open(path, "rb"), content_type="application/pdf")
+        response["Content-Disposition"] = f'attachment; filename="{certificate.certificate_number}.pdf"'
+        return response
+
+
+class PublicCertificateVerifyView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def get(self, request, verification_code):
+        certificate = Certificate.objects.filter(verification_code=verification_code).first()
+        if certificate is None:
+            data = {
+                "valid": False,
+                "student_name": "",
+                "course_title": "",
+                "issue_date": None,
+                "certificate_number": "",
+                "certificate_status": "",
+            }
+        else:
+            data = {
+                "valid": certificate.status == Certificate.Status.ACTIVE,
+                "student_name": certificate.student_name,
+                "course_title": certificate.course_title,
+                "issue_date": certificate.issue_date,
+                "certificate_number": certificate.certificate_number,
+                "certificate_status": certificate.status,
+            }
+        return Response(PublicCertificateVerificationSerializer(data).data)
+
+
+class AdminCertificateRevokeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, certificate_id):
+        if getattr(request.user, "role", None) != User.Role.ADMIN:
+            return Response({"detail": "Forbidden."}, status=status.HTTP_403_FORBIDDEN)
+        certificate = Certificate.objects.filter(pk=certificate_id).first()
+        if certificate is None:
+            return Response({"detail": "Certificate not found."}, status=status.HTTP_404_NOT_FOUND)
+        certificate.status = Certificate.Status.REVOKED
+        certificate.save(update_fields=["status"])
+        return Response(CertificateSerializer(certificate, context={"request": request}).data)
 
 
 class AdminUsersView(_AdminRoleRequiredMixin, APIView):

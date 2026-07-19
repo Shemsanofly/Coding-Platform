@@ -222,7 +222,7 @@ def generate_playground_challenge(
         import google.generativeai as genai
 
         genai.configure(api_key=api_key)
-        model_name = getattr(settings, "GEMINI_MODEL", "gemini-2.5-flash")
+        model_name = (getattr(settings, "GEMINI_MODEL", "") or "").strip() or "gemini-3.5-flash"
         model = genai.GenerativeModel(model_name, system_instruction=PLAYGROUND_SYSTEM_PROMPT)
         recent = ", ".join(recent_titles[:5]) if recent_titles else "none"
         prompt = (

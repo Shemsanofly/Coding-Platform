@@ -1,11 +1,12 @@
 from django.contrib import admin
 
-from progress.models import Enrollment, LessonProgress
+from progress.models import Certificate, Enrollment, LessonProgress
 
 
 @admin.register(Enrollment)
 class EnrollmentAdmin(admin.ModelAdmin):
-    list_display = ("id", "user", "course", "enrolled_at")
+    list_display = ("id", "user", "course", "status", "enrolled_at", "completed_at")
+    list_filter = ("status",)
     list_select_related = ("user", "course")
 
 
@@ -13,3 +14,11 @@ class EnrollmentAdmin(admin.ModelAdmin):
 class LessonProgressAdmin(admin.ModelAdmin):
     list_display = ("id", "user", "lesson", "first_opened_at", "last_opened_at", "completed_at")
     list_select_related = ("user", "lesson")
+
+
+@admin.register(Certificate)
+class CertificateAdmin(admin.ModelAdmin):
+    list_display = ("id", "certificate_number", "student_name", "course_title", "status", "issue_date")
+    list_filter = ("status", "issue_date")
+    search_fields = ("certificate_number", "verification_code", "student_name", "course_title")
+    list_select_related = ("student", "course", "enrollment")
