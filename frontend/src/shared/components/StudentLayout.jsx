@@ -34,10 +34,10 @@ const sidebarLinkClass =
       isActive
         ? isLight
           ? "border border-ocean-600/20 bg-white text-ocean-700 shadow-sm"
-          : "border border-ocean-600/30 bg-ocean-900/80 text-reef shadow-sm"
+          : "border border-reef/20 bg-[#213548] text-sand shadow-sm"
         : isLight
           ? "border border-transparent text-ocean-950 hover:border-ocean-600/20 hover:bg-white hover:text-ocean-700"
-          : "border border-transparent text-reef/90 hover:border-ocean-600/30 hover:bg-ocean-900/60 hover:text-reef"
+          : "border border-transparent text-reef/85 hover:border-reef/20 hover:bg-[#1c2d3d] hover:text-sand"
     }`;
 
 const mobileLinkClass =
@@ -47,10 +47,10 @@ const mobileLinkClass =
       isActive
         ? isLight
           ? "bg-white text-ocean-700 shadow-sm"
-          : "bg-ocean-900/80 text-reef shadow-sm"
+          : "bg-[#213548] text-sand shadow-sm"
         : isLight
           ? "text-ocean-800 hover:bg-white/70"
-          : "text-reef/90 hover:bg-ocean-900/60"
+          : "text-reef/85 hover:bg-[#1c2d3d] hover:text-sand"
     }`;
 
 function MobileNavIcon({ name }) {
@@ -124,17 +124,17 @@ export default function StudentLayout() {
 
   return (
     <div
-      className={`student-theme-root min-h-screen ${isLight ? "student-theme-light bg-lc-page text-ink" : "bg-lc-page-dark text-white"}`}
+      className={`student-theme-root min-h-screen ${isLight ? "student-theme-light bg-lc-page text-ink" : "bg-lc-page-dark text-sand"}`}
     >
       <div className="dashboard-layout min-h-screen md:grid md:grid-cols-[240px_1fr]">
         <aside
           className={`hidden border-r border-ocean-600/10 bg-lc-sidebar backdrop-blur-md md:sticky md:top-0 md:flex md:h-screen md:flex-col md:gap-5 md:p-4 ${
-            isLight ? "" : "border-line/80 bg-[linear-gradient(180deg,rgba(17,27,38,0.95)_0%,rgba(12,22,34,0.95)_100%)]"
+            isLight ? "" : "border-white/10 bg-[linear-gradient(180deg,rgba(25,40,54,0.96)_0%,rgba(19,33,46,0.96)_100%)]"
           }`}
         >
           <NavLink to="/" className="inline-flex items-center gap-2.5 px-2 text-lg font-bold text-ocean-800">
             <BrandMark />
-            <span className={isLight ? "text-ocean-800" : "text-white"}>LearnCode</span>
+            <span className={isLight ? "text-ocean-800" : "text-sand"}>LearnCode</span>
           </NavLink>
 
           <nav className="grid gap-2">
@@ -170,9 +170,16 @@ export default function StudentLayout() {
         </aside>
 
         <div className="min-w-0">
-          <header className="sticky top-0 z-40 border-b border-ocean-600/10 bg-white/90 backdrop-blur-xl md:hidden">
+          <header
+            className={`sticky top-0 z-40 border-b backdrop-blur-xl md:hidden ${
+              isLight ? "border-ocean-600/10 bg-white/90" : "border-white/10 bg-[#172433]/92"
+            }`}
+          >
             <div className="flex items-center justify-between gap-2 px-4 py-3">
-              <NavLink to="/" className="inline-flex items-center gap-2 font-bold text-ocean-800">
+              <NavLink
+                to="/"
+                className={`inline-flex items-center gap-2 font-bold ${isLight ? "text-ocean-800" : "text-sand"}`}
+              >
                 <BrandMark />
                 LearnCode
               </NavLink>
@@ -201,7 +208,7 @@ export default function StudentLayout() {
       {!hideBottomNav ? (
         <nav
           className={`fixed bottom-0 left-0 right-0 z-50 border-t py-1 backdrop-blur-xl md:hidden ${
-            isLight ? "border-ocean-600/10 bg-white/95" : "border-line/30 bg-ocean-950/95"
+            isLight ? "border-ocean-600/10 bg-white/95" : "border-white/10 bg-[#172433]/95"
           }`}
           aria-label="Mobile navigation"
         >

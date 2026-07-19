@@ -9,6 +9,7 @@ import LoadingState from "@/student/components/LoadingState";
 import Button from "@/shared/components/ui/Button";
 import Card from "@/shared/components/ui/Card";
 import PageHeader from "@/shared/components/ui/PageHeader";
+import BrandMark from "@/shared/components/BrandMark";
 import { formatSourceTypeLabel } from "@/shared/constants/lessonSources";
 import { triggerBlobDownload } from "@/shared/utils/downloadBlob";
 
@@ -241,14 +242,47 @@ export default function CourseDetail() {
         </div>
       </Card>
 
-      <Card variant="elevated" padding="md">
-        <SectionHeader title="Certificate" subtitle={`Course progress: ${courseProgress}%`} />
+      <Card variant="elevated" padding="md" className="overflow-hidden">
+        <div className="-mx-5 -mt-5 mb-5 h-1.5 bg-gradient-to-r from-coral via-spice to-ocean-600" />
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-ocean-600/10 bg-reef/70 dark:border-white/10 dark:bg-[#213548]">
+              <BrandMark />
+            </div>
+            <SectionHeader
+              title="LearnCode Certificate"
+              subtitle={`Official completion record - ${courseProgress}% course progress`}
+            />
+          </div>
+          <span
+            className={`inline-flex w-fit rounded-full border px-3 py-1 text-xs font-bold uppercase ${
+              certificate
+                ? "border-emerald-300/60 bg-emerald-50 text-emerald-800 dark:border-emerald-300/30 dark:bg-emerald-400/10 dark:text-emerald-100"
+                : certificateEligible
+                  ? "border-spice/50 bg-spice/10 text-ocean-950 dark:border-spice/40 dark:bg-spice/10 dark:text-sand"
+                  : "border-line bg-cream text-muted dark:border-white/10 dark:bg-[#1b2b3b] dark:text-reef/80"
+            }`}
+          >
+            {certificate ? "Issued" : certificateEligible ? "Ready" : "In progress"}
+          </span>
+        </div>
         {certificate ? (
-          <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-            <div className="min-w-0 space-y-1 text-sm text-muted dark:text-reef/90">
-              <p className="font-semibold text-ink dark:text-sand">Certificate of Completion</p>
-              <p>Certificate number: {certificate.certificate_number}</p>
-              <p>Issue date: {issueDate}</p>
+          <div className="mt-5 flex flex-col gap-5 rounded-xl border border-ocean-600/10 bg-cream/80 p-4 dark:border-white/10 dark:bg-[#1b2b3b]/70 sm:flex-row sm:items-end sm:justify-between">
+            <div className="min-w-0">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-ocean-800 dark:text-reef">
+                Certificate of Completion
+              </p>
+              <h3 className="mt-1 truncate text-lg font-bold text-ink dark:text-sand">{course.title}</h3>
+              <dl className="mt-3 grid gap-2 text-xs text-muted dark:text-reef/80 sm:grid-cols-2">
+                <div>
+                  <dt className="font-semibold uppercase tracking-wide">Certificate no.</dt>
+                  <dd className="mt-0.5 font-medium text-ink dark:text-sand">{certificate.certificate_number}</dd>
+                </div>
+                <div>
+                  <dt className="font-semibold uppercase tracking-wide">Issued</dt>
+                  <dd className="mt-0.5 font-medium text-ink dark:text-sand">{issueDate || "Available"}</dd>
+                </div>
+              </dl>
             </div>
             <div className="flex flex-wrap gap-2">
               <Button
@@ -260,16 +294,16 @@ export default function CourseDetail() {
               </Button>
               <Link
                 to={`/verify-certificate/${certificate.verification_code}`}
-                className="inline-flex min-h-10 items-center rounded-xl border border-ocean-600/20 px-4 text-sm font-semibold text-ocean-800 transition hover:bg-reef/40 dark:border-line/40 dark:text-reef dark:hover:bg-ocean-900/50"
+                className="inline-flex min-h-10 items-center rounded-xl border border-ocean-600/20 px-4 text-sm font-semibold text-ocean-800 transition hover:bg-reef/40 dark:border-white/10 dark:bg-[#172433]/80 dark:text-reef dark:hover:bg-[#213548]"
               >
-                View Certificate
+                Verify Certificate
               </Link>
             </div>
           </div>
         ) : certificateEligible ? (
-          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="mt-5 flex flex-col gap-3 rounded-xl border border-spice/30 bg-spice/10 p-4 sm:flex-row sm:items-center sm:justify-between dark:border-spice/30 dark:bg-spice/10">
             <p className="text-sm text-muted dark:text-reef/90">
-              Your course requirements are complete.
+              Your course requirements are complete. Generate your official LearnCode certificate.
             </p>
             <Button
               variant="gradient"
@@ -280,7 +314,7 @@ export default function CourseDetail() {
             </Button>
           </div>
         ) : (
-          <div className="mt-4 space-y-2 text-sm text-muted dark:text-reef/90">
+          <div className="mt-5 space-y-2 rounded-xl border border-ocean-600/10 bg-cream/80 p-4 text-sm text-muted dark:border-white/10 dark:bg-[#1b2b3b]/70 dark:text-reef/90">
             <p>Complete all required lessons and pass the final assessment to receive your certificate.</p>
             {certificateReasons.length > 0 ? (
               <ul className="list-inside list-disc">

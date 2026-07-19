@@ -6,7 +6,7 @@
 
 @layer base {
   :root {
-    --zanzibar-ocean-950: #08263a;
+    --zanzibar-ocean-950: #102c3d;
     --zanzibar-ocean-800: #0f4c75;
     --zanzibar-ocean-700: #13658f;
     --zanzibar-ocean-600: #15608d;
@@ -43,7 +43,7 @@
   }
 
   .student-theme-root:not(.student-theme-light) .lc-panel {
-    @apply border-line/80 bg-ocean-950/40 text-white shadow-none backdrop-blur-sm;
+    @apply border-white/10 bg-[#172433]/80 text-sand shadow-[0_18px_42px_rgba(5,18,30,0.24)] backdrop-blur-xl;
   }
 
   .lc-btn-primary {
@@ -55,7 +55,7 @@
   }
 
   .student-theme-root:not(.student-theme-light) .lc-btn-ghost {
-    @apply border-line/80 bg-ocean-950/70 text-reef hover:bg-ocean-900/80;
+    @apply border-white/10 bg-[#1b2b3b]/75 text-reef hover:bg-[#213548];
   }
 
   .lc-input {
@@ -63,7 +63,7 @@
   }
 
   .student-theme-root:not(.student-theme-light) .lc-input {
-    @apply border-line/80 bg-ocean-950/70 text-white focus:bg-ocean-900/80;
+    @apply border-white/10 bg-[#162331]/85 text-sand placeholder:text-reef/50 focus:bg-[#1c2d3d];
   }
 
   .lc-auth-shell {

@@ -13,8 +13,8 @@ export default {
           600: "#15608d",
           700: "#13658f",
           800: "#0f4c75",
-          900: "#0a3550",
-          950: "#08263a",
+          900: "#14384c",
+          950: "#102c3d",
         },
         coral: "#ff6f61",
         spice: "#d9a441",
@@ -37,7 +37,7 @@ export default {
         "lc-page":
           "radial-gradient(circle at 10% 12%, rgba(21, 96, 141, 0.14), transparent 40%), radial-gradient(circle at 85% 12%, rgba(255, 111, 97, 0.13), transparent 45%), linear-gradient(135deg, #fdf8ef, #ffffff 55%, #f3e6db)",
         "lc-page-dark":
-          "radial-gradient(circle at 10% 12%, rgba(33, 120, 178, 0.16), transparent 40%), radial-gradient(circle at 85% 12%, rgba(255, 143, 127, 0.14), transparent 45%), linear-gradient(135deg, #08111b, #0d1721 55%, #101d2a)",
+          "radial-gradient(circle at 12% 10%, rgba(21, 96, 141, 0.18), transparent 34%), radial-gradient(circle at 88% 0%, rgba(217, 164, 65, 0.10), transparent 32%), linear-gradient(135deg, #101923, #142230 52%, #172a36)",
         "lc-auth":
           "radial-gradient(circle at top left, rgba(21, 96, 141, 0.22), transparent 42%), radial-gradient(circle at 80% 20%, rgba(255, 111, 97, 0.18), transparent 48%), linear-gradient(120deg, #fdf8ef, #ffffff 55%, #f4ddd6)",
         "lc-primary": "linear-gradient(120deg, #ff6f61, #15608d)",

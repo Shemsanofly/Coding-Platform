@@ -7,15 +7,28 @@ import Button from "@/shared/components/ui/Button";
 import Card from "@/shared/components/ui/Card";
 import Input from "@/shared/components/ui/Input";
 
+const THEME_STORAGE_KEY = "learncode.theme";
+
 export default function CertificateVerification() {
   const { verificationCode = "" } = useParams();
   const [code, setCode] = useState(verificationCode);
   const [submittedCode, setSubmittedCode] = useState(verificationCode);
+  const [theme, setTheme] = useState(() => {
+    const saved = window.localStorage.getItem(THEME_STORAGE_KEY);
+    if (saved === "dark" || saved === "light") {
+      return saved;
+    }
+    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  });
 
   useEffect(() => {
     setCode(verificationCode);
     setSubmittedCode(verificationCode);
   }, [verificationCode]);
+
+  useEffect(() => {
+    window.localStorage.setItem(THEME_STORAGE_KEY, theme);
+  }, [theme]);
 
   const verificationQuery = useQuery({
     queryKey: ["certificate-verification", submittedCode],
@@ -32,77 +45,151 @@ export default function CertificateVerification() {
     setSubmittedCode(code.trim());
   };
 
+  const isLight = theme === "light";
+
   return (
-    <div className="min-h-screen bg-lc-page px-4 py-8 text-ink dark:bg-lc-page-dark dark:text-sand">
-      <div className="mx-auto max-w-3xl space-y-6">
-        <Link to="/" className="inline-flex items-center gap-2.5 text-lg font-bold text-ocean-800 dark:text-reef">
-          <BrandMark />
-          <span>LearnCode</span>
-        </Link>
+    <div
+      className={`student-theme-root min-h-screen px-4 py-6 ${
+        isLight ? "student-theme-light bg-lc-page text-ink" : "bg-lc-page-dark text-sand"
+      }`}
+    >
+      <div className="mx-auto flex min-h-[calc(100vh-3rem)] max-w-5xl flex-col">
+        <header className="flex items-center justify-between gap-3">
+          <Link
+            to="/"
+            className={`inline-flex items-center gap-2.5 text-lg font-bold ${
+              isLight ? "text-ocean-800" : "text-sand"
+            }`}
+          >
+            <BrandMark />
+            <span>LearnCode</span>
+          </Link>
+          <button
+            type="button"
+            onClick={() => setTheme((current) => (current === "dark" ? "light" : "dark"))}
+            className="lc-btn-ghost min-h-10 px-3"
+          >
+            {isLight ? "Dark mode" : "Light mode"}
+          </button>
+        </header>
 
-        <Card variant="elevated" padding="lg">
-          <p className="text-xs font-semibold uppercase tracking-widest text-ocean-800 dark:text-reef">
-            Certificate Verification
-          </p>
-          <h1 className="mt-2 text-2xl font-bold text-ink dark:text-sand">Verify a certificate</h1>
-
-          <form className="mt-5 flex flex-col gap-3 sm:flex-row" onSubmit={handleSubmit}>
-            <div className="flex-1">
-              <Input
-                value={code}
-                onChange={(event) => setCode(event.target.value)}
-                placeholder="Verification code"
-                className="w-full"
-              />
+        <main className="grid flex-1 items-center gap-6 py-8 lg:grid-cols-[1.05fr_0.95fr]">
+          <section className="space-y-5">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-ocean-800 dark:text-reef">
+                LearnCode Certificate Registry
+              </p>
+              <h1 className="mt-3 max-w-2xl text-3xl font-bold text-ink dark:text-sand sm:text-4xl">
+                Verify official course completion.
+              </h1>
+              <p className="mt-3 max-w-xl text-sm leading-6 text-muted dark:text-reef/80">
+                Enter the certificate verification code or scan the QR code printed on a LearnCode certificate.
+              </p>
             </div>
-            <Button type="submit" variant="gradient" loading={verificationQuery.isFetching}>
-              Verify
-            </Button>
-          </form>
-        </Card>
 
-        {submittedCode ? (
-          <Card variant="elevated" padding="lg">
+            <Card variant="elevated" padding="lg">
+              <form className="flex flex-col gap-3 sm:flex-row" onSubmit={handleSubmit}>
+                <div className="flex-1">
+                  <label
+                    htmlFor="certificate-code"
+                    className="mb-2 block text-xs font-semibold uppercase tracking-wide text-ocean-800 dark:text-reef"
+                  >
+                    Verification code
+                  </label>
+                  <Input
+                    id="certificate-code"
+                    value={code}
+                    onChange={(event) => setCode(event.target.value)}
+                    placeholder="Paste verification code"
+                    className="w-full"
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  variant="gradient"
+                  loading={verificationQuery.isFetching}
+                  className="self-end"
+                >
+                  Verify
+                </Button>
+              </form>
+            </Card>
+          </section>
+
+          <Card variant="elevated" padding="lg" className="overflow-hidden">
+            <div className="-mx-6 -mt-6 mb-6 h-1.5 bg-gradient-to-r from-coral via-spice to-ocean-600" />
             {verificationQuery.isLoading ? (
               <p className="text-sm text-muted dark:text-reef/90">Checking certificate...</p>
             ) : verificationQuery.isError ? (
-              <p className="text-sm text-red-600 dark:text-red-200">Could not verify this certificate.</p>
-            ) : result?.valid ? (
               <div className="space-y-3">
-                <p className="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold uppercase text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-100">
+                <p className="inline-flex rounded-full border border-red-300/60 bg-red-50 px-3 py-1 text-xs font-bold uppercase text-red-800 dark:border-red-300/30 dark:bg-red-500/10 dark:text-red-100">
+                  Verification unavailable
+                </p>
+                <p className="text-sm text-muted dark:text-reef/90">Could not verify this certificate.</p>
+              </div>
+            ) : result?.valid ? (
+              <div className="space-y-5">
+                <p className="inline-flex rounded-full border border-emerald-300/60 bg-emerald-50 px-3 py-1 text-xs font-bold uppercase text-emerald-800 dark:border-emerald-300/30 dark:bg-emerald-400/10 dark:text-emerald-100">
                   Valid Certificate
                 </p>
                 <div>
-                  <h2 className="text-xl font-bold text-ink dark:text-sand">{result.student_name}</h2>
-                  <p className="mt-1 text-sm text-muted dark:text-reef/90">{result.course_title}</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted dark:text-reef/70">
+                    Issued to
+                  </p>
+                  <h2 className="mt-1 text-2xl font-bold text-ink dark:text-sand">{result.student_name}</h2>
+                  <p className="mt-3 text-sm leading-6 text-muted dark:text-reef/85">
+                    This certificate confirms successful completion of
+                    <span className="font-semibold text-ink dark:text-sand"> {result.course_title}</span>.
+                  </p>
                 </div>
                 <dl className="grid gap-3 text-sm sm:grid-cols-2">
-                  <div>
-                    <dt className="text-xs uppercase text-muted dark:text-reef/80">Certificate number</dt>
+                  <div className="rounded-xl border border-ocean-600/10 bg-cream/80 p-3 dark:border-white/10 dark:bg-[#1b2b3b]/70">
+                    <dt className="text-xs font-semibold uppercase tracking-wide text-muted dark:text-reef/75">
+                      Certificate number
+                    </dt>
                     <dd className="mt-1 font-semibold text-ink dark:text-sand">{result.certificate_number}</dd>
                   </div>
-                  <div>
-                    <dt className="text-xs uppercase text-muted dark:text-reef/80">Issue date</dt>
+                  <div className="rounded-xl border border-ocean-600/10 bg-cream/80 p-3 dark:border-white/10 dark:bg-[#1b2b3b]/70">
+                    <dt className="text-xs font-semibold uppercase tracking-wide text-muted dark:text-reef/75">
+                      Issue date
+                    </dt>
                     <dd className="mt-1 font-semibold text-ink dark:text-sand">{issueDate}</dd>
                   </div>
-                  <div>
-                    <dt className="text-xs uppercase text-muted dark:text-reef/80">Status</dt>
+                  <div className="rounded-xl border border-ocean-600/10 bg-cream/80 p-3 dark:border-white/10 dark:bg-[#1b2b3b]/70">
+                    <dt className="text-xs font-semibold uppercase tracking-wide text-muted dark:text-reef/75">
+                      Status
+                    </dt>
                     <dd className="mt-1 font-semibold text-ink dark:text-sand">{result.certificate_status}</dd>
                   </div>
                 </dl>
               </div>
-            ) : (
-              <div className="space-y-2">
-                <p className="inline-flex rounded-full bg-red-100 px-3 py-1 text-xs font-semibold uppercase text-red-800 dark:bg-red-500/20 dark:text-red-100">
+            ) : submittedCode ? (
+              <div className="space-y-4">
+                <p className="inline-flex rounded-full border border-red-300/60 bg-red-50 px-3 py-1 text-xs font-bold uppercase text-red-800 dark:border-red-300/30 dark:bg-red-500/10 dark:text-red-100">
                   Invalid Certificate
                 </p>
-                <p className="text-sm text-muted dark:text-reef/90">
-                  This verification code is not active or does not match an issued certificate.
+                <div>
+                  <h2 className="text-xl font-bold text-ink dark:text-sand">No active record found</h2>
+                  <p className="mt-2 text-sm leading-6 text-muted dark:text-reef/85">
+                    This verification code is not active or does not match an issued LearnCode certificate.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <p className="inline-flex rounded-full border border-ocean-600/20 bg-reef/60 px-3 py-1 text-xs font-bold uppercase text-ocean-800 dark:border-white/10 dark:bg-[#1b2b3b] dark:text-reef">
+                  Ready to verify
                 </p>
+                <div>
+                  <h2 className="text-xl font-bold text-ink dark:text-sand">Official verification</h2>
+                  <p className="mt-2 text-sm leading-6 text-muted dark:text-reef/85">
+                    Scan a certificate QR code or enter a verification code to confirm authenticity.
+                  </p>
+                </div>
               </div>
             )}
           </Card>
-        ) : null}
+        </main>
       </div>
     </div>
   );
