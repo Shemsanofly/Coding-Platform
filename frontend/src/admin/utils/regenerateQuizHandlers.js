@@ -20,7 +20,7 @@ export function friendlyGenerationError(data) {
     return "Gemini rate limit reached. Please wait and try again.";
   }
   if (lower.includes("api key") || (lower.includes("invalid") && lower.includes("key"))) {
-    return "Gemini API key is invalid. Check backend/.env and restart Django.";
+    return "Gemini API key is invalid. Check backend/.env and restart the backend.";
   }
   if (lower.includes("transcript") || lower.includes("caption")) {
     return "Transcript unavailable for this video. Try another video with captions.";

@@ -15,6 +15,11 @@ export const getMyCertificates = async () => {
   return data;
 };
 
+export const getCertificate = async (certificateId) => {
+  const { data } = await client.get(`/api/certificates/${certificateId}/`);
+  return data;
+};
+
 export const downloadCertificate = (certificateId) =>
   client.get(`/api/certificates/${certificateId}/download/`, { responseType: "blob" });
 

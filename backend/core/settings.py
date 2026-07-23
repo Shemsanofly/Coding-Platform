@@ -91,9 +91,6 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'core.wsgi.application'
-
-
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
@@ -146,6 +143,19 @@ GEMINI_MODEL = config('GEMINI_MODEL', default='gemini-3.5-flash')
 CERTIFICATE_VERIFY_BASE_URL = config(
     'CERTIFICATE_VERIFY_BASE_URL',
     default='http://localhost:5173/verify-certificate',
+)
+CERTIFICATE_PLATFORM_NAME = config('CERTIFICATE_PLATFORM_NAME', default='LearnCode')
+CERTIFICATE_PLATFORM_WEBSITE = config('CERTIFICATE_PLATFORM_WEBSITE', default='http://localhost:5173')
+CERTIFICATE_CEO_NAME = config('CERTIFICATE_CEO_NAME', default='Shemsa Amin')
+CERTIFICATE_CEO_TITLE = config('CERTIFICATE_CEO_TITLE', default='Chief Executive Officer')
+CERTIFICATE_ASSET_DIR = BASE_DIR / 'progress' / 'assets' / 'certificates'
+CERTIFICATE_LOGO_PATH = config(
+    'CERTIFICATE_LOGO_PATH',
+    default=str(CERTIFICATE_ASSET_DIR / 'learncode-logo.png'),
+)
+CERTIFICATE_CEO_SIGNATURE_PATH = config(
+    'CERTIFICATE_CEO_SIGNATURE_PATH',
+    default=str(CERTIFICATE_ASSET_DIR / 'ceo-signature.png'),
 )
 
 

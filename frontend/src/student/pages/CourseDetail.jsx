@@ -285,6 +285,12 @@ export default function CourseDetail() {
               </dl>
             </div>
             <div className="flex flex-wrap gap-2">
+              <Link
+                to={`/certificates/${certificate.id}`}
+                className="inline-flex min-h-10 items-center rounded-xl border border-ocean-600/20 px-4 text-sm font-semibold text-ocean-800 transition hover:bg-reef/40 dark:border-white/10 dark:bg-[#172433]/80 dark:text-reef dark:hover:bg-[#213548]"
+              >
+                View Certificate
+              </Link>
               <Button
                 variant="gradient"
                 loading={downloadMutation.isPending}

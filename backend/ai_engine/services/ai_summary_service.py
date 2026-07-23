@@ -169,21 +169,20 @@ def _validate_payload(data: dict[str, Any], *, default_title: str) -> StudyNotes
 
 
 def _gemini_summarize_chunk(chunk: str, *, default_title: str) -> StudyNotesPayload:
-    import google.generativeai as genai
+    from google import genai
 
     api_key = getattr(settings, "GEMINI_API_KEY", "")
     if not api_key:
         raise RuntimeError("Gemini API key not configured.")
 
-    genai.configure(api_key=api_key)
+    client = genai.Client(api_key=api_key)
     model_name = (getattr(settings, "GEMINI_MODEL", "") or "").strip() or "gemini-3.5-flash"
-    model = genai.GenerativeModel(model_name)
     prompt = (
         f"{NOTES_SYSTEM_PROMPT}\n\n"
         f"<transcript>\n{chunk}\n</transcript>\n\n"
         f"Default lesson title if unclear: {default_title}"
     )
-    response = model.generate_content(prompt)
+    response = client.models.generate_content(model=model_name, contents=prompt)
     raw = getattr(response, "text", "") or ""
     data = _parse_gemini_json(raw)
     return _validate_payload(data, default_title=default_title)

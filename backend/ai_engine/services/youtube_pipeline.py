@@ -44,7 +44,7 @@ def user_facing_generation_error(raw: str) -> str:
     if "429" in text or "quota" in lower or "rate limit" in lower or "resource exhausted" in lower:
         return "Gemini rate limit reached. Please wait and try again."
     if "api key" in lower or ("invalid" in lower and "key" in lower) or "api_key" in lower:
-        return "Gemini API key is invalid. Check backend/.env and restart Django."
+        return "Gemini API key is invalid. Check backend/.env and restart the backend."
     if "transcript" in lower or "caption" in lower or "subtitles" in lower:
         return "Transcript unavailable for this video. Try another video with captions."
     if "traceback" in lower:

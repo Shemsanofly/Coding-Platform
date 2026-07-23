@@ -22,6 +22,7 @@ const QuizResult = lazy(() => import("@/student/pages/QuizResult"));
 const StudentAnalytics = lazy(() => import("@/student/pages/Analytics"));
 const Profile = lazy(() => import("@/student/pages/Profile"));
 const MyCertificates = lazy(() => import("@/student/pages/MyCertificates"));
+const CertificateDetail = lazy(() => import("@/student/pages/CertificateDetail"));
 const ProfileSettings = lazy(() => import("@/shared/pages/ProfileSettings"));
 const CertificateVerification = lazy(() => import("@/shared/pages/CertificateVerification"));
 const AdminReports = lazy(() => import("@/admin/pages/AdminReports"));
@@ -66,6 +67,7 @@ export default function App() {
             <Route path="/learning-path" element={<LearningPath />} />
             <Route path="/analytics" element={<StudentAnalytics />} />
             <Route path="/certificates" element={<MyCertificates />} />
+            <Route path="/certificates/:certificateId" element={<CertificateDetail />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/settings" element={<ProfileSettings />} />
             <Route path="/courses/:courseId" element={<CourseDetail />} />

@@ -9,6 +9,15 @@ import Input from "@/shared/components/ui/Input";
 
 const THEME_STORAGE_KEY = "learncode.theme";
 
+const formatDate = (value) =>
+  value
+    ? new Intl.DateTimeFormat(undefined, {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      }).format(new Date(value))
+    : "Not specified";
+
 export default function CertificateVerification() {
   const { verificationCode = "" } = useParams();
   const [code, setCode] = useState(verificationCode);
@@ -38,7 +47,9 @@ export default function CertificateVerification() {
   });
 
   const result = verificationQuery.data;
-  const issueDate = result?.issue_date ? new Date(result.issue_date).toLocaleDateString() : "";
+  const issueDate = formatDate(result?.issue_date);
+  const completionDate = formatDate(result?.completion_date);
+  const verificationStatus = result?.verification_status;
 
   const handleSubmit = (event) => {
     event.preventDefault();
@@ -157,6 +168,44 @@ export default function CertificateVerification() {
                   </div>
                   <div className="rounded-xl border border-ocean-600/10 bg-cream/80 p-3 dark:border-white/10 dark:bg-[#1b2b3b]/70">
                     <dt className="text-xs font-semibold uppercase tracking-wide text-muted dark:text-reef/75">
+                      Completion date
+                    </dt>
+                    <dd className="mt-1 font-semibold text-ink dark:text-sand">{completionDate}</dd>
+                  </div>
+                  <div className="rounded-xl border border-ocean-600/10 bg-cream/80 p-3 dark:border-white/10 dark:bg-[#1b2b3b]/70">
+                    <dt className="text-xs font-semibold uppercase tracking-wide text-muted dark:text-reef/75">
+                      Status
+                    </dt>
+                    <dd className="mt-1 font-semibold text-ink dark:text-sand">{result.certificate_status}</dd>
+                  </div>
+                  <div className="rounded-xl border border-ocean-600/10 bg-cream/80 p-3 dark:border-white/10 dark:bg-[#1b2b3b]/70">
+                    <dt className="text-xs font-semibold uppercase tracking-wide text-muted dark:text-reef/75">
+                      Organization
+                    </dt>
+                    <dd className="mt-1 font-semibold text-ink dark:text-sand">{result.platform_name}</dd>
+                  </div>
+                </dl>
+              </div>
+            ) : submittedCode && verificationStatus === "REVOKED" ? (
+              <div className="space-y-4">
+                <p className="inline-flex rounded-full border border-red-300/60 bg-red-50 px-3 py-1 text-xs font-bold uppercase text-red-800 dark:border-red-300/30 dark:bg-red-500/10 dark:text-red-100">
+                  Certificate Revoked
+                </p>
+                <div>
+                  <h2 className="text-xl font-bold text-ink dark:text-sand">This certificate is no longer valid</h2>
+                  <p className="mt-2 text-sm leading-6 text-muted dark:text-reef/85">
+                    The registry found this certificate number, but it has been revoked by {result.platform_name || "the issuing organization"}.
+                  </p>
+                </div>
+                <dl className="grid gap-3 text-sm sm:grid-cols-2">
+                  <div className="rounded-xl border border-ocean-600/10 bg-cream/80 p-3 dark:border-white/10 dark:bg-[#1b2b3b]/70">
+                    <dt className="text-xs font-semibold uppercase tracking-wide text-muted dark:text-reef/75">
+                      Certificate number
+                    </dt>
+                    <dd className="mt-1 font-semibold text-ink dark:text-sand">{result.certificate_number}</dd>
+                  </div>
+                  <div className="rounded-xl border border-ocean-600/10 bg-cream/80 p-3 dark:border-white/10 dark:bg-[#1b2b3b]/70">
+                    <dt className="text-xs font-semibold uppercase tracking-wide text-muted dark:text-reef/75">
                       Status
                     </dt>
                     <dd className="mt-1 font-semibold text-ink dark:text-sand">{result.certificate_status}</dd>
@@ -166,12 +215,12 @@ export default function CertificateVerification() {
             ) : submittedCode ? (
               <div className="space-y-4">
                 <p className="inline-flex rounded-full border border-red-300/60 bg-red-50 px-3 py-1 text-xs font-bold uppercase text-red-800 dark:border-red-300/30 dark:bg-red-500/10 dark:text-red-100">
-                  Invalid Certificate
+                  Certificate Not Found
                 </p>
                 <div>
-                  <h2 className="text-xl font-bold text-ink dark:text-sand">No active record found</h2>
+                  <h2 className="text-xl font-bold text-ink dark:text-sand">This code could not be verified</h2>
                   <p className="mt-2 text-sm leading-6 text-muted dark:text-reef/85">
-                    This verification code is not active or does not match an issued LearnCode certificate.
+                    The verification code does not match an issued LearnCode certificate. Check the code and try again.
                   </p>
                 </div>
               </div>

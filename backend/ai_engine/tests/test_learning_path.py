@@ -147,10 +147,9 @@ class LearningPathServiceTests(TestCase):
         self.assertEqual(payload["explanation"], "Focus on classes before inheritance.")
         mock_explain.assert_called_once()
 
-    @patch("google.generativeai.GenerativeModel")
-    def test_gemini_explanation_generation_mocked(self, mock_model_cls):
-        mock_model = mock_model_cls.return_value
-        mock_model.generate_content.return_value = type(
+    @patch("google.genai.Client")
+    def test_gemini_explanation_generation_mocked(self, mock_client_cls):
+        mock_client_cls.return_value.models.generate_content.return_value = type(
             "R", (), {"text": "Focus on Classes before Inheritance because inheritance builds on classes."}
         )()
 
@@ -163,7 +162,7 @@ class LearningPathServiceTests(TestCase):
                 ],
             )
         self.assertIn("Classes", text)
-        mock_model.generate_content.assert_called_once()
+        mock_client_cls.return_value.models.generate_content.assert_called_once()
 
 
 class LearningPathAPITests(TestCase):

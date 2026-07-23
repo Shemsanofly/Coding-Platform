@@ -118,7 +118,7 @@ export default function Dashboard() {
       ? "Your session expired. Log in again to reload your dashboard."
       : errorStatus === 403
         ? "This dashboard is available to student accounts only."
-        : "Could not load your dashboard. Make sure the backend is running on http://127.0.0.1:8000.";
+        : "Could not load your dashboard. Make sure the Flask backend is running on http://127.0.0.1:8000.";
 
   const displayName = getDisplayName(user) || "Learner";
   const learningLevel = formatLevel(analytics.learning_level);

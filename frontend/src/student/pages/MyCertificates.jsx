@@ -95,6 +95,12 @@ export default function MyCertificates() {
                         Download
                       </Button>
                       <Link
+                        to={`/certificates/${certificate.id}`}
+                        className="inline-flex min-h-9 items-center rounded-xl border border-ocean-600/20 px-3 text-xs font-semibold text-ocean-800 transition hover:bg-reef/40 dark:border-white/10 dark:bg-[#1b2b3b]/75 dark:text-reef dark:hover:bg-[#213548]"
+                      >
+                        View
+                      </Link>
+                      <Link
                         to={`/verify-certificate/${certificate.verification_code}`}
                         className="inline-flex min-h-9 items-center rounded-xl border border-ocean-600/20 px-3 text-xs font-semibold text-ocean-800 transition hover:bg-reef/40 dark:border-white/10 dark:bg-[#1b2b3b]/75 dark:text-reef dark:hover:bg-[#213548]"
                       >

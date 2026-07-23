@@ -121,6 +121,14 @@ class Certificate(models.Model):
     student_name = models.CharField(max_length=255)
     course_title = models.CharField(max_length=255)
     issue_date = models.DateTimeField()
+    completion_date = models.DateTimeField(null=True, blank=True)
+    platform_name = models.CharField(max_length=120, default="LearnCode")
+    platform_website = models.URLField(max_length=500, blank=True)
+    instructor_name = models.CharField(max_length=255, blank=True)
+    course_duration = models.CharField(max_length=80, blank=True)
+    verification_url = models.URLField(max_length=500, blank=True)
+    ceo_name = models.CharField(max_length=120, default="Shemsa Amin")
+    ceo_title = models.CharField(max_length=120, default="Chief Executive Officer")
     file = models.FileField(upload_to="certificates/%Y/%m/", blank=True)
     status = models.CharField(
         max_length=16,
@@ -128,6 +136,7 @@ class Certificate(models.Model):
         default=Status.ACTIVE,
         db_index=True,
     )
+    revoked_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

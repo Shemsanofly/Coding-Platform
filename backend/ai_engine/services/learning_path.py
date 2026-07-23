@@ -249,14 +249,14 @@ def generate_learning_path_explanation(
     )
 
     try:
-        import google.generativeai as genai
+        from google import genai
 
-        genai.configure(api_key=api_key)
+        client = genai.Client(api_key=api_key)
         model_name = (config("GEMINI_MODEL", default="") or "").strip() or "gemini-3.5-flash"
-        model = genai.GenerativeModel(model_name)
-        response = model.generate_content(
-            prompt,
-            generation_config={"temperature": 0.4, "max_output_tokens": 256},
+        response = client.models.generate_content(
+            model=model_name,
+            contents=prompt,
+            config={"temperature": 0.4, "max_output_tokens": 256},
         )
         text = (response.text or "").strip()
         return text[:1200] if text else ""

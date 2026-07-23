@@ -1,6 +1,9 @@
+import logging
+
 from django.contrib.auth import get_user_model
 from django.http import FileResponse
 from django.db.models import Avg, Count, Max, Q
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
@@ -15,6 +18,7 @@ from progress.models import Enrollment, LessonProgress
 from progress.models import Certificate
 from progress.services import quiz_passed_for_lesson
 from progress.services.certificates import (
+    certificate_download_filename,
     certificate_file_path,
     check_certificate_eligibility,
     generate_or_get_certificate,
@@ -39,6 +43,7 @@ from progress.serializers import (
 from quizzes.models import QuizResult
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 def _parse_course_id(request):
@@ -321,6 +326,24 @@ class MyCertificatesView(APIView):
         return Response(CertificateSerializer(certificates, many=True, context={"request": request}).data)
 
 
+class CertificateDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, certificate_id):
+        certificate = (
+            Certificate.objects.select_related("student", "course", "enrollment")
+            .filter(pk=certificate_id)
+            .first()
+        )
+        if certificate is None:
+            return Response({"detail": "Certificate not found."}, status=status.HTTP_404_NOT_FOUND)
+        is_owner = request.user.pk == certificate.student_id
+        is_admin = getattr(request.user, "role", None) == User.Role.ADMIN
+        if not is_owner and not is_admin:
+            return Response({"detail": "Forbidden."}, status=status.HTTP_403_FORBIDDEN)
+        return Response(CertificateSerializer(certificate, context={"request": request}).data)
+
+
 class CertificateDownloadView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -337,7 +360,7 @@ class CertificateDownloadView(APIView):
         if path is None or not path.exists():
             return Response({"detail": "Certificate PDF not found."}, status=status.HTTP_404_NOT_FOUND)
         response = FileResponse(open(path, "rb"), content_type="application/pdf")
-        response["Content-Disposition"] = f'attachment; filename="{certificate.certificate_number}.pdf"'
+        response["Content-Disposition"] = f"attachment; filename={certificate_download_filename(certificate)}"
         return response
 
 
@@ -350,20 +373,38 @@ class PublicCertificateVerifyView(APIView):
         if certificate is None:
             data = {
                 "valid": False,
+                "verification_status": "NOT_FOUND",
                 "student_name": "",
                 "course_title": "",
                 "issue_date": None,
+                "completion_date": None,
                 "certificate_number": "",
                 "certificate_status": "",
+                "platform_name": "",
+            }
+        elif certificate.status == Certificate.Status.REVOKED:
+            data = {
+                "valid": False,
+                "verification_status": "REVOKED",
+                "student_name": "",
+                "course_title": "",
+                "issue_date": certificate.issue_date,
+                "completion_date": certificate.completion_date,
+                "certificate_number": certificate.certificate_number,
+                "certificate_status": certificate.status,
+                "platform_name": certificate.platform_name,
             }
         else:
             data = {
-                "valid": certificate.status == Certificate.Status.ACTIVE,
+                "valid": True,
+                "verification_status": "VALID",
                 "student_name": certificate.student_name,
                 "course_title": certificate.course_title,
                 "issue_date": certificate.issue_date,
+                "completion_date": certificate.completion_date,
                 "certificate_number": certificate.certificate_number,
                 "certificate_status": certificate.status,
+                "platform_name": certificate.platform_name,
             }
         return Response(PublicCertificateVerificationSerializer(data).data)
 
@@ -378,7 +419,14 @@ class AdminCertificateRevokeView(APIView):
         if certificate is None:
             return Response({"detail": "Certificate not found."}, status=status.HTTP_404_NOT_FOUND)
         certificate.status = Certificate.Status.REVOKED
-        certificate.save(update_fields=["status"])
+        certificate.revoked_at = timezone.now()
+        certificate.save(update_fields=["status", "revoked_at"])
+        logger.info(
+            "Revoked certificate id=%s certificate_number=%s admin_id=%s",
+            certificate.pk,
+            certificate.certificate_number,
+            request.user.pk,
+        )
         return Response(CertificateSerializer(certificate, context={"request": request}).data)
 
 

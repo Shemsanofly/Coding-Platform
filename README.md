@@ -38,12 +38,12 @@ Students register with a learning level, enroll in courses, study embedded lesso
 
 | Layer | Tools |
 |-------|--------|
-| Backend | Django 5, Django REST Framework, SQLite3 |
+| Backend | Flask 3 runtime, Django compatibility data layer, Django REST Framework, SQLite3 |
 | Frontend | React 18, Vite, Tailwind CSS, React Query, Zustand |
 | AI | Google Gemini API |
 | PDF | ReportLab |
 | Transcripts | youtube-transcript-api |
-| Auth | djangorestframework-simplejwt |
+| Auth | djangorestframework-simplejwt behind Flask runtime |
 | Task queue | Celery + Redis (optional, for async AI generation) |
 
 AI features process **YouTube transcript text only** — not raw video frames.
@@ -69,7 +69,7 @@ cd backend
 cp .env.example .env
 pip install -r requirements.txt
 python manage.py migrate
-python manage.py runserver
+python app.py
 ```
 
 Backend runs at `http://127.0.0.1:8000/` — API base: `http://127.0.0.1:8000/api/`
@@ -82,7 +82,7 @@ npm install
 npm run dev
 ```
 
-Frontend runs at `http://localhost:5173/` with API requests proxied to Django (see `frontend/vite.config.js`).
+Frontend runs at `http://localhost:5173/` with API requests proxied to the Flask backend (see `frontend/vite.config.js`).
 
 ## Environment Variables
 
@@ -90,7 +90,7 @@ Frontend runs at `http://localhost:5173/` with API requests proxied to Django (s
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `SECRET_KEY` | Yes | Django secret key |
+| `SECRET_KEY` | Yes | Backend signing secret |
 | `DEBUG` | No | Enable debug mode (default: `True`) |
 | `DATABASE_URL` | No | Database URL (defaults to SQLite) |
 | `GEMINI_API_KEY` | Recommended | Google Gemini API key for quiz and PDF notes |
@@ -116,7 +116,9 @@ Coding_Platform/
 ├── backend/
 │   ├── accounts/          # User auth, roles, experience level
 │   ├── ai_engine/         # Gemini, transcripts, quiz pipeline, learning path
-│   ├── core/              # Django settings, URLs, Celery config
+│   ├── app.py             # Flask development server entrypoint
+│   ├── flask_app.py       # Flask app factory with compatibility routing
+│   ├── core/              # Compatibility settings, URLs, Celery config
 │   ├── courses/           # Courses, lessons, enrollment, PDF notes views
 │   ├── progress/          # Enrollments, lesson progress, weaknesses, reports
 │   ├── quizzes/           # Quiz models, student fetch/submit

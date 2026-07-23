@@ -219,20 +219,21 @@ def generate_playground_challenge(
         return _pick_fallback(level, exclude_titles=exclude)
 
     try:
-        import google.generativeai as genai
+        from google import genai
 
-        genai.configure(api_key=api_key)
+        client = genai.Client(api_key=api_key)
         model_name = (getattr(settings, "GEMINI_MODEL", "") or "").strip() or "gemini-3.5-flash"
-        model = genai.GenerativeModel(model_name, system_instruction=PLAYGROUND_SYSTEM_PROMPT)
         recent = ", ".join(recent_titles[:5]) if recent_titles else "none"
         prompt = (
             f"Learner level: {level}.\n"
             f"Avoid repeating these recent titles: {recent}.\n"
             "Generate a fresh Python function exercise."
         )
-        response = model.generate_content(
-            prompt,
-            generation_config={
+        response = client.models.generate_content(
+            model=model_name,
+            contents=prompt,
+            config={
+                "system_instruction": PLAYGROUND_SYSTEM_PROMPT,
                 "temperature": 0.65,
                 "response_mime_type": "application/json",
             },

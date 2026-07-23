@@ -13,7 +13,7 @@ export function extractApiError(error, fallback = "Request failed.") {
   if (!error.response) {
     const message = String(error.message || "");
     if (message.includes("Network Error") || message.includes("ECONNREFUSED")) {
-      return "Cannot reach the API server. Ensure Django is running on http://127.0.0.1:8000.";
+      return "Cannot reach the API server. Ensure the Flask backend is running on http://127.0.0.1:8000.";
     }
     return message || fallback;
   }

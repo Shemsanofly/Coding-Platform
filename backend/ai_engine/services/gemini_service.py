@@ -1,7 +1,4 @@
-"""Gemini lesson intelligence + quiz generation from transcript.
-
-TODO: Migrate from deprecated ``google.generativeai`` to ``google.genai`` when upgrading SDK.
-"""
+"""Gemini lesson intelligence + quiz generation from transcript."""
 
 from __future__ import annotations
 
@@ -21,7 +18,7 @@ from ai_engine.services.quiz_generator import (
 logger = logging.getLogger(__name__)
 
 INVALID_GEMINI_API_KEY_MESSAGE = (
-    "Gemini API key is invalid. Please check backend/.env and restart Django."
+    "Gemini API key is invalid. Please check backend/.env and restart the backend."
 )
 PLACEHOLDER_API_KEY_PARTS = (
     "replace",
@@ -132,17 +129,13 @@ class GeminiService:
 
     def generate_quiz(self, transcript: str, *, max_retries: int = 2) -> LessonIntelligencePayload:
         """Single Gemini request: lesson metadata + validated quiz questions."""
-        import google.generativeai as genai
+        from google import genai
 
         text = (transcript or "").strip()
         if len(text) < 50:
             raise GeminiQuizError("Transcript is too short for quiz generation.")
 
-        genai.configure(api_key=self.api_key)
-        model = genai.GenerativeModel(
-            self.model_name,
-            system_instruction=QUIZ_SYSTEM_PROMPT,
-        )
+        client = genai.Client(api_key=self.api_key)
         truncated = text[:TRANSCRIPT_CHAR_LIMIT]
         prompt = (
             "Generate lesson summary, learning objectives, key concepts, topic tags, "
@@ -153,9 +146,11 @@ class GeminiService:
         last_error: Exception | None = None
         for attempt in range(max_retries + 1):
             try:
-                response = model.generate_content(
-                    prompt,
-                    generation_config={
+                response = client.models.generate_content(
+                    model=self.model_name,
+                    contents=prompt,
+                    config={
+                        "system_instruction": QUIZ_SYSTEM_PROMPT,
                         "temperature": 0.35,
                         "response_mime_type": "application/json",
                     },

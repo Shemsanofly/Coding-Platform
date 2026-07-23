@@ -97,12 +97,11 @@ class PostProcessTests(SimpleTestCase):
 
 
 class GeminiServiceGenerateTests(SimpleTestCase):
-    @patch("google.generativeai.GenerativeModel")
-    @patch("google.generativeai.configure")
-    def test_generate_quiz_returns_validated_questions(self, _configure, mock_model_cls):
+    @patch("google.genai.Client")
+    def test_generate_quiz_returns_validated_questions(self, mock_client_cls):
         mock_response = MagicMock()
         mock_response.text = _sample_payload(4)
-        mock_model_cls.return_value.generate_content.return_value = mock_response
+        mock_client_cls.return_value.models.generate_content.return_value = mock_response
 
         svc = GeminiService(api_key="test-key", model="gemini-2.5-flash")
         result = svc.generate_quiz(" ".join(["lesson content"] * 30))
@@ -113,23 +112,21 @@ class GeminiServiceGenerateTests(SimpleTestCase):
         self.assertEqual(result["questions"][0]["type"], "mcq")
         self.assertIn("topic_tag", result["questions"][0])
 
-    @patch("google.generativeai.GenerativeModel")
-    @patch("google.generativeai.configure")
-    def test_generate_quiz_raises_on_malformed_json(self, _configure, mock_model_cls):
+    @patch("google.genai.Client")
+    def test_generate_quiz_raises_on_malformed_json(self, mock_client_cls):
         mock_response = MagicMock()
         mock_response.text = '{"broken": true}'
-        mock_model_cls.return_value.generate_content.return_value = mock_response
+        mock_client_cls.return_value.models.generate_content.return_value = mock_response
 
         svc = GeminiService(api_key="test-key")
         with self.assertRaises(GeminiQuizError):
             svc.generate_quiz(" ".join(["lesson content"] * 30))
 
-    @patch("google.generativeai.GenerativeModel")
-    @patch("google.generativeai.configure")
-    def test_generate_quiz_maps_invalid_api_key_error(self, _configure, mock_model_cls):
+    @patch("google.genai.Client")
+    def test_generate_quiz_maps_invalid_api_key_error(self, mock_client_cls):
         from google.api_core.exceptions import InvalidArgument
 
-        mock_model_cls.return_value.generate_content.side_effect = InvalidArgument(
+        mock_client_cls.return_value.models.generate_content.side_effect = InvalidArgument(
             "400 API key not valid. Please pass a valid API key."
         )
 

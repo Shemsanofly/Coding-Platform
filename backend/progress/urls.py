@@ -20,6 +20,7 @@ from progress.views import (
     AdminUserRecommendationsView,
     AdminUsersView,
     AdminUserWeaknessesView,
+    CertificateDetailView,
     CertificateDownloadView,
     EnrollmentListView,
     LessonWeaknessSummaryView,
@@ -50,6 +51,11 @@ urlpatterns = [
         name="student-course-certificate",
     ),
     path("certificates/my-certificates/", MyCertificatesView.as_view(), name="my-certificates"),
+    path(
+        "certificates/<int:certificate_id>/",
+        CertificateDetailView.as_view(),
+        name="certificate-detail",
+    ),
     path(
         "certificates/<int:certificate_id>/download/",
         CertificateDownloadView.as_view(),

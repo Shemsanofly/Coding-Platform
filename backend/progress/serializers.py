@@ -34,6 +34,7 @@ class EnrollmentSerializer(serializers.Serializer):
 
 class CertificateSerializer(serializers.ModelSerializer):
     file_url = serializers.SerializerMethodField()
+    qr_code_data_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Certificate
@@ -46,8 +47,18 @@ class CertificateSerializer(serializers.ModelSerializer):
             "course_id",
             "enrollment_id",
             "issue_date",
+            "completion_date",
+            "platform_name",
+            "platform_website",
+            "instructor_name",
+            "course_duration",
+            "verification_url",
+            "ceo_name",
+            "ceo_title",
             "file_url",
+            "qr_code_data_url",
             "status",
+            "revoked_at",
             "created_at",
         )
         read_only_fields = fields
@@ -59,6 +70,11 @@ class CertificateSerializer(serializers.ModelSerializer):
         if request:
             return request.build_absolute_uri(obj.file.url)
         return obj.file.url
+
+    def get_qr_code_data_url(self, obj):
+        from progress.services.certificates import certificate_qr_data_url
+
+        return certificate_qr_data_url(obj)
 
 
 class CertificateEligibilitySerializer(serializers.Serializer):
@@ -74,11 +90,14 @@ class CertificateEligibilitySerializer(serializers.Serializer):
 
 class PublicCertificateVerificationSerializer(serializers.Serializer):
     valid = serializers.BooleanField()
+    verification_status = serializers.CharField()
     student_name = serializers.CharField(allow_blank=True)
     course_title = serializers.CharField(allow_blank=True)
     issue_date = serializers.DateTimeField(allow_null=True)
+    completion_date = serializers.DateTimeField(allow_null=True)
     certificate_number = serializers.CharField(allow_blank=True)
     certificate_status = serializers.CharField(allow_blank=True)
+    platform_name = serializers.CharField(allow_blank=True)
 
 
 class WeakTopicCourseContextSerializer(serializers.Serializer):

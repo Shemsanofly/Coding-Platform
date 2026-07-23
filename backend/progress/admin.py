@@ -18,7 +18,21 @@ class LessonProgressAdmin(admin.ModelAdmin):
 
 @admin.register(Certificate)
 class CertificateAdmin(admin.ModelAdmin):
-    list_display = ("id", "certificate_number", "student_name", "course_title", "status", "issue_date")
-    list_filter = ("status", "issue_date")
-    search_fields = ("certificate_number", "verification_code", "student_name", "course_title")
+    list_display = (
+        "id",
+        "certificate_number",
+        "student_name",
+        "course_title",
+        "status",
+        "issue_date",
+        "revoked_at",
+    )
+    list_filter = ("status", "issue_date", "revoked_at")
+    search_fields = (
+        "certificate_number",
+        "verification_code",
+        "student_name",
+        "course_title",
+        "platform_name",
+    )
     list_select_related = ("student", "course", "enrollment")
