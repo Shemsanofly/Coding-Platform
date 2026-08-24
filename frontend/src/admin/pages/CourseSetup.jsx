@@ -11,12 +11,16 @@ import {
   getAdminLessons,
   updateAdminCourse,
 } from "@/api/adminCourses";
-import CourseStatusBadge from "@/admin/components/CourseStatusBadge";
 import EmptyState from "@/admin/components/EmptyState";
 import LessonAIStatusPanel from "@/admin/components/LessonAIStatusPanel";
 import LoadingState from "@/admin/components/LoadingState";
 import PipelineStatus from "@/admin/components/PipelineStatus";
-import { getLessonSourceOption, LESSON_SOURCE_OPTIONS } from "@/shared/constants/lessonSources";
+import SectionHeader from "@/student/components/SectionHeader";
+import Button from "@/shared/components/ui/Button";
+import Card from "@/shared/components/ui/Card";
+import PageHeader from "@/shared/components/ui/PageHeader";
+import { CourseLevelBadge, CourseMetric, CourseStatusPill } from "@/shared/components/course/CourseBadges";
+import { formatSourceTypeLabel, getLessonSourceOption, LESSON_SOURCE_OPTIONS } from "@/shared/constants/lessonSources";
 
 const LEVEL_OPTIONS = [
   { value: "beginner", label: "Beginner" },
@@ -25,9 +29,7 @@ const LEVEL_OPTIONS = [
 ];
 
 function normalizeCourseLevel(raw) {
-  const tier = String(raw ?? "")
-    .trim()
-    .toLowerCase();
+  const tier = String(raw ?? "").trim().toLowerCase();
   if (tier === "beginner" || tier === "intermediate" || tier === "advanced") {
     return tier;
   }
@@ -36,22 +38,212 @@ function normalizeCourseLevel(raw) {
 
 function extractApiError(error) {
   const data = error?.response?.data;
-  if (!data) {
-    return "";
+  if (!data) return "";
+  if (typeof data === "string") return data;
+  if (data.detail) return String(data.detail);
+  const source = data.errors && typeof data.errors === "object" ? data.errors : data;
+  return Object.entries(source)
+    .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(" ") : value}`)
+    .join(" ");
+}
+
+function tagsFromInput(value) {
+  return value
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter(Boolean);
+}
+
+function LessonForm({
+  selectedSource,
+  lessonTitle,
+  setLessonTitle,
+  lessonSource,
+  setLessonSource,
+  lessonUrl,
+  setLessonUrl,
+  lessonContent,
+  setLessonContent,
+  lessonMinutes,
+  setLessonMinutes,
+  lessonTags,
+  setLessonTags,
+  lessonTopicTag,
+  setLessonTopicTag,
+  lessonObjective,
+  setLessonObjective,
+  lessonFormError,
+  isSaving,
+  onSubmit,
+}) {
+  return (
+    <Card variant="elevated" padding="md">
+      <PageHeader
+        title="Add Lesson"
+        subtitle="Choose a source, add metadata, and keep the sequence ready for students."
+      />
+
+      <form className="mt-5 space-y-4" onSubmit={onSubmit}>
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="md:col-span-2">
+            <label className="mb-1.5 block text-sm font-semibold text-ocean-800 dark:text-reef">
+              Lesson title
+            </label>
+            <input
+              value={lessonTitle}
+              onChange={(event) => setLessonTitle(event.target.value)}
+              className="lc-input"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-sm font-semibold text-ocean-800 dark:text-reef">
+              Source type
+            </label>
+            <select value={lessonSource} onChange={(event) => setLessonSource(event.target.value)} className="lc-input">
+              {LESSON_SOURCE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-muted dark:text-reef/70">{selectedSource.help}</p>
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-sm font-semibold text-ocean-800 dark:text-reef">
+              {selectedSource.urlLabel}
+            </label>
+            <input
+              value={lessonUrl}
+              onChange={(event) => setLessonUrl(event.target.value)}
+              placeholder={selectedSource.placeholder}
+              required={selectedSource.requiresUrl}
+              className="lc-input"
+            />
+          </div>
+
+          {lessonSource === "internal" ? (
+            <div className="md:col-span-2">
+              <label className="mb-1.5 block text-sm font-semibold text-ocean-800 dark:text-reef">
+                Lesson content
+              </label>
+              <textarea
+                value={lessonContent}
+                onChange={(event) => setLessonContent(event.target.value)}
+                rows={5}
+                placeholder="Write the lesson text students will read on the platform."
+                className="lc-input"
+              />
+            </div>
+          ) : null}
+
+          <div>
+            <label className="mb-1.5 block text-sm font-semibold text-ocean-800 dark:text-reef">
+              Estimated minutes
+            </label>
+            <input
+              type="number"
+              min={5}
+              max={600}
+              value={lessonMinutes}
+              onChange={(event) => setLessonMinutes(Number(event.target.value))}
+              className="lc-input"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-sm font-semibold text-ocean-800 dark:text-reef">
+              Topic tag
+            </label>
+            <input value={lessonTopicTag} onChange={(event) => setLessonTopicTag(event.target.value)} className="lc-input" />
+          </div>
+
+          <div className="md:col-span-2">
+            <label className="mb-1.5 block text-sm font-semibold text-ocean-800 dark:text-reef">
+              Tags
+            </label>
+            <input
+              value={lessonTags}
+              onChange={(event) => setLessonTags(event.target.value)}
+              placeholder="functions, loops, arrays"
+              className="lc-input"
+            />
+          </div>
+
+          <div className="md:col-span-2">
+            <label className="mb-1.5 block text-sm font-semibold text-ocean-800 dark:text-reef">
+              Learning objective
+            </label>
+            <textarea
+              value={lessonObjective}
+              onChange={(event) => setLessonObjective(event.target.value)}
+              rows={2}
+              className="lc-input"
+            />
+          </div>
+        </div>
+
+        {lessonFormError ? <p className="text-sm font-medium text-red-600">{lessonFormError}</p> : null}
+        <Button type="submit" loading={isSaving}>
+          Add lesson
+        </Button>
+      </form>
+    </Card>
+  );
+}
+
+function LessonList({ courseId, lessons, loading, deletingId, onDelete }) {
+  if (loading) {
+    return <LoadingState label="Loading lessons..." rows={2} />;
   }
-  if (typeof data === "string") {
-    return data;
+
+  if (!lessons.length) {
+    return (
+      <Card variant="subtle">
+        <p className="text-sm text-muted dark:text-reef/75">No lessons yet. Add the first lesson above.</p>
+      </Card>
+    );
   }
-  if (data.detail) {
-    return String(data.detail);
-  }
-  const parts = Object.entries(data).map(([key, value]) => {
-    if (Array.isArray(value)) {
-      return `${key}: ${value.join(" ")}`;
-    }
-    return `${key}: ${value}`;
-  });
-  return parts.join(" ");
+
+  return (
+    <ol className="space-y-3">
+      {lessons.map((lesson, index) => (
+        <li
+          key={lesson.id}
+          className="rounded-2xl border border-ocean-600/10 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-[#172433]/85"
+        >
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-reef text-xs font-bold text-ocean-800 dark:bg-ocean-600/25 dark:text-reef">
+                  {index + 1}
+                </span>
+                <h3 className="font-semibold text-ink dark:text-sand">{lesson.title}</h3>
+              </div>
+              <p className="mt-2 text-sm text-muted dark:text-reef/75">
+                {formatSourceTypeLabel(lesson.source_type)} | {lesson.difficulty} | {lesson.estimated_minutes} min
+              </p>
+              <div className="mt-3">
+                <LessonAIStatusPanel courseId={courseId} lesson={lesson} />
+              </div>
+            </div>
+
+            <Button
+              variant="danger"
+              size="sm"
+              loading={deletingId === lesson.id}
+              onClick={() => onDelete(lesson)}
+              className="w-fit"
+            >
+              Delete
+            </Button>
+          </div>
+        </li>
+      ))}
+    </ol>
+  );
 }
 
 export default function CourseSetup() {
@@ -79,6 +271,7 @@ export default function CourseSetup() {
   const [lessonObjective, setLessonObjective] = useState("");
   const [lessonTopicTag, setLessonTopicTag] = useState("");
   const [lessonFormError, setLessonFormError] = useState("");
+  const [deletingLessonId, setDeletingLessonId] = useState(null);
 
   const { data: courses = [] } = useQuery({
     queryKey: ["admin-courses"],
@@ -141,18 +334,18 @@ export default function CourseSetup() {
       setLessonTopicTag("");
     },
     onError: (error) => {
-      setLessonFormError(
-        extractApiError(error) || "Could not create lesson. Check required fields for the selected source type."
-      );
+      setLessonFormError(extractApiError(error) || "Could not create lesson. Check the required fields.");
     },
   });
 
   const deleteLessonMutation = useMutation({
     mutationFn: ({ courseId, lessonId }) => deleteAdminLesson(courseId, lessonId),
+    onMutate: ({ lessonId }) => setDeletingLessonId(lessonId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-lessons", courseIdNum] });
       queryClient.invalidateQueries({ queryKey: ["admin-courses"] });
     },
+    onSettled: () => setDeletingLessonId(null),
   });
 
   const handleCreateCourse = (event) => {
@@ -170,9 +363,7 @@ export default function CourseSetup() {
     const rows = Array.isArray(lessons) ? lessons : lessons?.results || [];
     return [...rows].sort((a, b) => {
       const orderDiff = (Number(a.order) || 0) - (Number(b.order) || 0);
-      if (orderDiff !== 0) {
-        return orderDiff;
-      }
+      if (orderDiff !== 0) return orderDiff;
       return (a.id || 0) - (b.id || 0);
     });
   }, [lessons]);
@@ -197,10 +388,7 @@ export default function CourseSetup() {
       setLessonFormError("Add lesson content or an optional reference URL.");
       return;
     }
-    const tags = lessonTags
-      .split(",")
-      .map((t) => t.trim())
-      .filter(Boolean);
+
     createLessonMutation.mutate({
       courseId: courseIdNum,
       payload: {
@@ -210,7 +398,7 @@ export default function CourseSetup() {
         content: lessonContent,
         difficulty: normalizeCourseLevel(selectedCourseDetail?.level ?? "beginner"),
         estimated_minutes: Number(lessonMinutes) || 15,
-        tags,
+        tags: tagsFromInput(lessonTags),
         learning_objective: lessonObjective.trim(),
         topic_tag: lessonTopicTag.trim(),
         is_auto_generated: false,
@@ -221,18 +409,20 @@ export default function CourseSetup() {
   if (isNew) {
     const existingCourses = Array.isArray(courses) ? courses : courses?.results || [];
     return (
-      <div className="space-y-6 p-4 md:p-6">
-        <Link to="/admin/courses" className="text-sm font-medium text-emerald-700 hover:underline">
-          ← Back to courses
+      <div className="space-y-5 p-4 md:p-6">
+        <Link to="/admin/courses" className="text-sm font-semibold text-ocean-700 hover:underline">
+          Back to courses
         </Link>
-        <form
-          onSubmit={handleCreateCourse}
-          className="max-w-xl rounded-2xl border border-emerald-100 bg-white/90 p-5 shadow-lg backdrop-blur"
-        >
-          <h1 className="mb-5 text-xl font-semibold text-gray-900">Create new course</h1>
-          <div className="space-y-4">
+
+        <Card as="form" onSubmit={handleCreateCourse} variant="elevated" className="max-w-2xl">
+          <PageHeader
+            title="Create Course"
+            subtitle="Set the course title and level first. Lessons are added after the course exists."
+          />
+
+          <div className="mt-6 space-y-4">
             <div>
-              <label htmlFor="course-topic" className="mb-1 block text-sm font-medium text-gray-700">
+              <label htmlFor="course-topic" className="mb-1.5 block text-sm font-semibold text-ocean-800 dark:text-reef">
                 Course topic
               </label>
               <input
@@ -241,20 +431,16 @@ export default function CourseSetup() {
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
                 placeholder="e.g. Intro to Data Structures"
-                className="w-full rounded-xl border border-line px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
+                className="lc-input"
                 required
               />
             </div>
+
             <div>
-              <label htmlFor="level" className="mb-1 block text-sm font-medium text-gray-700">
+              <label htmlFor="level" className="mb-1.5 block text-sm font-semibold text-ocean-800 dark:text-reef">
                 Level
               </label>
-              <select
-                id="level"
-                value={level}
-                onChange={(event) => setLevel(event.target.value)}
-                className="w-full rounded-xl border border-line px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
-              >
+              <select id="level" value={level} onChange={(event) => setLevel(event.target.value)} className="lc-input">
                 {LEVEL_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
@@ -263,27 +449,23 @@ export default function CourseSetup() {
               </select>
             </div>
           </div>
-          {formError ? <p className="mt-4 text-sm text-red-600">{formError}</p> : null}
-          <button
-            type="submit"
-            disabled={createCourseMutation.isPending}
-            className="mt-6 inline-flex min-h-10 items-center rounded-xl bg-lc-primary px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
-          >
-            {createCourseMutation.isPending ? "Creating…" : "Create course"}
-          </button>
-          <button
-            type="button"
-            onClick={() => bootstrapMutation.mutate()}
-            disabled={bootstrapMutation.isPending}
-            className="ml-3 mt-6 inline-flex min-h-10 items-center rounded-xl border border-line px-4 py-2 text-sm font-semibold text-ocean-800"
-          >
-            Load sample catalog
-          </button>
-        </form>
+
+          {formError ? <p className="mt-4 text-sm font-medium text-red-600">{formError}</p> : null}
+
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Button type="submit" loading={createCourseMutation.isPending}>
+              Create course
+            </Button>
+            <Button variant="ghost" loading={bootstrapMutation.isPending} onClick={() => bootstrapMutation.mutate()}>
+              Load sample catalog
+            </Button>
+          </div>
+        </Card>
+
         {existingCourses.length > 0 ? (
           <p className="text-sm text-muted">
             {existingCourses.length} existing course(s).{" "}
-            <Link to="/admin/courses" className="font-semibold text-emerald-700 underline">
+            <Link to="/admin/courses" className="font-semibold text-ocean-700 underline">
               View all
             </Link>
           </p>
@@ -303,193 +485,94 @@ export default function CourseSetup() {
   if (courseLoading) {
     return (
       <div className="p-4 md:p-6">
-        <LoadingState label="Loading course…" />
+        <LoadingState label="Loading course..." />
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-1 gap-6 p-4 md:p-6 xl:grid-cols-3">
-      <section className="space-y-6 xl:col-span-2">
+    <div className="grid grid-cols-1 gap-5 p-4 md:p-6 xl:grid-cols-[minmax(0,1fr)_340px]">
+      <section className="space-y-5">
         {justCreated ? (
-          <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">
-            Course created successfully. Add YouTube lessons below to start AI quiz generation.
+          <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800 dark:border-emerald-400/30 dark:bg-emerald-500/15 dark:text-emerald-100">
+            Course created. Add lessons below to build the learning path.
           </p>
         ) : null}
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <Link to="/admin/courses" className="text-sm font-medium text-emerald-700 hover:underline">
-              ← Courses
-            </Link>
-            <h1 className="mt-2 text-xl font-semibold text-gray-900">{selectedCourseDetail?.title}</h1>
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              <CourseStatusBadge status={selectedCourseDetail?.status} />
-              <span className="text-sm text-muted">{selectedCourseDetail?.lesson_count ?? 0} lessons</span>
-            </div>
-          </div>
-          {selectedCourseDetail?.status !== "published" ? (
-            <button
-              type="button"
-              disabled={publishMutation.isPending}
-              onClick={() => publishMutation.mutate()}
-              className="inline-flex min-h-10 items-center rounded-xl bg-ocean-600 px-4 text-sm font-semibold text-white hover:bg-ocean-700 disabled:opacity-50"
-            >
-              Publish course
-            </button>
-          ) : null}
-        </div>
 
-        <section className="rounded-2xl border border-line bg-white/95 p-5 shadow-lg backdrop-blur">
-          <h2 className="text-lg font-semibold text-gray-900">Add lesson</h2>
-          <p className="mt-1 text-sm text-gray-600">
-            Choose a source type (YouTube, PDF, web page, link, or platform content). AI quiz generation
-            applies to YouTube lessons.
-          </p>
-
-          <form className="mt-6 space-y-4" onSubmit={handleLessonSubmit}>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="md:col-span-2">
-                <label className="mb-1 block text-sm font-medium text-gray-700">Lesson title</label>
-                <input
-                  value={lessonTitle}
-                  onChange={(e) => setLessonTitle(e.target.value)}
-                  className="w-full rounded-xl border border-line px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
-                  required
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">Source type</label>
-                <select
-                  value={lessonSource}
-                  onChange={(e) => setLessonSource(e.target.value)}
-                  className="w-full rounded-xl border border-line px-3 py-2 text-sm"
-                >
-                  {LESSON_SOURCE_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-                <p className="mt-1 text-xs text-gray-500">{selectedSource.help}</p>
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">{selectedSource.urlLabel}</label>
-                <input
-                  value={lessonUrl}
-                  onChange={(e) => setLessonUrl(e.target.value)}
-                  placeholder={selectedSource.placeholder}
-                  required={selectedSource.requiresUrl}
-                  className="w-full rounded-xl border border-line px-3 py-2 text-sm"
-                />
-              </div>
-              {lessonSource === "internal" ? (
-                <div className="md:col-span-2">
-                  <label className="mb-1 block text-sm font-medium text-gray-700">Lesson content</label>
-                  <textarea
-                    value={lessonContent}
-                    onChange={(e) => setLessonContent(e.target.value)}
-                    rows={4}
-                    placeholder="Write the lesson text students will read on the platform."
-                    className="w-full rounded-xl border border-line px-3 py-2 text-sm"
-                  />
-                </div>
-              ) : null}
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">Estimated minutes</label>
-                <input
-                  type="number"
-                  min={5}
-                  max={600}
-                  value={lessonMinutes}
-                  onChange={(e) => setLessonMinutes(Number(e.target.value))}
-                  className="w-full rounded-xl border border-line px-3 py-2 text-sm"
-                />
-              </div>
-              <div className="md:col-span-2">
-                <label className="mb-1 block text-sm font-medium text-gray-700">Tags (comma-separated)</label>
-                <input
-                  value={lessonTags}
-                  onChange={(e) => setLessonTags(e.target.value)}
-                  className="w-full rounded-xl border border-line px-3 py-2 text-sm"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">Topic tag</label>
-                <input
-                  value={lessonTopicTag}
-                  onChange={(e) => setLessonTopicTag(e.target.value)}
-                  className="w-full rounded-xl border border-line px-3 py-2 text-sm"
-                />
-              </div>
-              <div className="md:col-span-2">
-                <label className="mb-1 block text-sm font-medium text-gray-700">Learning objective</label>
-                <textarea
-                  value={lessonObjective}
-                  onChange={(e) => setLessonObjective(e.target.value)}
-                  rows={2}
-                  className="w-full rounded-xl border border-line px-3 py-2 text-sm"
-                />
+        <Card variant="elevated">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="min-w-0">
+              <Link to="/admin/courses" className="text-sm font-semibold text-ocean-700 hover:underline dark:text-reef">
+                Courses
+              </Link>
+              <h1 className="mt-2 text-2xl font-bold text-ink dark:text-sand">{selectedCourseDetail?.title}</h1>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <CourseLevelBadge level={selectedCourseDetail?.level} />
+                <CourseStatusPill status={selectedCourseDetail?.status} />
               </div>
             </div>
-            {lessonFormError ? <p className="text-sm text-red-600">{lessonFormError}</p> : null}
-            <button
-              type="submit"
-              disabled={createLessonMutation.isPending}
-              className="inline-flex min-h-10 items-center rounded-xl bg-lc-primary px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
-            >
-              {createLessonMutation.isPending ? "Saving…" : "Add lesson"}
-            </button>
-          </form>
 
-          <div className="mt-8 border-t border-line pt-4">
-            <h3 className="text-sm font-semibold text-gray-900">Lessons & AI status</h3>
-            {lessonsLoading ? <LoadingState label="Loading lessons…" rows={2} /> : null}
-            {!lessonsLoading && lessonRows.length === 0 ? (
-              <p className="mt-3 text-sm text-gray-500">No lessons yet. Add a lesson above.</p>
+            {selectedCourseDetail?.status !== "published" ? (
+              <Button loading={publishMutation.isPending} onClick={() => publishMutation.mutate()}>
+                Publish course
+              </Button>
             ) : null}
-            <ul className="mt-3 space-y-3">
-              {lessonRows.map((row) => (
-                <li
-                  key={row.id}
-                  className="rounded-lg border border-line/70 bg-cream px-3 py-3"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium text-gray-900">
-                        Lesson {row.order ?? "—"}: {row.title}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {row.source_type} · {row.difficulty} · ~{row.estimated_minutes}m
-                      </p>
-                      <LessonAIStatusPanel courseId={courseIdNum} lesson={row} />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (window.confirm("Delete this lesson?")) {
-                          deleteLessonMutation.mutate({ courseId: courseIdNum, lessonId: row.id });
-                        }
-                      }}
-                      className="shrink-0 text-xs font-semibold text-red-600 hover:text-red-700"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
           </div>
+
+          <div className="mt-5 grid gap-4 border-t border-line/70 pt-4 sm:grid-cols-3 dark:border-white/10">
+            <CourseMetric label="Lessons" value={selectedCourseDetail?.lesson_count ?? lessonRows.length} />
+            <CourseMetric label="Status" value={selectedCourseDetail?.status ?? "draft"} />
+            <CourseMetric label="Level" value={selectedCourseDetail?.level ?? "beginner"} />
+          </div>
+        </Card>
+
+        <LessonForm
+          selectedSource={selectedSource}
+          lessonTitle={lessonTitle}
+          setLessonTitle={setLessonTitle}
+          lessonSource={lessonSource}
+          setLessonSource={setLessonSource}
+          lessonUrl={lessonUrl}
+          setLessonUrl={setLessonUrl}
+          lessonContent={lessonContent}
+          setLessonContent={setLessonContent}
+          lessonMinutes={lessonMinutes}
+          setLessonMinutes={setLessonMinutes}
+          lessonTags={lessonTags}
+          setLessonTags={setLessonTags}
+          lessonTopicTag={lessonTopicTag}
+          setLessonTopicTag={setLessonTopicTag}
+          lessonObjective={lessonObjective}
+          setLessonObjective={setLessonObjective}
+          lessonFormError={lessonFormError}
+          isSaving={createLessonMutation.isPending}
+          onSubmit={handleLessonSubmit}
+        />
+
+        <section className="space-y-3">
+          <SectionHeader title="Lessons" subtitle="Review lesson order and generation status." />
+          <LessonList
+            courseId={courseIdNum}
+            lessons={lessonRows}
+            loading={lessonsLoading}
+            deletingId={deletingLessonId}
+            onDelete={(lesson) => {
+              if (window.confirm(`Delete "${lesson.title}"?`)) {
+                deleteLessonMutation.mutate({ courseId: courseIdNum, lessonId: lesson.id });
+              }
+            }}
+          />
         </section>
       </section>
 
       <aside className="space-y-4">
         <PipelineStatus courseId={courseIdNum} />
-        <section className="rounded-2xl border border-emerald-100 bg-white/90 p-4 shadow-lg backdrop-blur text-sm text-muted">
-          <p className="font-semibold text-ink">Approval workflow</p>
-          <p className="mt-2">
-            Preview generated questions, then approve to publish. Students only see published questions in quizzes.
+        <Card variant="subtle" padding="md">
+          <p className="font-semibold text-ink dark:text-sand">Approval workflow</p>
+          <p className="mt-2 text-sm text-muted dark:text-reef/75">
+            Generate or preview quiz questions from a lesson, then approve them before students can take the quiz.
           </p>
-        </section>
+        </Card>
       </aside>
     </div>
   );

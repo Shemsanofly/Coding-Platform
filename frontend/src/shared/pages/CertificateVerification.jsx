@@ -22,13 +22,6 @@ export default function CertificateVerification() {
   const { verificationCode = "" } = useParams();
   const [code, setCode] = useState(verificationCode);
   const [submittedCode, setSubmittedCode] = useState(verificationCode);
-  const [theme, setTheme] = useState(() => {
-    const saved = window.localStorage.getItem(THEME_STORAGE_KEY);
-    if (saved === "dark" || saved === "light") {
-      return saved;
-    }
-    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-  });
 
   useEffect(() => {
     setCode(verificationCode);
@@ -36,8 +29,8 @@ export default function CertificateVerification() {
   }, [verificationCode]);
 
   useEffect(() => {
-    window.localStorage.setItem(THEME_STORAGE_KEY, theme);
-  }, [theme]);
+    window.localStorage.setItem(THEME_STORAGE_KEY, "light");
+  }, []);
 
   const verificationQuery = useQuery({
     queryKey: ["certificate-verification", submittedCode],
@@ -56,32 +49,14 @@ export default function CertificateVerification() {
     setSubmittedCode(code.trim());
   };
 
-  const isLight = theme === "light";
-
   return (
-    <div
-      className={`student-theme-root min-h-screen px-4 py-6 ${
-        isLight ? "student-theme-light bg-lc-page text-ink" : "bg-lc-page-dark text-sand"
-      }`}
-    >
+    <div className="student-theme-root student-theme-light min-h-screen bg-lc-page px-4 py-6 text-ink">
       <div className="mx-auto flex min-h-[calc(100vh-3rem)] max-w-5xl flex-col">
         <header className="flex items-center justify-between gap-3">
-          <Link
-            to="/"
-            className={`inline-flex items-center gap-2.5 text-lg font-bold ${
-              isLight ? "text-ocean-800" : "text-sand"
-            }`}
-          >
+          <Link to="/" className="inline-flex items-center gap-2.5 text-lg font-bold text-ocean-800">
             <BrandMark />
             <span>LearnCode</span>
           </Link>
-          <button
-            type="button"
-            onClick={() => setTheme((current) => (current === "dark" ? "light" : "dark"))}
-            className="lc-btn-ghost min-h-10 px-3"
-          >
-            {isLight ? "Dark mode" : "Light mode"}
-          </button>
         </header>
 
         <main className="grid flex-1 items-center gap-6 py-8 lg:grid-cols-[1.05fr_0.95fr]">

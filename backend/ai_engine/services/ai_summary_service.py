@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 
 CHUNK_SIZE = 12_000
 CHUNK_OVERLAP = 400
+MAX_AI_NOTES_CHUNKS = 3
 
 
 class StudyNotesPayload(TypedDict):
@@ -245,6 +246,13 @@ def generate_study_notes(
 
     if not api_key:
         logger.info("GEMINI_API_KEY missing; using rule-based study notes fallback.")
+        return _rule_based_summary(cleaned, default_title=lesson_title)
+
+    if len(chunks) > MAX_AI_NOTES_CHUNKS:
+        logger.info(
+            "Transcript has %s chunks; using fast rule-based study notes fallback.",
+            len(chunks),
+        )
         return _rule_based_summary(cleaned, default_title=lesson_title)
 
     partials: list[StudyNotesPayload] = []

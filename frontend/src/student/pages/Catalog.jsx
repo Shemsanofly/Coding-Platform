@@ -8,21 +8,20 @@ import CourseCard from "@/student/components/CourseCard";
 import EmptyState from "@/student/components/EmptyState";
 import ErrorState from "@/shared/components/ErrorState";
 import PageHeader from "@/shared/components/ui/PageHeader";
-import Card from "@/shared/components/ui/Card";
 import Button from "@/shared/components/ui/Button";
+import { formatCourseLevel } from "@/shared/components/course/CourseBadges";
 
 const LEVEL_OPTIONS = [
   { value: "matched", label: "My level" },
-  { value: "all", label: "All levels" },
   { value: "beginner", label: "Beginner" },
   { value: "intermediate", label: "Intermediate" },
   { value: "advanced", label: "Advanced" },
 ];
 
-function formatLevel(level) {
-  if (!level) return null;
-  const text = String(level).replace(/_/g, " ");
-  return `${text.charAt(0).toUpperCase()}${text.slice(1)}`;
+function matchesSearch(course, query) {
+  if (!query) return true;
+  const text = `${course.title || ""} ${course.level || ""} ${course.status || ""}`.toLowerCase();
+  return text.includes(query.toLowerCase());
 }
 
 export default function Catalog() {
@@ -31,19 +30,17 @@ export default function Catalog() {
   const { user } = useAuth();
   const [joiningId, setJoiningId] = useState(null);
   const [levelFilter, setLevelFilter] = useState("matched");
+  const [search, setSearch] = useState("");
 
   const catalogLevel = useMemo(() => {
     if (levelFilter === "matched") {
-      return user?.experience_level || undefined;
-    }
-    if (levelFilter === "all") {
-      return "all";
+      return user?.experience_level || "beginner";
     }
     return levelFilter;
   }, [levelFilter, user?.experience_level]);
 
   const { data = [], isLoading, isPending, isError, refetch } = useQuery({
-    queryKey: ["course-catalog", catalogLevel ?? "default"],
+    queryKey: ["course-catalog", catalogLevel ?? "all"],
     queryFn: () => getCourseCatalog({ level: catalogLevel }),
   });
 
@@ -64,46 +61,68 @@ export default function Catalog() {
     onSettled: () => setJoiningId(null),
   });
 
-  const items = useMemo(() => (Array.isArray(data) ? data : data?.results ?? []), [data]);
+  const allCourses = useMemo(() => (Array.isArray(data) ? data : data?.results ?? []), [data]);
+  const courses = useMemo(
+    () => allCourses.filter((course) => matchesSearch(course, search.trim())),
+    [allCourses, search],
+  );
   const showSkeleton = isLoading || isPending;
+  const enrolledCount = allCourses.filter((course) => course.is_enrolled).length;
 
   const subtitle = useMemo(() => {
-    if (levelFilter === "all") {
-      return "Browse all published courses and enroll to unlock lessons, quizzes, and your personalized study plan.";
-    }
     if (levelFilter === "matched" && user?.experience_level) {
-      return `Showing ${formatLevel(user.experience_level)} courses matched to your learning level. Enrolled courses always stay visible.`;
+      return `${formatCourseLevel(user.experience_level)} courses matched to your profile. You can switch levels anytime.`;
     }
-    return "Browse published courses and enroll to unlock lessons, quizzes, and your personalized study plan.";
+    return "Find a course, enroll, and continue directly into the lesson path.";
   }, [levelFilter, user?.experience_level]);
 
   return (
-    <div className="space-y-6 p-4 md:p-6">
-      <Card variant="elevated">
+    <div className="space-y-5 p-4 md:p-6">
+      <section className="rounded-2xl border border-ocean-600/10 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-[#172433]/85">
         <PageHeader
-          title="Course catalog"
+          title="Course Catalog"
           subtitle={subtitle}
-          actions={
-            <div className="flex flex-wrap gap-2">
-              {LEVEL_OPTIONS.map((option) => (
-                <Button
-                  key={option.value}
-                  variant={levelFilter === option.value ? "gradient" : "ghost"}
-                  size="sm"
-                  onClick={() => setLevelFilter(option.value)}
-                >
-                  {option.label}
-                </Button>
-              ))}
-            </div>
-          }
         />
-      </Card>
+
+        <div className="mt-5 grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+          <label className="relative block">
+            <span className="sr-only">Search courses</span>
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-muted">
+              Search
+            </span>
+            <input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search by course name, level, or status"
+              className="lc-input pl-16"
+            />
+          </label>
+
+          <div className="flex flex-wrap gap-2">
+            {LEVEL_OPTIONS.map((option) => (
+              <Button
+                key={option.value}
+                variant={levelFilter === option.value ? "primary" : "ghost"}
+                size="sm"
+                onClick={() => setLevelFilter(option.value)}
+              >
+                {option.label}
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-4 flex flex-wrap gap-4 text-sm text-muted dark:text-reef/75">
+          <span>{allCourses.length} course{allCourses.length === 1 ? "" : "s"} available</span>
+          <span>{enrolledCount} enrolled</span>
+          {search.trim() ? <span>{courses.length} match search</span> : null}
+        </div>
+      </section>
 
       {showSkeleton ? (
-        <div className="space-y-3" aria-busy="true">
-          {Array.from({ length: 3 }).map((_, index) => (
-            <div key={index} className="h-24 animate-pulse rounded-2xl bg-reef/50 dark:bg-ocean-950/60" />
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3" aria-busy="true">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <div key={index} className="h-[220px] animate-pulse rounded-2xl bg-reef/50 dark:bg-ocean-950/60" />
           ))}
         </div>
       ) : null}
@@ -112,9 +131,9 @@ export default function Catalog() {
         <ErrorState message="Unable to load the catalog." onRetry={() => void refetch()} />
       ) : null}
 
-      {!showSkeleton && !isError && items.length > 0 ? (
-        <ul className="space-y-3">
-          {items.map((course) => (
+      {!showSkeleton && !isError && courses.length > 0 ? (
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {courses.map((course) => (
             <CourseCard
               key={course.id}
               course={course}
@@ -126,15 +145,15 @@ export default function Catalog() {
               }}
             />
           ))}
-        </ul>
+        </div>
       ) : null}
 
-      {!showSkeleton && !isError && items.length === 0 ? (
+      {!showSkeleton && !isError && courses.length === 0 ? (
         <EmptyState
-          title="No courses available"
+          title={search.trim() ? "No matching courses" : "No courses available"}
           message={
-            levelFilter === "matched"
-              ? "No published courses match your learning level yet. Try showing all levels."
+            search.trim()
+              ? "Clear the search or switch to another level."
               : "Published courses will appear here once an admin creates content."
           }
         />

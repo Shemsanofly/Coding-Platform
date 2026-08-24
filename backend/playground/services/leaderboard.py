@@ -142,7 +142,7 @@ def build_playground_leaderboard(*, current_user_id: int, limit: int = 25) -> di
     rows = []
     for student in students:
         stats = build_student_playground_stats(student.id)
-        if stats:
+        if stats and stats["challenges_solved"] > 0:
             rows.append(stats)
 
     rows.sort(

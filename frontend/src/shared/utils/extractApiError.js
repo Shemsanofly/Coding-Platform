@@ -1,13 +1,13 @@
 /**
  * Extract a readable message from an Axios or fetch error.
  */
-export function extractApiError(error, fallback = "Request failed.") {
+export function extractApiError(error, fallback = "Request failed.", options = {}) {
   if (!error) {
     return fallback;
   }
 
   if (error.code === "ECONNABORTED") {
-    return "Request timed out. Quiz generation can take up to two minutes — try again or refresh status.";
+    return options.timeoutMessage || "Request timed out. Try again or refresh status.";
   }
 
   if (!error.response) {

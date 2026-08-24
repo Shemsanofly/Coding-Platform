@@ -8,89 +8,120 @@ import SectionHeader from "@/student/components/SectionHeader";
 import LoadingState from "@/student/components/LoadingState";
 import Button from "@/shared/components/ui/Button";
 import Card from "@/shared/components/ui/Card";
-import PageHeader from "@/shared/components/ui/PageHeader";
-import BrandMark from "@/shared/components/BrandMark";
+import { CourseLevelBadge, CourseMetric, CourseStatusPill } from "@/shared/components/course/CourseBadges";
 import { formatSourceTypeLabel } from "@/shared/constants/lessonSources";
 import { triggerBlobDownload } from "@/shared/utils/downloadBlob";
 
-function LessonTimelineItem({ lesson, index, lessons, onStudy, onQuiz }) {
-  const isLast = index === lessons.length - 1;
-  const quizAvailable = Boolean(lesson.quiz_available ?? lesson.quiz_ready);
-  const quizFailed = lesson.quiz_generation_status === "failed";
-  const status = lesson.quiz_passed ? "completed" : lesson.unlocked ? "active" : "locked";
+function lessonState(lesson) {
+  if (lesson.quiz_passed || lesson.lesson_officially_completed) {
+    return { label: "Complete", className: "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-400/30 dark:bg-emerald-500/15 dark:text-emerald-100" };
+  }
+  if (!lesson.unlocked) {
+    return { label: "Locked", className: "border-slate-200 bg-slate-50 text-slate-700 dark:border-white/10 dark:bg-white/10 dark:text-reef" };
+  }
+  if (lesson.quiz_generation_status === "failed") {
+    return { label: "Quiz failed", className: "border-red-200 bg-red-50 text-red-700 dark:border-red-400/30 dark:bg-red-500/15 dark:text-red-100" };
+  }
+  if (lesson.quiz_available || lesson.quiz_ready) {
+    return { label: "Ready", className: "border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-400/30 dark:bg-blue-500/15 dark:text-blue-100" };
+  }
+  return { label: "Studying", className: "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-400/30 dark:bg-amber-500/15 dark:text-amber-100" };
+}
 
-  const statusStyles = {
-    completed: "border-emerald-500 bg-emerald-500 text-white",
-    active: "border-ocean-600 bg-ocean-600 text-white",
-    locked: "border-line bg-cream text-muted dark:border-line/50 dark:bg-ocean-950/60 dark:text-muted",
-  };
+function LessonRow({ lesson, index, previousLesson, onStudy, onQuiz }) {
+  const state = lessonState(lesson);
+  const quizAvailable = Boolean(lesson.quiz_available ?? lesson.quiz_ready);
 
   return (
-    <li className="relative flex gap-4 pb-6 last:pb-0">
-      {!isLast ? (
-        <span
-          className="absolute left-[15px] top-8 h-[calc(100%-8px)] w-0.5 bg-line dark:bg-line/40"
-          aria-hidden="true"
-        />
-      ) : null}
-      <span
-        className={`relative z-[1] flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 text-xs font-bold ${statusStyles[status]}`}
-        aria-hidden="true"
-      >
-        {lesson.quiz_passed ? "✓" : (lesson.order ?? index) + 1}
-      </span>
-      <div className="min-w-0 flex-1 rounded-2xl border border-ocean-600/10 bg-white p-4 shadow-sm dark:border-line/30 dark:bg-ocean-950/40">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0">
-            <p className="font-semibold text-ink dark:text-sand">{lesson.title}</p>
-            <p className="mt-1 text-xs text-muted dark:text-muted">
-              {formatSourceTypeLabel(lesson.source_type)}
-              {lesson.estimated_minutes ? ` · ~${lesson.estimated_minutes} min` : ""}
-              {lesson.learning_objective ? ` · ${lesson.learning_objective}` : ""}
-            </p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {!lesson.unlocked ? (
-                <span className="rounded-full bg-reef/60 px-2 py-0.5 text-xs font-medium text-ocean-800 dark:bg-ocean-900/60 dark:text-reef">
-                  Locked
-                </span>
-              ) : null}
-              {lesson.unlocked && lesson.quiz_passed ? (
-                <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800 dark:bg-emerald-500/30 dark:text-emerald-100">
-                  Quiz cleared
-                </span>
-              ) : null}
-              {lesson.unlocked && !lesson.quiz_passed && !quizAvailable ? (
-                <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800 dark:bg-red-500/25 dark:text-red-100">
-                  {quizFailed ? "Quiz failed to generate" : "Quiz not ready"}
-                </span>
-              ) : null}
-            </div>
-            {!lesson.unlocked ? (
-              <p className="mt-2 text-xs text-muted dark:text-muted/80">
-                {index > 0 && lessons[index - 1]
-                  ? `Pass the quiz for "${lessons[index - 1].title}" to unlock`
-                  : "Pass the prior quiz to unlock"}
-              </p>
-            ) : null}
+    <li className="rounded-2xl border border-ocean-600/10 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-[#172433]/85">
+      <div className="grid gap-4 lg:grid-cols-[auto_minmax(0,1fr)_auto] lg:items-center">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-reef text-sm font-bold text-ocean-800 dark:bg-ocean-600/25 dark:text-reef">
+          {lesson.quiz_passed ? "OK" : index + 1}
+        </div>
+
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="font-semibold text-ink dark:text-sand">{lesson.title}</h3>
+            <span className={`inline-flex min-h-6 items-center rounded-full border px-2.5 text-xs font-semibold ${state.className}`}>
+              {state.label}
+            </span>
           </div>
-          {lesson.unlocked ? (
-            <div className="flex shrink-0 flex-wrap gap-2">
-              <Button variant="ghost" size="sm" onClick={() => onStudy(lesson.id)}>
-                Study
-              </Button>
-              <Button
-                variant="gradient"
-                size="sm"
-                disabled={!quizAvailable}
-                onClick={() => onQuiz(lesson.id)}
-              >
-                Quiz
-              </Button>
-            </div>
+          <p className="mt-1 text-sm text-muted dark:text-reef/75">
+            {formatSourceTypeLabel(lesson.source_type)}
+            {lesson.estimated_minutes ? ` | ${lesson.estimated_minutes} min` : ""}
+            {lesson.learning_objective ? ` | ${lesson.learning_objective}` : ""}
+          </p>
+          {!lesson.unlocked ? (
+            <p className="mt-2 text-xs text-muted dark:text-reef/70">
+              {previousLesson ? `Pass "${previousLesson.title}" to unlock this lesson.` : "Pass the prior quiz to unlock this lesson."}
+            </p>
           ) : null}
+        </div>
+
+        <div className="flex flex-wrap gap-2 lg:justify-end">
+          <Button variant="ghost" size="sm" disabled={!lesson.unlocked} onClick={() => onStudy(lesson.id)}>
+            Study
+          </Button>
+          <Button variant="gradient" size="sm" disabled={!lesson.unlocked || !quizAvailable} onClick={() => onQuiz(lesson.id)}>
+            Quiz
+          </Button>
         </div>
       </div>
     </li>
+  );
+}
+
+function CertificatePanel({ course, courseProgress, certificate, eligible, reasons, onGenerate, onDownload, generating, downloading }) {
+  const issueDate = certificate?.issue_date ? new Date(certificate.issue_date).toLocaleDateString() : "";
+
+  return (
+    <Card variant="subtle" padding="md">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0">
+          <SectionHeader
+            title="Certificate"
+            subtitle={`Completion record for this course - ${courseProgress}% progress`}
+          />
+          {certificate ? (
+            <p className="mt-3 text-sm text-muted dark:text-reef/75">
+              Certificate {certificate.certificate_number}
+              {issueDate ? ` issued ${issueDate}` : ""}.
+            </p>
+          ) : eligible ? (
+            <p className="mt-3 text-sm text-muted dark:text-reef/75">
+              Requirements are complete. Generate your certificate when ready.
+            </p>
+          ) : (
+            <div className="mt-3 space-y-1 text-sm text-muted dark:text-reef/75">
+              <p>Complete the course requirements to unlock your certificate.</p>
+              {reasons.map((reason) => (
+                <p key={reason}>{reason}</p>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="flex shrink-0 flex-wrap gap-2">
+          {certificate ? (
+            <>
+              <Link
+                to={`/certificates/${certificate.id}`}
+                className="lc-btn-ghost min-h-9 px-3 py-2 text-xs"
+              >
+                View
+              </Link>
+              <Button variant="gradient" size="sm" loading={downloading} onClick={() => onDownload(certificate.id)}>
+                Download
+              </Button>
+            </>
+          ) : eligible ? (
+            <Button variant="gradient" size="sm" loading={generating} onClick={onGenerate}>
+              Generate
+            </Button>
+          ) : null}
+        </div>
+      </div>
+    </Card>
   );
 }
 
@@ -165,7 +196,7 @@ export default function CourseDetail() {
   if (isLoading) {
     return (
       <div className="p-6">
-        <LoadingState label="Loading course…" rows={4} />
+        <LoadingState label="Loading course..." rows={4} />
       </div>
     );
   }
@@ -179,17 +210,10 @@ export default function CourseDetail() {
             Join this course to access lessons, quizzes, and your study plan.
           </p>
           <div className="mt-4 flex flex-wrap gap-3">
-            <Button
-              variant="gradient"
-              loading={enrollMutation.isPending}
-              onClick={() => enrollMutation.mutate()}
-            >
+            <Button variant="gradient" loading={enrollMutation.isPending} onClick={() => enrollMutation.mutate()}>
               Enroll now
             </Button>
-            <Link
-              to="/catalog"
-              className="inline-flex min-h-10 items-center rounded-xl border border-amber-800/25 px-4 text-sm font-medium hover:bg-amber-100 dark:border-line/40 dark:hover:bg-ocean-900/50"
-            >
+            <Link to="/catalog" className="lc-btn-ghost">
               Browse catalog
             </Link>
           </div>
@@ -211,7 +235,7 @@ export default function CourseDetail() {
 
   const lessons = Array.isArray(course.lessons) ? course.lessons : [];
   const completedCount =
-    Number(course.completed_lessons) || lessons.filter((l) => l.lesson_officially_completed || l.quiz_passed).length;
+    Number(course.completed_lessons) || lessons.filter((lesson) => lesson.lesson_officially_completed || lesson.quiz_passed).length;
   const courseProgress =
     typeof course.progress_percent === "number"
       ? Math.round(course.progress_percent)
@@ -221,137 +245,71 @@ export default function CourseDetail() {
   const certificate = generateMutation.data ?? course.certificate ?? null;
   const certificateEligible = Boolean(course.certificate_eligible || certificate);
   const certificateReasons = Array.isArray(course.certificate_reasons) ? course.certificate_reasons : [];
-  const issueDate = certificate?.issue_date ? new Date(certificate.issue_date).toLocaleDateString() : "";
+  const readyQuizzes = lessons.filter((lesson) => lesson.quiz_available || lesson.quiz_ready).length;
 
   return (
-    <div className="space-y-6 overflow-x-hidden p-4 md:p-6">
-      <Card variant="elevated">
-        <p className="text-xs font-semibold uppercase tracking-widest text-ocean-800 dark:text-reef">
-          Course path
-        </p>
-        <PageHeader
-          className="mt-1"
-          title={course.title}
-          subtitle={`Level ${course.level} · Lessons unlock in order after passing each quiz`}
-        />
-        <div className="mt-4">
-          <ProgressBar
-            value={courseProgress}
-            label={`${completedCount} of ${lessons.length} lessons completed`}
-          />
-        </div>
-      </Card>
-
-      <Card variant="elevated" padding="md" className="overflow-hidden">
-        <div className="-mx-5 -mt-5 mb-5 h-1.5 bg-gradient-to-r from-coral via-spice to-ocean-600" />
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-ocean-600/10 bg-reef/70 dark:border-white/10 dark:bg-[#213548]">
-              <BrandMark />
+    <div className="space-y-5 p-4 md:p-6">
+      <section className="rounded-2xl border border-ocean-600/10 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-[#172433]/85">
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-end">
+          <div className="min-w-0">
+            <Link to="/catalog" className="text-sm font-semibold text-ocean-700 hover:underline dark:text-reef">
+              Back to catalog
+            </Link>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <CourseLevelBadge level={course.level} />
+              <CourseStatusPill status={course.status || "published"} />
             </div>
-            <SectionHeader
-              title="LearnCode Certificate"
-              subtitle={`Official completion record - ${courseProgress}% course progress`}
-            />
-          </div>
-          <span
-            className={`inline-flex w-fit rounded-full border px-3 py-1 text-xs font-bold uppercase ${
-              certificate
-                ? "border-emerald-300/60 bg-emerald-50 text-emerald-800 dark:border-emerald-300/30 dark:bg-emerald-400/10 dark:text-emerald-100"
-                : certificateEligible
-                  ? "border-spice/50 bg-spice/10 text-ocean-950 dark:border-spice/40 dark:bg-spice/10 dark:text-sand"
-                  : "border-line bg-cream text-muted dark:border-white/10 dark:bg-[#1b2b3b] dark:text-reef/80"
-            }`}
-          >
-            {certificate ? "Issued" : certificateEligible ? "Ready" : "In progress"}
-          </span>
-        </div>
-        {certificate ? (
-          <div className="mt-5 flex flex-col gap-5 rounded-xl border border-ocean-600/10 bg-cream/80 p-4 dark:border-white/10 dark:bg-[#1b2b3b]/70 sm:flex-row sm:items-end sm:justify-between">
-            <div className="min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-ocean-800 dark:text-reef">
-                Certificate of Completion
-              </p>
-              <h3 className="mt-1 truncate text-lg font-bold text-ink dark:text-sand">{course.title}</h3>
-              <dl className="mt-3 grid gap-2 text-xs text-muted dark:text-reef/80 sm:grid-cols-2">
-                <div>
-                  <dt className="font-semibold uppercase tracking-wide">Certificate no.</dt>
-                  <dd className="mt-0.5 font-medium text-ink dark:text-sand">{certificate.certificate_number}</dd>
-                </div>
-                <div>
-                  <dt className="font-semibold uppercase tracking-wide">Issued</dt>
-                  <dd className="mt-0.5 font-medium text-ink dark:text-sand">{issueDate || "Available"}</dd>
-                </div>
-              </dl>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Link
-                to={`/certificates/${certificate.id}`}
-                className="inline-flex min-h-10 items-center rounded-xl border border-ocean-600/20 px-4 text-sm font-semibold text-ocean-800 transition hover:bg-reef/40 dark:border-white/10 dark:bg-[#172433]/80 dark:text-reef dark:hover:bg-[#213548]"
-              >
-                View Certificate
-              </Link>
-              <Button
-                variant="gradient"
-                loading={downloadMutation.isPending}
-                onClick={() => downloadMutation.mutate(certificate.id)}
-              >
-                Download Certificate
-              </Button>
-              <Link
-                to={`/verify-certificate/${certificate.verification_code}`}
-                className="inline-flex min-h-10 items-center rounded-xl border border-ocean-600/20 px-4 text-sm font-semibold text-ocean-800 transition hover:bg-reef/40 dark:border-white/10 dark:bg-[#172433]/80 dark:text-reef dark:hover:bg-[#213548]"
-              >
-                Verify Certificate
-              </Link>
-            </div>
-          </div>
-        ) : certificateEligible ? (
-          <div className="mt-5 flex flex-col gap-3 rounded-xl border border-spice/30 bg-spice/10 p-4 sm:flex-row sm:items-center sm:justify-between dark:border-spice/30 dark:bg-spice/10">
-            <p className="text-sm text-muted dark:text-reef/90">
-              Your course requirements are complete. Generate your official LearnCode certificate.
+            <h1 className="mt-3 text-2xl font-bold text-ink dark:text-sand md:text-3xl">{course.title}</h1>
+            <p className="mt-2 max-w-2xl text-sm text-muted dark:text-reef/75">
+              Work through the lessons in order, then use the quizzes to confirm mastery and unlock completion.
             </p>
-            <Button
-              variant="gradient"
-              loading={generateMutation.isPending}
-              onClick={() => generateMutation.mutate()}
-            >
-              Generate Certificate
-            </Button>
           </div>
-        ) : (
-          <div className="mt-5 space-y-2 rounded-xl border border-ocean-600/10 bg-cream/80 p-4 text-sm text-muted dark:border-white/10 dark:bg-[#1b2b3b]/70 dark:text-reef/90">
-            <p>Complete all required lessons and pass the final assessment to receive your certificate.</p>
-            {certificateReasons.length > 0 ? (
-              <ul className="list-inside list-disc">
-                {certificateReasons.map((reason) => (
-                  <li key={reason}>{reason}</li>
-                ))}
-              </ul>
-            ) : null}
-          </div>
-        )}
-      </Card>
 
-      <Card variant="elevated" padding="md">
-        <SectionHeader title="Lesson timeline" subtitle="Follow the sequence from top to bottom." />
+          <div className="rounded-xl border border-line/70 bg-cream p-4 dark:border-white/10 dark:bg-ocean-950/35">
+            <ProgressBar value={courseProgress} label={`${completedCount} of ${lessons.length} lessons complete`} />
+          </div>
+        </div>
+
+        <div className="mt-5 grid gap-4 border-t border-line/70 pt-4 sm:grid-cols-3 dark:border-white/10">
+          <CourseMetric label="Lessons" value={lessons.length} />
+          <CourseMetric label="Quizzes ready" value={`${readyQuizzes}/${lessons.length}`} />
+          <CourseMetric label="Progress" value={`${courseProgress}%`} />
+        </div>
+      </section>
+
+      <CertificatePanel
+        course={course}
+        courseProgress={courseProgress}
+        certificate={certificate}
+        eligible={certificateEligible}
+        reasons={certificateReasons}
+        generating={generateMutation.isPending}
+        downloading={downloadMutation.isPending}
+        onGenerate={() => generateMutation.mutate()}
+        onDownload={(certificateId) => downloadMutation.mutate(certificateId)}
+      />
+
+      <section className="space-y-3">
+        <SectionHeader title="Lessons" subtitle="Study, then take the quiz when it is ready." />
         {lessons.length === 0 ? (
-          <p className="mt-4 text-sm text-muted dark:text-muted">No lessons yet.</p>
+          <Card variant="subtle">
+            <p className="text-sm text-muted dark:text-reef/75">No lessons have been added yet.</p>
+          </Card>
         ) : (
-          <ol className="mt-6">
+          <ol className="space-y-3">
             {lessons.map((lesson, index) => (
-              <LessonTimelineItem
+              <LessonRow
                 key={lesson.id}
                 lesson={lesson}
                 index={index}
-                lessons={lessons}
+                previousLesson={lessons[index - 1]}
                 onStudy={(lessonId) => navigate(`/lessons/${lessonId}`)}
                 onQuiz={(lessonId) => navigate(`/lessons/${lessonId}/quiz`)}
               />
             ))}
           </ol>
         )}
-      </Card>
+      </section>
     </div>
   );
 }

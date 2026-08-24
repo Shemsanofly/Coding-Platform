@@ -3,8 +3,6 @@
 import os
 import sys
 from pathlib import Path
-
-
 def _reexec_from_local_venv():
     """Prefer the project virtualenv when manage.py is launched with global Python."""
     project_python = Path(__file__).resolve().parent / ".venv" / "Scripts" / "python.exe"

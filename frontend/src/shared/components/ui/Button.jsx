@@ -33,7 +33,7 @@ export default function Button({
       className={`${base} ${sizeClass} ${className}`.trim()}
       {...props}
     >
-      {loading ? "Please wait…" : children}
+      {loading ? "Please wait..." : children}
     </button>
   );
 }

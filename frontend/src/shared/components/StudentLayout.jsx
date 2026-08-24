@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthProvider";
 import UserAvatar from "@/shared/components/UserAvatar";
@@ -27,31 +27,17 @@ const mobileNavItems = [
   { to: "/profile", label: "Profile", icon: "profile" },
 ];
 
-const sidebarLinkClass =
-  (isLight) =>
-  ({ isActive }) =>
-    `flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold transition ${
-      isActive
-        ? isLight
-          ? "border border-ocean-600/20 bg-white text-ocean-700 shadow-sm"
-          : "border border-reef/20 bg-[#213548] text-sand shadow-sm"
-        : isLight
-          ? "border border-transparent text-ocean-950 hover:border-ocean-600/20 hover:bg-white hover:text-ocean-700"
-          : "border border-transparent text-reef/85 hover:border-reef/20 hover:bg-[#1c2d3d] hover:text-sand"
-    }`;
+const sidebarLinkClass = ({ isActive }) =>
+  `flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold transition ${
+    isActive
+      ? "border border-ocean-600/20 bg-white text-ocean-700 shadow-sm"
+      : "border border-transparent text-ocean-950 hover:border-ocean-600/20 hover:bg-white hover:text-ocean-700"
+  }`;
 
-const mobileLinkClass =
-  (isLight) =>
-  ({ isActive }) =>
-    `flex min-h-[48px] min-w-[52px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-1.5 text-[10px] font-medium transition ${
-      isActive
-        ? isLight
-          ? "bg-white text-ocean-700 shadow-sm"
-          : "bg-[#213548] text-sand shadow-sm"
-        : isLight
-          ? "text-ocean-800 hover:bg-white/70"
-          : "text-reef/85 hover:bg-[#1c2d3d] hover:text-sand"
-    }`;
+const mobileLinkClass = ({ isActive }) =>
+  `flex min-h-[48px] min-w-[52px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-1.5 text-[10px] font-medium transition ${
+    isActive ? "bg-white text-ocean-700 shadow-sm" : "text-ocean-800 hover:bg-white/70"
+  }`;
 
 function MobileNavIcon({ name }) {
   const className = "h-5 w-5";
@@ -107,62 +93,41 @@ function MobileNavIcon({ name }) {
 export default function StudentLayout() {
   const { user, logout } = useAuth();
   const location = useLocation();
-  const [theme, setTheme] = useState(() => {
-    const saved = window.localStorage.getItem(THEME_STORAGE_KEY);
-    if (saved === "dark" || saved === "light") {
-      return saved;
-    }
-    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-  });
 
   useEffect(() => {
-    window.localStorage.setItem(THEME_STORAGE_KEY, theme);
-  }, [theme]);
+    window.localStorage.setItem(THEME_STORAGE_KEY, "light");
+  }, []);
 
   const hideBottomNav = location.pathname.includes("/quiz");
-  const isLight = theme === "light";
 
   return (
-    <div
-      className={`student-theme-root min-h-screen ${isLight ? "student-theme-light bg-lc-page text-ink" : "bg-lc-page-dark text-sand"}`}
-    >
+    <div className="student-theme-root student-theme-light min-h-screen bg-lc-page text-ink">
       <div className="dashboard-layout min-h-screen md:grid md:grid-cols-[240px_1fr]">
-        <aside
-          className={`hidden border-r border-ocean-600/10 bg-lc-sidebar backdrop-blur-md md:sticky md:top-0 md:flex md:h-screen md:flex-col md:gap-5 md:p-4 ${
-            isLight ? "" : "border-white/10 bg-[linear-gradient(180deg,rgba(25,40,54,0.96)_0%,rgba(19,33,46,0.96)_100%)]"
-          }`}
-        >
+        <aside className="hidden border-r border-ocean-600/10 bg-lc-sidebar backdrop-blur-md md:sticky md:top-0 md:flex md:h-screen md:flex-col md:gap-5 md:p-4">
           <NavLink to="/" className="inline-flex items-center gap-2.5 px-2 text-lg font-bold text-ocean-800">
             <BrandMark />
-            <span className={isLight ? "text-ocean-800" : "text-sand"}>LearnCode</span>
+            <span className="text-ocean-800">LearnCode</span>
           </NavLink>
 
           <nav className="grid gap-2">
             {navItems.map((item) => (
-              <NavLink key={item.to} to={item.to} end={item.end} className={sidebarLinkClass(isLight)}>
+              <NavLink key={item.to} to={item.to} end={item.end} className={sidebarLinkClass}>
                 {item.label}
               </NavLink>
             ))}
-            <NavLink to="/settings" className={sidebarLinkClass(isLight)}>
+            <NavLink to="/settings" className={sidebarLinkClass}>
               Settings
             </NavLink>
           </nav>
 
           <div className="mt-auto grid gap-2 border-t border-ocean-600/10 pt-4">
-            <button
-              type="button"
-              onClick={() => setTheme((current) => (current === "dark" ? "light" : "dark"))}
-              className={sidebarLinkClass(isLight)({ isActive: false })}
-            >
-              {isLight ? "Dark mode" : "Light mode"}
-            </button>
-            <button type="button" onClick={() => void logout()} className={sidebarLinkClass(isLight)({ isActive: false })}>
+            <button type="button" onClick={() => void logout()} className={sidebarLinkClass({ isActive: false })}>
               Log out
             </button>
-            <div className={`flex items-center gap-2 px-2 ${isLight ? "text-muted" : "text-reef/80"}`}>
+            <div className="flex items-center gap-2 px-2 text-muted">
               <UserAvatar user={user} size="sm" className="rounded-xl" />
               <div className="min-w-0">
-                <p className="truncate text-xs font-semibold text-ink dark:text-sand">{getDisplayName(user)}</p>
+                <p className="truncate text-xs font-semibold text-ink">{getDisplayName(user)}</p>
                 <p className="truncate text-[11px]">{user?.email}</p>
               </div>
             </div>
@@ -170,32 +135,15 @@ export default function StudentLayout() {
         </aside>
 
         <div className="min-w-0">
-          <header
-            className={`sticky top-0 z-40 border-b backdrop-blur-xl md:hidden ${
-              isLight ? "border-ocean-600/10 bg-white/90" : "border-white/10 bg-[#172433]/92"
-            }`}
-          >
+          <header className="sticky top-0 z-40 border-b border-ocean-600/10 bg-white/90 backdrop-blur-xl md:hidden">
             <div className="flex items-center justify-between gap-2 px-4 py-3">
-              <NavLink
-                to="/"
-                className={`inline-flex items-center gap-2 font-bold ${isLight ? "text-ocean-800" : "text-sand"}`}
-              >
+              <NavLink to="/" className="inline-flex items-center gap-2 font-bold text-ocean-800">
                 <BrandMark />
                 LearnCode
               </NavLink>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setTheme((current) => (current === "dark" ? "light" : "dark"))}
-                  className="lc-btn-ghost min-h-10 min-w-10 px-2"
-                  aria-label={isLight ? "Switch to dark theme" : "Switch to light theme"}
-                >
-                  {isLight ? "☾" : "☀"}
-                </button>
-                <button type="button" onClick={() => void logout()} className="lc-btn-ghost min-h-10 px-3">
-                  Log out
-                </button>
-              </div>
+              <button type="button" onClick={() => void logout()} className="lc-btn-ghost min-h-10 px-3">
+                Log out
+              </button>
             </div>
           </header>
 
@@ -206,15 +154,10 @@ export default function StudentLayout() {
       </div>
 
       {!hideBottomNav ? (
-        <nav
-          className={`fixed bottom-0 left-0 right-0 z-50 border-t py-1 backdrop-blur-xl md:hidden ${
-            isLight ? "border-ocean-600/10 bg-white/95" : "border-white/10 bg-[#172433]/95"
-          }`}
-          aria-label="Mobile navigation"
-        >
+        <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-ocean-600/10 bg-white/95 py-1 backdrop-blur-xl md:hidden" aria-label="Mobile navigation">
           <div className="mx-auto flex max-w-6xl items-stretch justify-start gap-0.5 overflow-x-auto px-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {mobileNavItems.map((item) => (
-              <NavLink key={item.to} to={item.to} end={item.end} className={mobileLinkClass(isLight)}>
+              <NavLink key={item.to} to={item.to} end={item.end} className={mobileLinkClass}>
                 <MobileNavIcon name={item.icon} />
                 <span>{item.label}</span>
               </NavLink>

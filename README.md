@@ -38,12 +38,12 @@ Students register with a learning level, enroll in courses, study embedded lesso
 
 | Layer | Tools |
 |-------|--------|
-| Backend | Flask 3 runtime, Django compatibility data layer, Django REST Framework, SQLite3 |
+| Backend | Flask 3 runtime, SQLite3 |
 | Frontend | React 18, Vite, Tailwind CSS, React Query, Zustand |
 | AI | Google Gemini API |
 | PDF | ReportLab |
 | Transcripts | youtube-transcript-api |
-| Auth | djangorestframework-simplejwt behind Flask runtime |
+| Auth | Flask signed bearer tokens + httpOnly refresh cookie |
 | Task queue | Celery + Redis (optional, for async AI generation) |
 
 AI features process **YouTube transcript text only** — not raw video frames.
@@ -68,7 +68,6 @@ cd Coding-Platform
 cd backend
 cp .env.example .env
 pip install -r requirements.txt
-python manage.py migrate
 python app.py
 ```
 
@@ -92,7 +91,7 @@ Frontend runs at `http://localhost:5173/` with API requests proxied to the Flask
 |----------|----------|-------------|
 | `SECRET_KEY` | Yes | Backend signing secret |
 | `DEBUG` | No | Enable debug mode (default: `True`) |
-| `DATABASE_URL` | No | Database URL (defaults to SQLite) |
+| `DATABASE_PATH` | No | SQLite database path (defaults to `backend/db.sqlite3`) |
 | `GEMINI_API_KEY` | Recommended | Google Gemini API key for quiz and PDF notes |
 | `GEMINI_MODEL` | No | Gemini model name (default: `gemini-3.5-flash`) |
 | `ADMIN_REGISTRATION_CODE` | No | Code required for admin signup (default: `Admin2026`) |
@@ -117,12 +116,11 @@ Coding_Platform/
 │   ├── accounts/          # User auth, roles, experience level
 │   ├── ai_engine/         # Gemini, transcripts, quiz pipeline, learning path
 │   ├── app.py             # Flask development server entrypoint
-│   ├── flask_app.py       # Flask app factory with compatibility routing
-│   ├── core/              # Compatibility settings, URLs, Celery config
+│   ├── flask_app.py       # Flask app factory and API routes
+│   ├── core/              # Historical tests and compatibility files
 │   ├── courses/           # Courses, lessons, enrollment, PDF notes views
 │   ├── progress/          # Enrollments, lesson progress, weaknesses, reports
 │   ├── quizzes/           # Quiz models, student fetch/submit
-│   ├── manage.py
 │   └── requirements.txt
 ├── frontend/
 │   ├── src/
@@ -142,8 +140,7 @@ Coding_Platform/
 
 ```bash
 cd backend
-python manage.py test              # all apps
-python manage.py test ai_engine     # single app
+python -m unittest core.tests.test_flask_runtime -v
 ```
 
 ### Frontend production build

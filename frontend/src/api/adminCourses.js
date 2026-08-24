@@ -78,6 +78,7 @@ export const getAdminLessonQuizPreview = async (courseId, lessonId) => {
 
 /** Long-running AI pipeline calls (transcript + Gemini). */
 const AI_PIPELINE_TIMEOUT_MS = 120000;
+const PDF_NOTES_TIMEOUT_MS = 300000;
 
 export const generateAdminLessonQuiz = async (courseId, lessonId) => {
   const response = await client.post(
@@ -106,7 +107,7 @@ export const generateAdminLessonNotes = async (lessonId) => {
   const response = await client.post(
     `/api/lessons/${lessonId}/generate-notes/`,
     {},
-    { timeout: AI_PIPELINE_TIMEOUT_MS }
+    { timeout: PDF_NOTES_TIMEOUT_MS }
   );
   return response.data;
 };

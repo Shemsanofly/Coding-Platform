@@ -76,7 +76,7 @@ class PDFGenerationNotesTests(TestCase):
         pdf_bytes = build_notes_pdf(_sample_summary())
         self.assertTrue(pdf_bytes.startswith(b"%PDF"))
 
-    @override_settings(MEDIA_ROOT="d:/AI PLATFORM/backend/test_media_notes")
+    @override_settings(MEDIA_ROOT="test_media_notes")
     def test_save_notes_pdf_success(self):
         path = save_notes_pdf(_sample_summary(), filename="test_lesson.pdf")
         self.assertTrue(path.startswith("pdf_notes/"))
@@ -274,6 +274,15 @@ class LessonNotesAPITests(TestCase):
         self.assertEqual(summary["lesson_title"], "Fallback Lesson")
         self.assertTrue(summary["key_concepts"])
         self.assertTrue(summary["possible_quiz_points"])
+
+    @override_settings(GEMINI_API_KEY="test-key")
+    @patch("ai_engine.services.ai_summary_service._gemini_summarize_chunk")
+    def test_long_transcript_uses_fast_summary_fallback(self, mock_gemini):
+        summary = generate_study_notes(_sample_transcript(50_000), lesson_title="Long Lesson")
+
+        mock_gemini.assert_not_called()
+        self.assertEqual(summary["lesson_title"], "Long Lesson")
+        self.assertTrue(summary["key_concepts"])
 
     @patch("ai_engine.services.lesson_notes.fetch_transcript")
     @patch("ai_engine.services.lesson_notes.generate_study_notes")

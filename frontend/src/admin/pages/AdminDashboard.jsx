@@ -63,7 +63,6 @@ export default function AdminDashboard() {
     { title: "Failed AI runs", value: data?.failed_ai_generations ?? 0, color: "rose" },
   ];
 
-  const weakTopics = data?.top_weak_topics || [];
   const activity = data?.recent_activity || [];
   const hasCourses = (data?.total_courses ?? 0) > 0;
   const pendingApprovals = data?.pending_quiz_approvals ?? 0;
@@ -135,29 +134,7 @@ export default function AdminDashboard() {
         ))}
       </section>
 
-      <section className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        <Card variant="subtle">
-          <h2 className="text-lg font-semibold text-ink">Top weak topics</h2>
-          <p className="mt-1 text-sm text-muted">Across all students on the platform.</p>
-          {weakTopics.length === 0 ? (
-            <div className="mt-4">
-              <EmptyState title="No weak topics yet" message="Weakness data appears after students take quizzes." />
-            </div>
-          ) : (
-            <ul className="mt-4 space-y-2">
-              {weakTopics.map((topic) => (
-                <li
-                  key={topic.topic_tag}
-                  className="flex items-center justify-between rounded-lg border border-line/70 bg-cream px-3 py-2 text-sm"
-                >
-                  <span className="font-medium text-ink">{topic.topic_tag}</span>
-                  <span className="text-muted">{topic.student_count} students</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
-
+      <section>
         <Card variant="subtle">
           <h2 className="text-lg font-semibold text-ink">Recent activity</h2>
           <p className="mt-1 text-sm text-muted">Latest quiz attempts in your courses.</p>

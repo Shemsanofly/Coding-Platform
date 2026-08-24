@@ -70,7 +70,13 @@ export default function LessonAIStatusPanel({ courseId, lesson, onEdit }) {
     },
     onError: (error) => {
       invalidateQuizPipelineQueries(queryClient, courseId, lesson.id);
-      toast.error(extractApiError(error, "Could not generate quiz."), { id: "gen-quiz-err" });
+      toast.error(
+        extractApiError(error, "Could not generate quiz.", {
+          timeoutMessage:
+            "Request timed out. Quiz generation can take up to two minutes. Try again or refresh status.",
+        }),
+        { id: "gen-quiz-err" }
+      );
     },
   });
 
@@ -82,9 +88,15 @@ export default function LessonAIStatusPanel({ courseId, lesson, onEdit }) {
     },
     onError: (error) => {
       invalidateQuizPipelineQueries(queryClient, courseId, lesson.id);
-      toast.error(extractApiError(error, "Could not start quiz regeneration."), {
-        id: "regen-quiz-err",
-      });
+      toast.error(
+        extractApiError(error, "Could not start quiz regeneration.", {
+          timeoutMessage:
+            "Request timed out. Quiz regeneration can take up to two minutes. Try again or refresh status.",
+        }),
+        {
+          id: "regen-quiz-err",
+        }
+      );
     },
   });
 
@@ -107,6 +119,10 @@ export default function LessonAIStatusPanel({ courseId, lesson, onEdit }) {
       const message = extractApiError(
         error,
         "Could not generate PDF notes. Transcript may be unavailable.",
+        {
+          timeoutMessage:
+            "Request timed out. PDF notes can take a few minutes for long videos. Try again or refresh the lesson status.",
+        }
       );
       toast.error(message, { id: "gen-notes-err" });
     },

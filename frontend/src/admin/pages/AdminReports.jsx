@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { getAdminCourses } from "@/api/adminCourses";
@@ -42,6 +42,18 @@ export default function AdminReports() {
 
   const coursesQuery = useQuery({ queryKey: ["admin-courses"], queryFn: getAdminCourses });
   const studentsQuery = useQuery({ queryKey: ["admin-users"], queryFn: () => getAdminUsers() });
+  const courses = coursesQuery.data ?? [];
+  const students = studentsQuery.data ?? [];
+  const firstCourseId = courses[0]?.id ? String(courses[0].id) : "";
+  const activeCourseId = courses.some((course) => String(course.id) === String(courseFilter))
+    ? String(courseFilter)
+    : firstCourseId;
+
+  useEffect(() => {
+    if (activeCourseId && activeCourseId !== courseFilter) {
+      setCourseFilter(activeCourseId);
+    }
+  }, [activeCourseId, courseFilter]);
 
   const downloadMutation = useMutation({
     mutationFn: async ({ key, fn, filename, params }) => {
@@ -90,9 +102,6 @@ export default function AdminReports() {
     );
   }
 
-  const courses = coursesQuery.data ?? [];
-  const students = studentsQuery.data ?? [];
-
   return (
     <div className="space-y-8 p-4 md:p-6">
       <header className="rounded-2xl border border-emerald-100 bg-white/90 p-5 shadow-lg backdrop-blur">
@@ -130,16 +139,20 @@ export default function AdminReports() {
           </label>
           <select
             id="course-filter"
-            value={courseFilter}
+            value={activeCourseId}
             onChange={(event) => setCourseFilter(event.target.value)}
+            disabled={!courses.length}
             className="mt-2 w-full max-w-md rounded-xl border border-line px-3 py-2 text-sm"
           >
-            <option value="">All courses</option>
-            {courses.map((course) => (
-              <option key={course.id} value={course.id}>
-                {course.title}
-              </option>
-            ))}
+            {courses.length ? (
+              courses.map((course) => (
+                <option key={course.id} value={course.id}>
+                  {course.title}
+                </option>
+              ))
+            ) : (
+              <option value="">No courses available</option>
+            )}
           </select>
         </div>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -152,8 +165,8 @@ export default function AdminReports() {
               download(
                 "courses",
                 downloadAdminCoursesReport,
-                courseFilter ? `course-report-${courseFilter}.pdf` : "course-performance-report.pdf",
-                courseFilter ? { course_id: courseFilter } : {}
+                activeCourseId ? `course-report-${activeCourseId}.pdf` : "course-performance-report.pdf",
+                activeCourseId ? { course_id: activeCourseId } : {}
               )
             }
           />
