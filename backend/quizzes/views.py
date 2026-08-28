@@ -10,13 +10,18 @@ from ai_engine.services.generation_mode import get_ai_generation_mode
 from ai_engine.services.task_queue import run_or_enqueue
 from ai_engine.tasks import detect_weaknesses
 from courses.services import lesson_unlocked
-from progress.services import refresh_lesson_official_completion
+from progress.models import Enrollment, LessonProgress
+from progress.services import engagement_met, refresh_lesson_official_completion
 from progress.services.certificates import maybe_generate_certificate_for_lesson
 from accounts.permissions import STUDENT_ACCESS
-from progress.models import Enrollment
 from quizzes.models import Quiz, QuizResult
 
 logger = logging.getLogger(__name__)
+
+
+def _study_completed_for_lesson(user, lesson) -> bool:
+    progress = LessonProgress.objects.filter(user=user, lesson=lesson).first()
+    return bool(progress and (progress.completed_at or engagement_met(lesson, progress)))
 
 
 class LessonQuizView(APIView):
@@ -43,6 +48,11 @@ class LessonQuizView(APIView):
         if not lesson_unlocked(course, request.user, quiz.lesson):
             return Response(
                 {"detail": "This lesson is locked until prior quizzes are completed."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        if not _study_completed_for_lesson(request.user, quiz.lesson):
+            return Response(
+                {"detail": "Study this lesson to 100% before taking the quiz."},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
@@ -98,6 +108,11 @@ class QuizSubmitView(APIView):
         if not lesson_unlocked(course, request.user, quiz.lesson):
             return Response(
                 {"detail": "This lesson is locked until prior quizzes are completed."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        if not _study_completed_for_lesson(request.user, quiz.lesson):
+            return Response(
+                {"detail": "Study this lesson to 100% before submitting the quiz."},
                 status=status.HTTP_403_FORBIDDEN,
             )
 

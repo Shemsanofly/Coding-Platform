@@ -13,7 +13,7 @@ import { formatSourceTypeLabel } from "@/shared/constants/lessonSources";
 import { triggerBlobDownload } from "@/shared/utils/downloadBlob";
 
 function lessonState(lesson) {
-  if (lesson.quiz_passed || lesson.lesson_officially_completed) {
+  if (lesson.quiz_passed) {
     return { label: "Complete", className: "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-400/30 dark:bg-emerald-500/15 dark:text-emerald-100" };
   }
   if (!lesson.unlocked) {
@@ -22,8 +22,14 @@ function lessonState(lesson) {
   if (lesson.quiz_generation_status === "failed") {
     return { label: "Quiz failed", className: "border-red-200 bg-red-50 text-red-700 dark:border-red-400/30 dark:bg-red-500/15 dark:text-red-100" };
   }
+  if (lesson.lesson_officially_completed && (lesson.quiz_available || lesson.quiz_ready)) {
+    return { label: "Quiz required", className: "border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-400/30 dark:bg-blue-500/15 dark:text-blue-100" };
+  }
+  if (lesson.lesson_officially_completed) {
+    return { label: "Studied", className: "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-400/30 dark:bg-emerald-500/15 dark:text-emerald-100" };
+  }
   if (lesson.quiz_available || lesson.quiz_ready) {
-    return { label: "Ready", className: "border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-400/30 dark:bg-blue-500/15 dark:text-blue-100" };
+    return { label: "Study first", className: "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-400/30 dark:bg-amber-500/15 dark:text-amber-100" };
   }
   return { label: "Studying", className: "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-400/30 dark:bg-amber-500/15 dark:text-amber-100" };
 }
@@ -31,6 +37,7 @@ function lessonState(lesson) {
 function LessonRow({ lesson, index, previousLesson, onStudy, onQuiz }) {
   const state = lessonState(lesson);
   const quizAvailable = Boolean(lesson.quiz_available ?? lesson.quiz_ready);
+  const studyComplete = Boolean(lesson.lesson_officially_completed || lesson.quiz_passed);
 
   return (
     <li className="rounded-2xl border border-ocean-600/10 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-[#172433]/85">
@@ -62,7 +69,7 @@ function LessonRow({ lesson, index, previousLesson, onStudy, onQuiz }) {
           <Button variant="ghost" size="sm" disabled={!lesson.unlocked} onClick={() => onStudy(lesson.id)}>
             Study
           </Button>
-          <Button variant="gradient" size="sm" disabled={!lesson.unlocked || !quizAvailable} onClick={() => onQuiz(lesson.id)}>
+          <Button variant="gradient" size="sm" disabled={!lesson.unlocked || !quizAvailable || !studyComplete} onClick={() => onQuiz(lesson.id)}>
             Quiz
           </Button>
         </div>

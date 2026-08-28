@@ -124,8 +124,12 @@ export default function CertificateVerification() {
                   </p>
                   <h2 className="mt-1 text-2xl font-bold text-ink dark:text-sand">{result.student_name}</h2>
                   <p className="mt-3 text-sm leading-6 text-muted dark:text-reef/85">
-                    This certificate confirms successful completion of
-                    <span className="font-semibold text-ink dark:text-sand"> {result.course_title}</span>.
+                    {result.verification_summary || (
+                      <>
+                        This certificate confirms successful completion of
+                        <span className="font-semibold text-ink dark:text-sand"> {result.course_title}</span>.
+                      </>
+                    )}
                   </p>
                 </div>
                 <dl className="grid gap-3 text-sm sm:grid-cols-2">

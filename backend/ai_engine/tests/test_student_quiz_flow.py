@@ -10,7 +10,7 @@ from accounts.models import User
 from ai_engine.models import Recommendation, WeakTopic
 from ai_engine.services.quiz_persistence import persist_generated_questions, publish_quiz_questions
 from courses.models import Course, Lesson
-from progress.models import Enrollment
+from progress.models import Enrollment, LessonProgress
 from quizzes.models import Quiz
 
 
@@ -84,14 +84,32 @@ class StudentQuizFlowTests(TestCase):
         publish_quiz_questions(quiz.pk)
         return quiz
 
+    def _complete_study(self):
+        return LessonProgress.objects.update_or_create(
+            user=self.student,
+            lesson=self.lesson,
+            defaults={"seconds_engaged": 3600, "video_watch_pct": 100},
+        )
+
     def test_student_cannot_fetch_unpublished_quiz(self):
         persist_generated_questions(self.lesson.pk, _generated_rows(), publish=False)
+        self._complete_study()
         url = reverse("lesson-quiz", kwargs={"lesson_id": self.lesson.pk})
         response = self.client.get(url)
         self.assertEqual(response.status_code, 404)
 
+    def test_student_must_complete_study_before_fetching_published_quiz(self):
+        self._published_quiz()
+        url = reverse("lesson-quiz", kwargs={"lesson_id": self.lesson.pk})
+
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.data["detail"], "Study this lesson to 100% before taking the quiz.")
+
     def test_student_fetches_published_quiz_without_explanations(self):
         self._published_quiz()
+        self._complete_study()
         url = reverse("lesson-quiz", kwargs={"lesson_id": self.lesson.pk})
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
@@ -107,6 +125,7 @@ class StudentQuizFlowTests(TestCase):
     def test_submit_triggers_weakness_detection(self, mock_safe_delay):
         mock_safe_delay.return_value = MagicMock()
         quiz = self._published_quiz()
+        self._complete_study()
         questions = list(quiz.questions.filter(is_published=True).order_by("order", "pk"))
         answers = [q.correct_index for q in questions]
 
@@ -128,6 +147,7 @@ class ManualModeQuizSubmitTests(StudentQuizFlowTests):
 
     def test_manual_submit_returns_weakness_detection_triggered_true(self):
         quiz = self._published_quiz()
+        self._complete_study()
         url = reverse("quiz-submit", kwargs={"quiz_id": quiz.pk})
         response = self.client.post(url, {"answers": self._wrong_answers(quiz)}, format="json")
         self.assertEqual(response.status_code, 200)
@@ -135,6 +155,7 @@ class ManualModeQuizSubmitTests(StudentQuizFlowTests):
 
     def test_manual_submit_updates_weak_topic_immediately(self):
         quiz = self._published_quiz()
+        self._complete_study()
         self.assertEqual(WeakTopic.objects.filter(user=self.student).count(), 0)
 
         url = reverse("quiz-submit", kwargs={"quiz_id": quiz.pk})
@@ -147,6 +168,7 @@ class ManualModeQuizSubmitTests(StudentQuizFlowTests):
 
     def test_manual_submit_updates_recommendations_immediately(self):
         quiz = self._published_quiz()
+        self._complete_study()
         self.assertEqual(Recommendation.objects.filter(user=self.student).count(), 0)
 
         url = reverse("quiz-submit", kwargs={"quiz_id": quiz.pk})
@@ -157,6 +179,7 @@ class ManualModeQuizSubmitTests(StudentQuizFlowTests):
 
     def test_manual_submit_weakness_and_recommendation_apis_reflect_updates(self):
         quiz = self._published_quiz()
+        self._complete_study()
         submit_url = reverse("quiz-submit", kwargs={"quiz_id": quiz.pk})
         self.client.post(submit_url, {"answers": self._wrong_answers(quiz)}, format="json")
 
@@ -176,6 +199,7 @@ class CeleryModeQuizSubmitTests(StudentQuizFlowTests):
     def test_celery_mode_enqueues_detect_weaknesses(self, mock_safe_delay):
         mock_safe_delay.return_value = MagicMock()
         quiz = self._published_quiz()
+        self._complete_study()
         questions = list(quiz.questions.filter(is_published=True).order_by("order", "pk"))
         answers = [q.correct_index for q in questions]
 
@@ -190,6 +214,7 @@ class CeleryModeQuizSubmitTests(StudentQuizFlowTests):
     def test_celery_down_does_not_crash_quiz_submit(self, mock_safe_delay):
         mock_safe_delay.return_value = None
         quiz = self._published_quiz()
+        self._complete_study()
         questions = list(quiz.questions.filter(is_published=True).order_by("order", "pk"))
         answers = [q.correct_index for q in questions]
 

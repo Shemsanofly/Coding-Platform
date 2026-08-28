@@ -189,7 +189,9 @@ export default function LessonDetail() {
   const aiStatus = lesson.ai_processing_status || "pending";
   const quizProcessing = quizStatus === "pending" || quizStatus === "processing";
   const quizFailed = quizStatus === "failed";
-  const quizReady = Boolean(lesson.quiz_available);
+  const studyComplete = Boolean(lesson.lesson_officially_completed || lesson.engagement_satisfied);
+  const quizAvailable = Boolean(lesson.quiz_available);
+  const quizReady = quizAvailable && studyComplete;
   const nextPathStep = (learningPath?.learning_path ?? []).find((s) => s.status === "next");
   const showNextCta = nextPathStep && nextPathStep.lesson_id !== lesson.id;
   const aiSummary = lessonNotes?.ai_summary || {};
@@ -258,19 +260,19 @@ export default function LessonDetail() {
             <p className="mt-1 text-ink dark:text-sand">{lesson.video_watch_pct ?? 0}%</p>
           </div>
           <div className="rounded-xl bg-sand px-3 py-2 dark:bg-black/20">
-            <p className="font-semibold text-ocean-800 dark:text-reef">Lesson complete</p>
+            <p className="font-semibold text-ocean-800 dark:text-reef">Study status</p>
             <p className="mt-1 text-ink dark:text-sand">
               {lesson.lesson_officially_completed
-                ? "Done — quiz passed and engagement met"
-                : "Pass the quiz and spend enough time on the lesson"}
+                ? "Study done - take the quiz for certification"
+                : "Reach 100% study progress to unlock the quiz"}
             </p>
           </div>
         </div>
 
         <p className="mb-4 text-sm text-muted dark:text-muted">
           {isYoutubeLesson
-            ? "Watch the YouTube lesson below or read AI-generated PDF study notes from the transcript. Your watch time and quiz results feed adaptive analytics — lessons are not marked complete from a single click."
-            : "Open the lesson resource below and spend time engaging with the material. Quiz results and study activity feed your personalized analytics."}
+            ? "Watch the YouTube lesson below or read AI-generated PDF study notes from the transcript. At 100% study progress, the quiz unlocks. Pass the required quiz to earn your certificate."
+            : "Open the lesson resource below and spend time engaging with the material. At 100% study progress, the quiz unlocks. Pass the required quiz to earn your certificate."}
         </p>
 
         <div className="mb-4 flex flex-wrap gap-2">
@@ -470,6 +472,10 @@ export default function LessonDetail() {
           >
             Take quiz
           </Link>
+        ) : quizAvailable && !studyComplete ? (
+          <span className="inline-flex min-h-[44px] items-center rounded-xl border border-line px-4 py-2 text-sm text-muted dark:border-line/40 dark:text-reef/70">
+            Finish 100% study to unlock quiz
+          </span>
         ) : (
           <span className="inline-flex min-h-[44px] items-center rounded-xl border border-line px-4 py-2 text-sm text-muted dark:border-line/40 dark:text-reef/70">
             Quiz not ready

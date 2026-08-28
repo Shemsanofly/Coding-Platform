@@ -91,6 +91,7 @@ class CertificateEligibilitySerializer(serializers.Serializer):
 class PublicCertificateVerificationSerializer(serializers.Serializer):
     valid = serializers.BooleanField()
     verification_status = serializers.CharField()
+    verification_summary = serializers.CharField(allow_blank=True)
     student_name = serializers.CharField(allow_blank=True)
     course_title = serializers.CharField(allow_blank=True)
     issue_date = serializers.DateTimeField(allow_null=True)

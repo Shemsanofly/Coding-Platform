@@ -1,4 +1,4 @@
-"""Lesson engagement thresholds and official completion (quiz + behavioral signals)."""
+"""Lesson engagement thresholds and study completion."""
 
 from __future__ import annotations
 
@@ -62,7 +62,7 @@ def passed_lesson_ids_for_user(user_id: int, lesson_ids: list[int]) -> set[int]:
 
 def refresh_lesson_official_completion(user_id: int, lesson_id: int) -> bool:
     """
-    Sets completed_at only when quiz is passed and engagement rules pass.
+    Sets completed_at when study engagement rules pass.
     Never clears completed_at from here.
     """
     lesson = Lesson.objects.filter(pk=lesson_id).only(
@@ -71,9 +71,6 @@ def refresh_lesson_official_completion(user_id: int, lesson_id: int) -> bool:
         "source_type",
     ).first()
     if lesson is None:
-        return False
-
-    if not quiz_passed_for_lesson(user_id, lesson.id):
         return False
 
     progress, _ = LessonProgress.objects.get_or_create(user_id=user_id, lesson_id=lesson.id)

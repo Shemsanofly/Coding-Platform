@@ -374,6 +374,7 @@ class PublicCertificateVerifyView(APIView):
             data = {
                 "valid": False,
                 "verification_status": "NOT_FOUND",
+                "verification_summary": "",
                 "student_name": "",
                 "course_title": "",
                 "issue_date": None,
@@ -386,6 +387,7 @@ class PublicCertificateVerifyView(APIView):
             data = {
                 "valid": False,
                 "verification_status": "REVOKED",
+                "verification_summary": "",
                 "student_name": "",
                 "course_title": "",
                 "issue_date": certificate.issue_date,
@@ -398,6 +400,10 @@ class PublicCertificateVerifyView(APIView):
             data = {
                 "valid": True,
                 "verification_status": "VALID",
+                "verification_summary": (
+                    f"{certificate.student_name} completed {certificate.course_title} "
+                    f"at {certificate.platform_name}."
+                ),
                 "student_name": certificate.student_name,
                 "course_title": certificate.course_title,
                 "issue_date": certificate.issue_date,

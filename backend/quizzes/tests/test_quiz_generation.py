@@ -12,7 +12,7 @@ from ai_engine.services.quiz_persistence import persist_generated_questions, pub
 from ai_engine.services.youtube_pipeline import bootstrap_youtube_processing, generate_quiz_for_youtube_lesson
 from ai_engine.tests.test_lesson_intelligence import _full_payload_dict
 from courses.models import Course, Lesson
-from progress.models import Enrollment
+from progress.models import Enrollment, LessonProgress
 from quizzes.models import Question, Quiz
 
 
@@ -103,6 +103,12 @@ class TranscriptGeminiQuizFlowTests(TestCase):
     def test_student_fetches_approved_quiz(self):
         quiz = persist_generated_questions(self.lesson.pk, _generated_rows(), publish=False)
         publish_quiz_questions(quiz.pk)
+        LessonProgress.objects.create(
+            user=self.student,
+            lesson=self.lesson,
+            seconds_engaged=3600,
+            video_watch_pct=100,
+        )
 
         self.client.force_authenticate(user=self.student)
         url = reverse("lesson-quiz", kwargs={"lesson_id": self.lesson.pk})
@@ -114,6 +120,12 @@ class TranscriptGeminiQuizFlowTests(TestCase):
     def test_quiz_submit_updates_weak_topic_in_manual_mode(self):
         quiz = persist_generated_questions(self.lesson.pk, _generated_rows(), publish=False)
         publish_quiz_questions(quiz.pk)
+        LessonProgress.objects.create(
+            user=self.student,
+            lesson=self.lesson,
+            seconds_engaged=3600,
+            video_watch_pct=100,
+        )
         questions = list(quiz.questions.filter(is_published=True).order_by("order", "pk"))
         wrong_answers = [(q.correct_index + 1) % len(q.choices) for q in questions]
 

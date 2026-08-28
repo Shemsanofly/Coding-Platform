@@ -135,6 +135,41 @@ class CertificateFeatureTests(TestCase):
         self.assertFalse(response.data["eligible"])
         self.assertIn("Pass the final assessment.", response.data["reasons"])
 
+    def test_study_completion_reaches_100_percent_before_final_quiz_for_certificate(self):
+        course = Course.objects.create(
+            title="Single Lesson Certificate",
+            level=Course.Level.BEGINNER,
+            status=Course.Status.PUBLISHED,
+            created_by=self.admin,
+        )
+        lesson = Lesson.objects.create(
+            course=course,
+            title="Final Lesson",
+            source_type=Lesson.SourceType.INTERNAL,
+            content="Final lesson",
+            order=1,
+            estimated_minutes=1,
+        )
+        Enrollment.objects.create(user=self.student, course=course)
+        self._quiz(lesson, passing_score=70)
+        self.client.force_authenticate(user=self.student)
+
+        response = self.client.post(
+            reverse("student-lesson-progress", kwargs={"lesson_id": lesson.pk}),
+            {"delta_seconds": 60},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNotNone(response.data["completed_at"])
+
+        response = self.client.get(reverse("student-course-detail", kwargs={"course_id": course.pk}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["progress_percent"], 100.0)
+        self.assertEqual(response.data["completed_lessons"], 1)
+        self.assertFalse(response.data["certificate_eligible"])
+        self.assertIn("Pass the final assessment.", response.data["certificate_reasons"])
+
     def test_eligible_student_can_generate_certificate_for_course_with_no_assignments(self):
         self._make_eligible()
         self.client.force_authenticate(user=self.student)
@@ -206,8 +241,7 @@ class CertificateFeatureTests(TestCase):
         self.assertEqual(certificate.instructor_name, "Ada Admin")
         self.assertEqual(certificate.completion_date.date(), certificate.issue_date.date())
         self.assertEqual(certificate.course_duration, "2 minutes")
-        self.assertTrue(response.data["qr_code_data_url"].startswith("data:image/svg+xml;utf8,"))
-        self.assertIn("verify-certificate", response.data["qr_code_data_url"])
+        self.assertTrue(response.data["qr_code_data_url"].startswith("data:image/svg+xml;base64,"))
 
     def test_generated_pdf_is_one_page_a4_landscape(self):
         self._make_eligible()
@@ -230,6 +264,21 @@ class CertificateFeatureTests(TestCase):
         self.assertIn(b"VERIFIED", pdf_bytes)
         self.assertIn(b"Shemsa Amin", pdf_bytes)
         self.assertIn(b"Chief Executive Officer", pdf_bytes)
+
+    def test_generated_pdf_uses_official_learncode_completion_layout_text(self):
+        self._make_eligible()
+        self.client.force_authenticate(user=self.student)
+
+        response = self.client.post(reverse("student-course-certificate", kwargs={"course_id": self.course.pk}))
+
+        self.assertEqual(response.status_code, 201)
+        certificate = Certificate.objects.get(pk=response.data["id"])
+        pdf_bytes = certificate.file.read()
+        self.assertIn(b"LEARNCODE OFFICIAL COMPLETION CREDENTIAL", pdf_bytes)
+        self.assertIn(b"Awarded to", pdf_bytes)
+        self.assertIn(b"Course completed", pdf_bytes)
+        self.assertIn(b"Authorized signature", pdf_bytes)
+        self.assertIn(b"Scan to verify at LearnCode", pdf_bytes)
 
     def test_download_uses_professional_sanitized_filename(self):
         self.student.first_name = "Grace / The"
@@ -339,6 +388,10 @@ class CertificateFeatureTests(TestCase):
         self.assertEqual(response.data["certificate_status"], "ACTIVE")
         self.assertEqual(response.data["verification_status"], "VALID")
         self.assertEqual(response.data["platform_name"], "LearnCode")
+        self.assertEqual(
+            response.data["verification_summary"],
+            "Grace Hopper completed Certificate Python at LearnCode.",
+        )
         self.assertIn("completion_date", response.data)
         self.assertNotIn("student_id", response.data)
 

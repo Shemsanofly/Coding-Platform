@@ -262,6 +262,12 @@ class LessonNotesAPITests(TestCase):
             topic_tag="variables",
             is_published=True,
         )
+        LessonProgress.objects.create(
+            user=self.student,
+            lesson=self.lesson,
+            seconds_engaged=3600,
+            video_watch_pct=100,
+        )
         self.client.force_authenticate(user=self.student)
         url = reverse("lesson-quiz", kwargs={"lesson_id": self.lesson.pk})
         response = self.client.get(url)

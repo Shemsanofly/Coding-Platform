@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import logging
+import base64
 import re
 import secrets
 from dataclasses import dataclass
 from io import BytesIO
 from pathlib import Path
-from urllib.parse import quote
 
 from django.conf import settings
 from django.core.files.base import ContentFile
@@ -262,7 +262,9 @@ def certificate_qr_svg(certificate: Certificate, size: int = 160) -> str:
 
 
 def certificate_qr_data_url(certificate: Certificate) -> str:
-    return f"data:image/svg+xml;utf8,{quote(certificate_qr_svg(certificate), safe='/:;,%#?&=+-_.')}"
+    svg = certificate_qr_svg(certificate)
+    encoded = base64.b64encode(svg.encode("utf-8")).decode("ascii")
+    return f"data:image/svg+xml;base64,{encoded}"
 
 
 def _draw_centered(c: canvas.Canvas, text: str, y: float, font: str, size: int, color=colors.black):
@@ -304,6 +306,61 @@ def _draw_wrapped_centered(
     for idx, line in enumerate(_wrap_for_width(text, font, size, max_width)):
         c.drawCentredString(width / 2, y - idx * leading, line)
     return y - (len(_wrap_for_width(text, font, size, max_width)) * leading)
+
+
+def _draw_polygon(c: canvas.Canvas, points: list[tuple[float, float]], color) -> None:
+    path = c.beginPath()
+    first_x, first_y = points[0]
+    path.moveTo(first_x, first_y)
+    for x, y in points[1:]:
+        path.lineTo(x, y)
+    path.close()
+    c.setFillColor(color)
+    c.drawPath(path, fill=1, stroke=0)
+
+
+def _draw_geometric_background(c: canvas.Canvas, width: float, height: float) -> None:
+    c.setFillColor(colors.HexColor("#D8EEF6"))
+    c.rect(0, 0, width, height, fill=1, stroke=0)
+
+    teal = colors.HexColor("#2DB9B1")
+    ocean_light = colors.HexColor("#2E9AC5")
+
+    _draw_polygon(c, [(0, height), (220, height), (172, height - 92), (0, height - 62)], NAVY)
+    _draw_polygon(c, [(0, height), (96, height), (62, height - 182), (0, height - 150)], OCEAN)
+    _draw_polygon(c, [(94, height), (360, height), (310, height - 72), (52, height - 72)], ocean_light)
+    _draw_polygon(c, [(280, height), (486, height), (520, height - 74), (342, height - 78)], colors.HexColor("#FF8A7E"))
+    _draw_polygon(c, [(430, height), (690, height), (720, height - 88), (482, height - 72)], teal)
+    _draw_polygon(c, [(width - 234, 0), (width, 0), (width, 118), (width - 155, 84)], OCEAN)
+    _draw_polygon(c, [(width - 70, 0), (width, 0), (width, 212), (width - 54, 168)], NAVY)
+    _draw_polygon(c, [(450, 0), (560, 0), (517, 86)], GOLD)
+    _draw_polygon(c, [(520, 0), (708, 0), (602, 95)], teal)
+    _draw_polygon(c, [(0, 0), (162, 0), (0, 120)], colors.Color(1, 1, 1, alpha=0.42))
+
+
+def _draw_wave_pattern(c: canvas.Canvas, x: float, y: float, width: float, height: float) -> None:
+    c.saveState()
+    c.setStrokeColor(colors.Color(16 / 255, 44 / 255, 61 / 255, alpha=0.055))
+    c.setLineWidth(1.35)
+    row_y = y + height - 16
+    while row_y > y + 12:
+        path = c.beginPath()
+        path.moveTo(x, row_y)
+        segment = 58
+        current_x = x
+        while current_x < x + width + segment:
+            path.curveTo(
+                current_x + segment * 0.28,
+                row_y + 9,
+                current_x + segment * 0.72,
+                row_y - 9,
+                current_x + segment,
+                row_y,
+            )
+            current_x += segment
+        c.drawPath(path, fill=0, stroke=1)
+        row_y -= 14
+    c.restoreState()
 
 
 def _draw_image_preserved(c: canvas.Canvas, path: Path, x: float, y: float, max_width: float, max_height: float) -> bool:
@@ -366,184 +423,184 @@ def _draw_watermark(c: canvas.Canvas, platform_name: str, width: float, height: 
     c.restoreState()
 
 
-def _draw_official_seal(c: canvas.Canvas, center_x: float, center_y: float, year: str, platform_name: str) -> None:
+def _draw_official_seal(
+    c: canvas.Canvas,
+    center_x: float,
+    center_y: float,
+    year: str,
+    platform_name: str,
+    radius: float = 52,
+) -> None:
     c.saveState()
+    scale = radius / 52
     c.setStrokeColor(GOLD)
     c.setFillColor(colors.Color(1, 1, 1, alpha=0))
     c.setLineWidth(2)
-    c.circle(center_x, center_y, 52, fill=0, stroke=1)
+    c.circle(center_x, center_y, radius, fill=0, stroke=1)
     c.setLineWidth(0.8)
-    c.circle(center_x, center_y, 43, fill=0, stroke=1)
+    c.circle(center_x, center_y, radius * 0.83, fill=0, stroke=1)
     c.setStrokeColor(PALE_GOLD)
-    for offset in (-32, 32):
-        c.line(center_x + offset - 9, center_y - 5, center_x + offset + 9, center_y + 10)
-        c.line(center_x + offset - 9, center_y + 10, center_x + offset + 9, center_y - 5)
+    for offset in (-32 * scale, 32 * scale):
+        c.line(center_x + offset - 9 * scale, center_y - 5 * scale, center_x + offset + 9 * scale, center_y + 10 * scale)
+        c.line(center_x + offset - 9 * scale, center_y + 10 * scale, center_x + offset + 9 * scale, center_y - 5 * scale)
     c.setFillColor(GOLD)
-    c.setFont("Helvetica-Bold", 8)
-    c.drawCentredString(center_x - 28, center_y + 26, "*")
-    c.drawCentredString(center_x + 28, center_y + 26, "*")
+    c.setFont("Helvetica-Bold", 8 * scale)
+    c.drawCentredString(center_x - 28 * scale, center_y + 26 * scale, "*")
+    c.drawCentredString(center_x + 28 * scale, center_y + 26 * scale, "*")
     c.setFillColor(NAVY)
-    c.setFont("Helvetica-Bold", 7.5)
-    c.drawCentredString(center_x, center_y + 15, "OFFICIAL CERTIFICATE")
+    c.setFont("Helvetica-Bold", 7.5 * scale)
+    c.drawCentredString(center_x, center_y + 15 * scale, "OFFICIAL CERTIFICATE")
     c.setFillColor(GOLD)
-    c.setFont("Helvetica-Bold", 11)
-    c.drawCentredString(center_x, center_y - 2, "VERIFIED")
+    c.setFont("Helvetica-Bold", 11 * scale)
+    c.drawCentredString(center_x, center_y - 2 * scale, "VERIFIED")
     c.setFillColor(MUTED)
-    c.setFont("Helvetica-Bold", 8)
-    c.drawCentredString(center_x, center_y - 20, year)
+    c.setFont("Helvetica-Bold", 8 * scale)
+    c.drawCentredString(center_x, center_y - 20 * scale, year)
     c.restoreState()
 
 
 def _draw_signature(c: canvas.Canvas, x: float, y: float, width: float, certificate: Certificate) -> None:
     line_y = y + 34
-    signature_path = _asset_path("CERTIFICATE_CEO_SIGNATURE_PATH")
-    if signature_path:
-        _draw_image_preserved(c, signature_path, x + 18, line_y + 6, width - 36, 48)
+    c.saveState()
+    c.setStrokeColor(INK)
+    c.setLineWidth(1.6)
+    path = c.beginPath()
+    path.moveTo(x + 40, line_y + 8)
+    path.curveTo(x + 56, line_y + 35, x + 62, line_y - 3, x + 77, line_y + 14)
+    path.curveTo(x + 92, line_y + 31, x + 105, line_y + 2, x + 119, line_y + 10)
+    path.curveTo(x + 138, line_y + 22, x + 151, line_y + 4, x + 166, line_y + 9)
+    c.drawPath(path, fill=0, stroke=1)
+    c.restoreState()
     c.setStrokeColor(NAVY)
     c.setLineWidth(0.8)
     c.line(x, line_y, x + width, line_y)
+    c.setFillColor(GOLD)
+    c.setFont("Helvetica-Bold", 6.8)
+    c.drawCentredString(x + width / 2, line_y - 7, "Authorized signature")
     c.setFillColor(INK)
     c.setFont("Helvetica-Bold", 10)
-    c.drawCentredString(x + width / 2, line_y - 15, certificate.ceo_name)
+    c.drawCentredString(x + width / 2, line_y - 22, certificate.ceo_name)
     c.setFillColor(MUTED)
     c.setFont("Helvetica", 8)
-    c.drawCentredString(x + width / 2, line_y - 28, certificate.ceo_title)
+    c.drawCentredString(x + width / 2, line_y - 35, certificate.ceo_title)
 
 
-def _draw_qr(c: canvas.Canvas, certificate: Certificate, x: float, y: float) -> None:
-    qr_size = 112
-    quiet = 10
+def _draw_qr(c: canvas.Canvas, certificate: Certificate, x: float, y: float, qr_size: float = 112) -> None:
+    quiet = max(5, qr_size * 0.08)
+    platform_name = _clean_text(certificate.platform_name, "LearnCode")
     c.setFillColor(colors.white)
     c.rect(x - quiet, y - quiet, qr_size + quiet * 2, qr_size + quiet * 2, fill=1, stroke=0)
     renderPDF.draw(_qr_drawing(certificate.verification_url or _verification_url(certificate.verification_code), qr_size), c, x, y)
     c.setFillColor(NAVY)
-    c.setFont("Helvetica-Bold", 8)
-    c.drawCentredString(x + qr_size / 2, y - 18, "Scan to verify certificate")
+    c.setFont("Helvetica-Bold", 6.2)
+    c.drawCentredString(x + qr_size / 2, y - 13, f"Scan to verify at {platform_name}")
     c.setFillColor(MUTED)
-    c.setFont("Helvetica", 6.8)
-    c.drawCentredString(x + qr_size / 2, y - 31, certificate.verification_code)
+    c.setFont("Helvetica", 5.3)
+    c.drawCentredString(x + qr_size / 2, y - 24, certificate.verification_code)
 
 
 def _certificate_pdf_bytes(certificate: Certificate) -> bytes:
     buffer = BytesIO()
     c = canvas.Canvas(buffer, pagesize=landscape(A4), pageCompression=0)
     width, height = landscape(A4)
-    margin = 34
-
-    c.setFillColor(CREAM)
-    c.rect(0, 0, width, height, fill=1, stroke=0)
     platform_name = _clean_text(certificate.platform_name, "LearnCode")
-    _draw_watermark(c, platform_name, width, height)
-    c.setStrokeColor(NAVY)
-    c.setLineWidth(3.2)
-    c.rect(margin, margin, width - margin * 2, height - margin * 2, fill=0, stroke=1)
-    c.setStrokeColor(GOLD)
-    c.setLineWidth(1.1)
-    c.rect(margin + 10, margin + 10, width - (margin + 10) * 2, height - (margin + 10) * 2, fill=0, stroke=1)
-    _draw_corner_ornament(c, margin + 20, height - margin - 20, 1, -1)
-    _draw_corner_ornament(c, width - margin - 20, height - margin - 20, -1, -1)
-    _draw_corner_ornament(c, margin + 20, margin + 20, 1, 1)
-    _draw_corner_ornament(c, width - margin - 20, margin + 20, -1, 1)
+    panel_x = 36
+    panel_y = 42
+    panel_w = width - panel_x * 2
+    panel_h = height - 82
+    panel_top = panel_y + panel_h
 
-    _draw_logo(c, 60, height - 86, 38, platform_name)
-    c.setFillColor(NAVY)
-    c.setFont("Helvetica-Bold", 12)
-    c.drawString(106, height - 66, platform_name)
-    c.setFillColor(MUTED)
-    c.setFont("Helvetica", 7.5)
-    c.drawString(106, height - 79, "Official Learning Registry")
+    _draw_geometric_background(c, width, height)
+    c.setFillColor(colors.Color(16 / 255, 44 / 255, 61 / 255, alpha=0.12))
+    c.rect(panel_x + 6, panel_y - 5, panel_w, panel_h, fill=1, stroke=0)
+    c.setFillColor(colors.white)
+    c.rect(panel_x, panel_y, panel_w, panel_h, fill=1, stroke=0)
+    _draw_wave_pattern(c, panel_x, panel_y, panel_w, panel_h)
 
-    _draw_logo(c, width / 2 - 24, height - 88, 48, platform_name)
-    _draw_centered(c, platform_name.upper(), height - 106, "Helvetica-Bold", 12, NAVY)
-    _draw_centered(c, "Certificate Registry", height - 119, "Helvetica", 8, MUTED)
+    c.setStrokeColor(colors.Color(255 / 255, 255 / 255, 255 / 255, alpha=0.82))
+    c.setLineWidth(1)
+    c.rect(panel_x + 8, panel_y + 8, panel_w - 16, panel_h - 16, fill=0, stroke=1)
+
+    _draw_logo(c, width / 2 - 18, panel_top - 55, 36, platform_name)
+    _draw_centered(c, platform_name.upper(), panel_top - 72, "Helvetica-Bold", 14, INK)
+    _draw_centered(c, certificate.platform_website or _platform_website(), panel_top - 90, "Helvetica", 10.5, MUTED)
+
     c.setFillColor(MUTED)
     c.setFont("Helvetica-Bold", 7.5)
-    c.drawRightString(width - 58, height - 68, "CERTIFICATE NUMBER")
-    c.setFillColor(NAVY)
-    c.setFont("Helvetica-Bold", 10)
-    c.drawRightString(width - 58, height - 83, certificate.certificate_number)
+    c.drawRightString(panel_x + panel_w - 44, panel_top - 42, "CERTIFICATE ID")
+    c.setFillColor(INK)
+    c.setFont("Helvetica-Bold", 9)
+    c.drawRightString(panel_x + panel_w - 44, panel_top - 56, certificate.certificate_number)
 
-    _draw_centered(c, "CERTIFICATE", height - 155, "Times-Bold", 42, NAVY)
-    c.setStrokeColor(GOLD)
-    c.setLineWidth(1)
-    c.line(width / 2 - 118, height - 168, width / 2 + 118, height - 168)
-    _draw_centered(c, "OF COMPLETION", height - 190, "Helvetica-Bold", 15, GOLD)
-    _draw_centered(c, "THIS IS TO CERTIFY THAT", height - 220, "Helvetica", 10.5, MUTED)
-
-    name_size = _fit_font_size(certificate.student_name, "Times-BoldItalic", 34, width - 180, 22)
-    _draw_centered(c, certificate.student_name, height - 257, "Times-BoldItalic", name_size, INK)
-    c.setStrokeColor(GOLD)
-    c.setLineWidth(0.6)
-    c.line(width / 2 - 210, height - 268, width / 2 + 210, height - 268)
-
+    _draw_centered(c, "C E R T I F I C A T E", panel_top - 166, "Times-Roman", 48, OCEAN)
+    c.setStrokeColor(OCEAN)
+    c.setLineWidth(1.2)
+    c.line(width / 2 - 198, panel_top - 202, width / 2 - 46, panel_top - 202)
+    c.line(width / 2 + 46, panel_top - 202, width / 2 + 198, panel_top - 202)
+    _draw_centered(c, "OF COMPLETION", panel_top - 208, "Helvetica-Bold", 13.5, INK)
     _draw_centered(
         c,
-        "has successfully completed all the prescribed requirements for the course",
-        height - 296,
-        "Helvetica",
-        10.5,
-        MUTED,
+        f"{platform_name.upper()} OFFICIAL COMPLETION CREDENTIAL",
+        panel_top - 230,
+        "Helvetica-Bold",
+        6.8,
+        OCEAN,
     )
-    course_size = _fit_font_size(certificate.course_title, "Times-Bold", 25, width - 210, 16)
-    next_y = _draw_wrapped_centered(
-        c,
-        certificate.course_title,
-        height - 331,
-        "Times-Bold",
-        course_size,
-        width - 210,
-        course_size + 4,
-        NAVY,
+    _draw_centered(c, "WE PROUDLY PRESENT THIS CERTIFICATE TO", panel_top - 266, "Helvetica-Bold", 17, INK)
+    _draw_centered(c, "Awarded to", panel_top - 298, "Helvetica", 10, MUTED)
+
+    name_size = _fit_font_size(certificate.student_name, "Times-BoldItalic", 42, width - 190, 26)
+    _draw_centered(c, certificate.student_name, panel_top - 352, "Times-BoldItalic", name_size, OCEAN)
+    course_size = _fit_font_size(
+        f"for completing the course {certificate.course_title}",
+        "Helvetica-Bold",
+        17,
+        width - 220,
+        11,
     )
     _draw_wrapped_centered(
         c,
-        (
-            "and is hereby awarded this Certificate of Completion in recognition of dedication, "
-            "achievement, and successful completion of the programme."
-        ),
-        min(next_y - 8, height - 368),
-        "Helvetica",
-        10,
-        width - 275,
-        14,
+        f"for completing the course {certificate.course_title}",
+        panel_top - 398,
+        "Helvetica-Bold",
+        course_size,
+        width - 220,
+        course_size + 4,
         MUTED,
     )
 
     issue_date = format_certificate_date(certificate.issue_date)
     completion_date = format_certificate_date(certificate.completion_date or certificate.issue_date)
-    details = [
-        ("Date issued", issue_date),
-        ("Completion date", completion_date),
-        ("Instructor", certificate.instructor_name or "Not specified"),
-        ("Duration", certificate.course_duration or "Not specified"),
-    ]
-    c.setFont("Helvetica", 8)
-    c.setFillColor(MUTED)
-    x_positions = [216, 334, 470, 608]
-    y = 101
-    for idx, (label, value) in enumerate(details):
-        x = x_positions[idx]
-        c.setFillColor(MUTED)
-        c.setFont("Helvetica-Bold", 6.8)
-        c.drawString(x, y + 10, label.upper())
-        c.setFillColor(INK)
-        c.setFont("Helvetica", 8)
-        c.drawString(x, y - 2, _clean_text(value))
+    bottom_y = panel_y + 38
 
-    _draw_qr(c, certificate, 72, 127)
-    _draw_official_seal(c, width / 2, 146, timezone.localtime(certificate.issue_date).strftime("%Y"), platform_name)
-    _draw_signature(c, width - 245, 110, 165, certificate)
-
-    authenticity = (
-        f"This certificate is issued electronically by {platform_name}. Its authenticity may be verified "
-        "by scanning the QR code or entering the verification code on the official verification page."
-    )
+    c.setStrokeColor(OCEAN)
+    c.setLineWidth(1.1)
+    c.line(panel_x + 58, bottom_y + 62, panel_x + 196, bottom_y + 62)
+    c.setFillColor(INK)
+    c.setFont("Helvetica-Bold", 15)
+    c.drawString(panel_x + 58, bottom_y + 39, _clean_text(certificate.instructor_name or "Course Instructor"))
     c.setFillColor(MUTED)
-    c.setFont("Helvetica", 7.4)
-    c.drawCentredString(width / 2, 58, _clean_text(authenticity))
-    c.setFillColor(NAVY)
-    c.setFont("Helvetica-Bold", 7)
-    c.drawCentredString(width / 2, 46, _clean_text(certificate.platform_website or _platform_website()))
+    c.setFont("Helvetica", 10)
+    c.drawString(panel_x + 58, bottom_y + 17, "COURSE SPEAKER")
+
+    _draw_signature(c, width / 2 - 100, bottom_y + 5, 200, certificate)
+
+    c.setFillColor(INK)
+    c.setFont("Helvetica-Bold", 13)
+    c.drawRightString(panel_x + panel_w - 106, bottom_y + 52, f"ISSUING DATE - {issue_date.upper()}")
+    c.setFont("Helvetica", 11)
+    c.drawRightString(panel_x + panel_w - 106, bottom_y + 30, f"CERTIFICATE ID - {certificate.certificate_number}")
+    c.setFont("Helvetica", 8.2)
+    c.setFillColor(MUTED)
+    c.drawRightString(panel_x + panel_w - 106, bottom_y + 12, f"Course completed - {completion_date}")
+    if certificate.course_duration:
+        c.drawRightString(panel_x + panel_w - 106, bottom_y - 2, f"Duration - {certificate.course_duration}")
+
+    c.setFillColor(OCEAN)
+    c.setFont("Helvetica-Bold", 6.5)
+    c.drawCentredString(width / 2, panel_y + 18, "OFFICIAL CERTIFICATE VERIFIED")
+
+    _draw_qr(c, certificate, panel_x + panel_w - 82, bottom_y + 8, qr_size=58)
 
     c.showPage()
     c.save()

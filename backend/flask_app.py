@@ -289,6 +289,20 @@ def create_app(config=None):
         origin = request.host_url.rstrip("/")
         return f"https://www.youtube.com/embed/{video_id}?enablejsapi=1&origin={quote(origin, safe='')}"
 
+    def lesson_engagement_required_seconds(lesson):
+        return max(60, int((lesson["estimated_minutes"] or 15) * 60 * 0.7))
+
+    def lesson_study_complete(lesson, progress):
+        if not progress:
+            return False
+        if progress["completed_at"]:
+            return True
+        if (progress["seconds_engaged"] or 0) < lesson_engagement_required_seconds(lesson):
+            return False
+        if progress["video_watch_pct"] is not None:
+            return progress["video_watch_pct"] >= 70
+        return True
+
     def lesson_payload(lesson, user_id=None, detail=False):
         progress = None
         if user_id and table_exists("progress_lessonprogress"):
@@ -350,8 +364,8 @@ def create_app(config=None):
                     "seconds_engaged": progress["seconds_engaged"] if progress else 0,
                     "max_scroll_depth_pct": progress["max_scroll_depth_pct"] if progress else 0,
                     "video_watch_pct": progress["video_watch_pct"] if progress else None,
-                    "engagement_required_seconds": max((lesson["estimated_minutes"] or 15) * 60 // 2, 60),
-                    "engagement_satisfied": bool(progress and progress["seconds_engaged"] >= 60),
+                    "engagement_required_seconds": lesson_engagement_required_seconds(lesson),
+                    "engagement_satisfied": lesson_study_complete(lesson, progress),
                     "youtube_embed_url": youtube_embed_url(lesson["resource_url"]) if lesson["source_type"] == "youtube" else "",
                     "notes_viewed_at": progress["notes_viewed_at"] if progress else None,
                     "notes_downloaded_at": progress["notes_downloaded_at"] if progress else None,
@@ -605,7 +619,20 @@ def create_app(config=None):
             "SELECT * FROM progress_lessonprogress WHERE user_id=? AND lesson_id=?",
             (g.current_user["id"], lesson_id),
         )
-        return jsonify({"seconds_engaged": row["seconds_engaged"], "max_scroll_depth_pct": row["max_scroll_depth_pct"], "video_watch_pct": row["video_watch_pct"]})
+        if row and not row["completed_at"] and lesson_study_complete(lesson, row):
+            execute("UPDATE progress_lessonprogress SET completed_at=? WHERE id=?", (now, row["id"]))
+            row = query_one(
+                "SELECT * FROM progress_lessonprogress WHERE user_id=? AND lesson_id=?",
+                (g.current_user["id"], lesson_id),
+            )
+        return jsonify(
+            {
+                "seconds_engaged": row["seconds_engaged"],
+                "max_scroll_depth_pct": row["max_scroll_depth_pct"],
+                "video_watch_pct": row["video_watch_pct"],
+                "completed_at": row["completed_at"],
+            }
+        )
 
     @route_api("/dashboard/", methods=["GET"])
     @require_auth
@@ -688,6 +715,17 @@ def create_app(config=None):
         quiz = query_one("SELECT * FROM quizzes_quiz WHERE lesson_id=?", (lesson_id,)) if table_exists("quizzes_quiz") else None
         if not quiz:
             return json_error("Quiz is not ready yet.", 404)
+        lesson = query_one("SELECT * FROM courses_lesson WHERE id=?", (lesson_id,))
+        progress = (
+            query_one(
+                "SELECT * FROM progress_lessonprogress WHERE user_id=? AND lesson_id=?",
+                (g.current_user["id"], lesson_id),
+            )
+            if table_exists("progress_lessonprogress")
+            else None
+        )
+        if lesson and not lesson_study_complete(lesson, progress):
+            return json_error("Study this lesson to 100% before taking the quiz.", 403)
         questions = [
             {
                 "id": row["id"],
@@ -709,6 +747,17 @@ def create_app(config=None):
         quiz = query_one("SELECT * FROM quizzes_quiz WHERE id=?", (quiz_id,))
         if not quiz:
             return json_error("Quiz not found.", 404)
+        lesson = query_one("SELECT * FROM courses_lesson WHERE id=?", (quiz["lesson_id"],))
+        progress = (
+            query_one(
+                "SELECT * FROM progress_lessonprogress WHERE user_id=? AND lesson_id=?",
+                (g.current_user["id"], quiz["lesson_id"]),
+            )
+            if table_exists("progress_lessonprogress")
+            else None
+        )
+        if lesson and not lesson_study_complete(lesson, progress):
+            return json_error("Study this lesson to 100% before submitting the quiz.", 403)
         answers = (request.get_json(silent=True) or {}).get("answers") or {}
         questions = query_all("SELECT * FROM quizzes_question WHERE quiz_id=? AND is_published=1 ORDER BY \"order\", id", (quiz_id,))
         correct = 0
