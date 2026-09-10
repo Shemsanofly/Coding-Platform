@@ -9,6 +9,7 @@ from rest_framework.views import APIView
 from accounts.models import User
 from accounts.permissions import STUDENT_ACCESS
 from ai_engine.models import LessonAIProcessing
+from ai_engine.services.gemini_service import GeminiQuizError, GeminiService
 from ai_engine.services.learning_path import generate_learning_path
 from ai_engine.services.quiz_persistence import publish_quiz_questions
 from ai_engine.services.generation_mode import get_ai_generation_mode, is_manual_mode
@@ -279,3 +280,47 @@ class LearningPathView(APIView):
             course_id=course_id,
         )
         return Response(payload)
+
+
+class StudentAISupportView(APIView):
+    """Student-only AI tutor support for the learning interface."""
+
+    permission_classes = STUDENT_ACCESS
+
+    def post(self, request):
+        question = request.data.get("question", "")
+        if not isinstance(question, str) or not question.strip():
+            return Response(
+                {"detail": "Ask a question first."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if len(question) > 4000:
+            return Response(
+                {"detail": "Please keep your question under 4000 characters."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        history = request.data.get("history", [])
+        if not isinstance(history, list):
+            history = []
+
+        try:
+            answer = GeminiService().generate_student_support_response(
+                question,
+                page_path=str(request.data.get("page_path", "")),
+                history=history,
+                student_level=request.user.experience_level or "",
+            )
+        except GeminiQuizError as exc:
+            logger.warning("student_ai_support_failed user=%s error=%s", request.user.id, exc)
+            return Response(
+                {
+                    "detail": (
+                        "AI support is not available right now. "
+                        "Please try again later or ask your instructor."
+                    )
+                },
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        return Response({"answer": answer})

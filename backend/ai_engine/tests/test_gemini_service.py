@@ -141,6 +141,23 @@ class GeminiServiceGenerateTests(SimpleTestCase):
         with self.assertRaises(GeminiQuizError):
             GeminiService()
 
+    @patch("google.genai.Client")
+    def test_generate_student_support_response_returns_text(self, mock_client_cls):
+        mock_response = MagicMock()
+        mock_response.text = "Use a for loop when you know the collection you want to visit."
+        mock_client_cls.return_value.models.generate_content.return_value = mock_response
+
+        svc = GeminiService(api_key="test-key")
+        result = svc.generate_student_support_response(
+            "When should I use a for loop?",
+            history=[{"role": "student", "content": "I am learning loops."}],
+            student_level="beginner",
+            page_path="/lessons/2",
+        )
+
+        self.assertIn("for loop", result)
+        mock_client_cls.return_value.models.generate_content.assert_called_once()
+
 
 @override_settings(GEMINI_API_KEY="fake-key")
 def test_gemini_service_reads_api_key_from_settings():

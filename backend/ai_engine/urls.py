@@ -7,10 +7,12 @@ from ai_engine.views import (
     AdminLessonQuizPreviewView,
     AdminLessonRegenerateQuizView,
     LearningPathView,
+    StudentAISupportView,
 )
 
 urlpatterns = [
     path("learning-path/", LearningPathView.as_view(), name="learning-path"),
+    path("student/ai-support/", StudentAISupportView.as_view(), name="student-ai-support"),
     path(
         "admin/courses/<int:course_pk>/lessons/<int:lesson_pk>/processing-status/",
         AdminLessonProcessingStatusView.as_view(),

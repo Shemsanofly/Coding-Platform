@@ -4,6 +4,7 @@ import { useAuth } from "@/context/AuthProvider";
 import UserAvatar from "@/shared/components/UserAvatar";
 import BrandMark from "@/shared/components/BrandMark";
 import { getDisplayName } from "@/shared/utils/userDisplay";
+import AISupportWidget from "@/student/components/AISupportWidget";
 
 const THEME_STORAGE_KEY = "learncode.theme";
 
@@ -147,11 +148,13 @@ export default function StudentLayout() {
             </div>
           </header>
 
-          <main className="mx-auto max-w-6xl overflow-x-hidden px-4 pb-24 pt-5 md:px-6 md:pb-10 md:pt-8">
+          <main className="mx-auto max-w-6xl overflow-x-hidden px-4 pb-32 pt-5 md:px-6 md:pb-10 md:pt-8">
             <Outlet />
           </main>
         </div>
       </div>
+
+      <AISupportWidget avoidMobileNav={!hideBottomNav} />
 
       {!hideBottomNav ? (
         <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-ocean-600/10 bg-white/95 py-1 backdrop-blur-xl md:hidden" aria-label="Mobile navigation">

@@ -32,6 +32,9 @@ MAX_QUESTIONS = 15
 TARGET_MCQ_COUNT = 8
 DEFAULT_GEMINI_MODEL = "gemini-3.5-flash"
 TRANSCRIPT_CHAR_LIMIT = 100_000
+SUPPORT_QUESTION_CHAR_LIMIT = 4000
+SUPPORT_HISTORY_LIMIT = 8
+SUPPORT_ANSWER_CHAR_LIMIT = 6000
 MIN_SUMMARY_LEN = 40
 MAX_SUMMARY_LEN = 8000
 MIN_OBJECTIVES = 1
@@ -83,6 +86,14 @@ Rules:
 Generate about """ + str(
     TARGET_MCQ_COUNT
 ) + """ multiple-choice questions and up to 2 true/false questions when the transcript supports them."""
+
+STUDENT_SUPPORT_SYSTEM_PROMPT = """You are LearnCode AI Support, a patient coding tutor for students.
+
+Help students understand programming, debug code, plan their next learning step, and reason through course material.
+Give clear, practical answers with small examples when useful.
+When a student asks for quiz or assessment answers, guide them with hints and reasoning steps instead of giving direct answers.
+Do not invent platform data you cannot see; ask the student for missing code, errors, lesson text, or screenshots when needed.
+Keep responses concise, encouraging, and actionable."""
 
 
 class LessonIntelligencePayload(TypedDict):
@@ -179,6 +190,70 @@ class GeminiService:
                     )
 
         raise GeminiQuizError(f"Quiz generation failed: {last_error}")
+
+    def generate_student_support_response(
+        self,
+        question: str,
+        *,
+        page_path: str = "",
+        history: list[dict[str, Any]] | None = None,
+        student_level: str = "",
+    ) -> str:
+        """Answer an authenticated student's support question."""
+        from google import genai
+
+        clean_question = str(question or "").strip()
+        if not clean_question:
+            raise GeminiQuizError("Question is required.")
+
+        client = genai.Client(api_key=self.api_key)
+        history_lines = _format_support_history(history or [])
+        context_lines = []
+        if student_level:
+            context_lines.append(f"Student level: {student_level}")
+        if page_path:
+            context_lines.append(f"Current app page: {page_path[:200]}")
+
+        prompt = (
+            "Use the context below to help the student.\n\n"
+            f"<context>\n{chr(10).join(context_lines) or 'No extra context provided.'}\n</context>\n\n"
+            f"<recent_messages>\n{history_lines or 'No previous messages.'}\n</recent_messages>\n\n"
+            f"<student_question>\n{clean_question[:SUPPORT_QUESTION_CHAR_LIMIT]}\n</student_question>"
+        )
+
+        try:
+            response = client.models.generate_content(
+                model=self.model_name,
+                contents=prompt,
+                config={
+                    "system_instruction": STUDENT_SUPPORT_SYSTEM_PROMPT,
+                    "temperature": 0.45,
+                },
+            )
+        except Exception as exc:
+            if is_invalid_gemini_api_key_error(exc):
+                logger.error("Gemini API key rejected by Google")
+                raise GeminiQuizError(INVALID_GEMINI_API_KEY_MESSAGE) from exc
+            raise GeminiQuizError(f"AI support failed: {exc}") from exc
+
+        answer = (response.text or "").strip()
+        if not answer:
+            raise GeminiQuizError("AI support returned an empty answer.")
+        return answer[:SUPPORT_ANSWER_CHAR_LIMIT]
+
+
+def _format_support_history(history: list[dict[str, Any]]) -> str:
+    lines = []
+    for item in history[-SUPPORT_HISTORY_LIMIT:]:
+        if not isinstance(item, dict):
+            continue
+        role = str(item.get("role", "")).strip().lower()
+        if role not in {"student", "assistant"}:
+            continue
+        content = str(item.get("content", "")).strip()
+        if content:
+            lines.append(f"{role}: {content[:1000]}")
+    return "\n".join(lines)
 
 
 def configured_gemini_api_key() -> str:
