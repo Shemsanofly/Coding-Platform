@@ -24,7 +24,7 @@ export default function Card({
   children,
   ...props
 }) {
-  const paddingClass = variant === "alert" ? "" : paddings[padding] ?? paddings.md;
+  const paddingClass = variant === "alert" ? "" : (paddings[padding] ?? paddings.md);
   return (
     <Component
       className={`${variants[variant] ?? variants.default} ${paddingClass} ${className}`.trim()}

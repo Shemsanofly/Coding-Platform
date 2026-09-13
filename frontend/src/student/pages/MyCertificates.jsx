@@ -20,7 +20,8 @@ export default function MyCertificates() {
   const downloadMutation = useMutation({
     mutationFn: (certificateId) => downloadCertificate(certificateId),
     onSuccess: (response) => triggerBlobDownload(response, "certificate.pdf"),
-    onError: () => toast.error("Could not download certificate.", { id: "my-certificate-download-error" }),
+    onError: () =>
+      toast.error("Could not download certificate.", { id: "my-certificate-download-error" }),
   });
 
   const certificates = Array.isArray(certificatesQuery.data) ? certificatesQuery.data : [];
@@ -35,7 +36,10 @@ export default function MyCertificates() {
       {certificatesQuery.isLoading ? (
         <LoadingState label="Loading certificates..." rows={4} />
       ) : certificatesQuery.isError ? (
-        <ErrorState message="Could not load certificates." onRetry={() => void certificatesQuery.refetch()} />
+        <ErrorState
+          message="Could not load certificates."
+          onRetry={() => void certificatesQuery.refetch()}
+        />
       ) : certificates.length === 0 ? (
         <Card variant="subtle">
           <p className="text-sm text-muted dark:text-reef/90">
@@ -44,7 +48,10 @@ export default function MyCertificates() {
         </Card>
       ) : (
         <section className="space-y-4">
-          <SectionHeader title="Certificates" subtitle={`${certificates.length} issued by LearnCode`} />
+          <SectionHeader
+            title="Certificates"
+            subtitle={`${certificates.length} issued by LearnCode`}
+          />
           <ul className="grid gap-4">
             {certificates.map((certificate) => {
               const issueDate = certificate.issue_date
@@ -70,14 +77,18 @@ export default function MyCertificates() {
                         </h2>
                         <dl className="mt-3 grid gap-2 text-xs text-muted dark:text-reef/80 sm:grid-cols-2">
                           <div>
-                            <dt className="font-semibold uppercase tracking-wide">Certificate no.</dt>
+                            <dt className="font-semibold uppercase tracking-wide">
+                              Certificate no.
+                            </dt>
                             <dd className="mt-0.5 font-medium text-ink dark:text-sand">
                               {certificate.certificate_number}
                             </dd>
                           </div>
                           <div>
                             <dt className="font-semibold uppercase tracking-wide">Issued</dt>
-                            <dd className="mt-0.5 font-medium text-ink dark:text-sand">{issueDate || "Available"}</dd>
+                            <dd className="mt-0.5 font-medium text-ink dark:text-sand">
+                              {issueDate || "Available"}
+                            </dd>
                           </div>
                         </dl>
                       </div>

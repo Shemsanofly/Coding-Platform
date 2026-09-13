@@ -7,5 +7,7 @@ const LABELS = {
 };
 
 export default function CourseStatusBadge({ status }) {
-  return <StatusBadge status={status} label={LABELS[String(status || "").toLowerCase()] || status} />;
+  return (
+    <StatusBadge status={status} label={LABELS[String(status || "").toLowerCase()] || status} />
+  );
 }

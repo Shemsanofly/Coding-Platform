@@ -10,9 +10,9 @@ from accounts.models import User
 from accounts.permissions import STUDENT_ACCESS
 from ai_engine.models import LessonAIProcessing
 from ai_engine.services.gemini_service import GeminiQuizError, GeminiService
+from ai_engine.services.generation_mode import get_ai_generation_mode, is_manual_mode
 from ai_engine.services.learning_path import generate_learning_path
 from ai_engine.services.quiz_persistence import publish_quiz_questions
-from ai_engine.services.generation_mode import get_ai_generation_mode, is_manual_mode
 from ai_engine.services.youtube_pipeline import (
     MANUAL_PENDING_HINT,
     enqueue_video_processing,
@@ -20,7 +20,7 @@ from ai_engine.services.youtube_pipeline import (
     run_youtube_quiz_generation_sync,
     user_facing_generation_error,
 )
-from courses.models import Course, Lesson
+from courses.models import Lesson
 from quizzes.models import Question, Quiz
 
 logger = logging.getLogger(__name__)
@@ -29,9 +29,7 @@ logger = logging.getLogger(__name__)
 def _quiz_generation_response(lesson: Lesson, result: dict) -> Response:
     quiz = Quiz.objects.filter(lesson=lesson).first()
     processing = LessonAIProcessing.objects.filter(lesson=lesson).first()
-    published_count = (
-        Question.objects.filter(quiz=quiz, is_published=True).count() if quiz else 0
-    )
+    published_count = Question.objects.filter(quiz=quiz, is_published=True).count() if quiz else 0
     payload = {
         **result,
         "lesson_id": lesson.id,
@@ -44,11 +42,7 @@ def _quiz_generation_response(lesson: Lesson, result: dict) -> Response:
         "question_count": Question.objects.filter(quiz=quiz).count() if quiz else 0,
         "published_question_count": published_count,
     }
-    if (
-        quiz
-        and quiz.generation_status == Quiz.GenerationStatus.DONE
-        and published_count == 0
-    ):
+    if quiz and quiz.generation_status == Quiz.GenerationStatus.DONE and published_count == 0:
         payload["approval_status"] = "pending_approval"
     return Response(payload, status=status.HTTP_200_OK)
 
@@ -71,7 +65,10 @@ class _AdminOnlyMixin:
             course_id=course_pk,
             course__created_by=request.user,
         )
-        if lesson.source_type != Lesson.SourceType.YOUTUBE or not (lesson.resource_url or "").strip():
+        if (
+            lesson.source_type != Lesson.SourceType.YOUTUBE
+            or not (lesson.resource_url or "").strip()
+        ):
             return None, Response(
                 {"detail": "AI quiz generation is only supported for YouTube lessons."},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -265,15 +262,20 @@ class LearningPathView(APIView):
         from progress.services.weakness_context import parse_course_id_param
 
         course_id = parse_course_id_param(request.query_params.get("course_id"))
-        if course_id is not None and not Enrollment.objects.filter(
-            user=request.user, course_id=course_id
-        ).exists():
+        if (
+            course_id is not None
+            and not Enrollment.objects.filter(user=request.user, course_id=course_id).exists()
+        ):
             return Response(
                 {"detail": "You are not enrolled in this course."},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        include_explanation = request.query_params.get("explain", "").lower() in ("1", "true", "yes")
+        include_explanation = request.query_params.get("explain", "").lower() in (
+            "1",
+            "true",
+            "yes",
+        )
         payload = generate_learning_path(
             request.user.id,
             include_explanation=include_explanation,

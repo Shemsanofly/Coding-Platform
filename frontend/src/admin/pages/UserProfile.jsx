@@ -46,7 +46,9 @@ function LevelBadge({ level }) {
 
   return (
     <span
-      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${styles[normalized] || styles.NONE}`}
+      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${
+        styles[normalized] || styles.NONE
+      }`}
     >
       {normalized}
     </span>
@@ -72,7 +74,9 @@ function AdminWeaknessMap({ topics }) {
           >
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-sm font-semibold text-ink">{topic.topic_tag || "Unknown topic"}</p>
+                <p className="text-sm font-semibold text-ink">
+                  {topic.topic_tag || "Unknown topic"}
+                </p>
                 <p className="mt-1 text-xs text-muted">
                   {attempts} attempts · {accuracy}% accuracy
                 </p>
@@ -98,7 +102,9 @@ function RecommendationsList({ items }) {
           key={item.id ?? `${item.lesson_title || "lesson"}-${index}`}
           className="rounded-xl border border-ocean-600/10 bg-white p-3 dark:border-line/40 dark:bg-ocean-950/40"
         >
-          <p className="text-sm font-semibold text-ink">{item.lesson_title || item.title || "Untitled lesson"}</p>
+          <p className="text-sm font-semibold text-ink">
+            {item.lesson_title || item.title || "Untitled lesson"}
+          </p>
           <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
             <span className="rounded-full bg-reef/50 px-2 py-1 font-medium text-ocean-800">
               Triggered by: {item.triggered_by || "weakness"}
@@ -195,10 +201,16 @@ function QuizAttemptLog({ attempts }) {
             ) : (
               sortedAttempts.map((attempt, index) => (
                 <tr key={attempt.id ?? `${attempt.quiz_title || "quiz"}-${index}`}>
-                  <td className="px-3 py-2 text-sm text-ink">{attempt.quiz_title || "Quiz attempt"}</td>
+                  <td className="px-3 py-2 text-sm text-ink">
+                    {attempt.quiz_title || "Quiz attempt"}
+                  </td>
                   <td className="px-3 py-2 text-sm text-ink">{normalizeNumber(attempt.score)}</td>
-                  <td className="px-3 py-2 text-sm text-ink">{normalizeNumber(attempt.accuracy)}%</td>
-                  <td className="px-3 py-2 text-sm text-muted">{formatDateTime(attempt.taken_at)}</td>
+                  <td className="px-3 py-2 text-sm text-ink">
+                    {normalizeNumber(attempt.accuracy)}%
+                  </td>
+                  <td className="px-3 py-2 text-sm text-muted">
+                    {formatDateTime(attempt.taken_at)}
+                  </td>
                 </tr>
               ))
             )}
@@ -266,7 +278,9 @@ export default function UserProfile() {
   const recommendations = Array.isArray(recommendationsQuery.data)
     ? recommendationsQuery.data
     : recommendationsQuery.data?.results || [];
-  const quizLog = Array.isArray(quizLogQuery.data) ? quizLogQuery.data : quizLogQuery.data?.results || [];
+  const quizLog = Array.isArray(quizLogQuery.data)
+    ? quizLogQuery.data
+    : quizLogQuery.data?.results || [];
 
   return (
     <div className="space-y-5 p-4 md:p-6">
@@ -280,7 +294,10 @@ export default function UserProfile() {
 
       {isLoading ? <LoadingState label="Loading user profile…" rows={3} /> : null}
       {isError ? (
-        <ErrorState title="Profile unavailable" message="Failed to load one or more profile sections." />
+        <ErrorState
+          title="Profile unavailable"
+          message="Failed to load one or more profile sections."
+        />
       ) : null}
 
       {!isLoading && !isError ? (
@@ -301,12 +318,18 @@ export default function UserProfile() {
                   </p>
                 </div>
               </div>
-              <p className="text-sm text-muted">Last active: {formatDateTime(profile.last_active)}</p>
+              <p className="text-sm text-muted">
+                Last active: {formatDateTime(profile.last_active)}
+              </p>
             </div>
 
             <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
               <AdminMetricCard title="Enrolled" value={profile.enrolled_count ?? 0} color="blue" />
-              <AdminMetricCard title="Lessons completed" value={profile.completed_lessons ?? 0} color="green" />
+              <AdminMetricCard
+                title="Lessons completed"
+                value={profile.completed_lessons ?? 0}
+                color="green"
+              />
               <AdminMetricCard
                 title="Avg score"
                 value={
@@ -316,7 +339,11 @@ export default function UserProfile() {
                 }
                 color="purple"
               />
-              <AdminMetricCard title="Quiz attempts" value={profile.quiz_attempts ?? quizLog.length} color="slate" />
+              <AdminMetricCard
+                title="Quiz attempts"
+                value={profile.quiz_attempts ?? quizLog.length}
+                color="slate"
+              />
               <AdminMetricCard
                 title="Weak topics"
                 value={profile.weak_topics_count ?? weaknesses.length}

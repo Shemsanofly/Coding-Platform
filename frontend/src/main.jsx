@@ -30,4 +30,6 @@ const appTree = (
   </QueryClientProvider>
 );
 
-ReactDOM.createRoot(document.getElementById("root")).render(<React.StrictMode>{appTree}</React.StrictMode>);
+ReactDOM.createRoot(document.getElementById("root")).render(
+  <React.StrictMode>{appTree}</React.StrictMode>,
+);

@@ -83,7 +83,9 @@ def _serialize_weak_topic(wt) -> dict[str, Any]:
     }
 
 
-def _serialize_lesson_brief(lesson, *, weak_topic_tag: str = "", reason: str = "") -> dict[str, Any]:
+def _serialize_lesson_brief(
+    lesson, *, weak_topic_tag: str = "", reason: str = ""
+) -> dict[str, Any]:
     course = lesson.course
     return {
         "lesson_id": lesson.id,
@@ -174,7 +176,11 @@ def _build_learning_path_steps(
             continue
         seen_lessons.add(lesson.id)
         matched_tag = next(
-            (wt.topic_tag for wt in weak_topics_sorted if _topic_matches_lesson(wt.topic_tag, lesson)),
+            (
+                wt.topic_tag
+                for wt in weak_topics_sorted
+                if _topic_matches_lesson(wt.topic_tag, lesson)
+            ),
             "",
         )
         step = _serialize_lesson_brief(
@@ -207,7 +213,9 @@ def _path_progress(
     )
     if course_ids is not None:
         enrolled_ids = [cid for cid in enrolled_ids if cid in course_ids]
-    total_enrolled = Lesson.objects.filter(course_id__in=enrolled_ids).count() if enrolled_ids else 0
+    total_enrolled = (
+        Lesson.objects.filter(course_id__in=enrolled_ids).count() if enrolled_ids else 0
+    )
     completed_count = len(completed_ids)
     percent = round((completed_count / total_enrolled) * 100, 1) if total_enrolled else 0.0
     next_lesson_id = path[0]["lesson_id"] if path else None
@@ -287,15 +295,16 @@ def generate_learning_path(
 
     context_index = build_topic_context_index(user_id, course_ids=course_ids)
 
-    weak_rows = list(
-        WeakTopic.objects.filter(user_id=user_id, weakness_level__isnull=False)
-    )
+    weak_rows = list(WeakTopic.objects.filter(user_id=user_id, weakness_level__isnull=False))
     if course_id is not None:
         weak_rows = [
             wt
             for wt in weak_rows
             if topic_matches_course(wt.topic_tag, course_id, context_index)
-            or any(_topic_matches_lesson(wt.topic_tag, lesson) for lesson in Lesson.objects.filter(course_id=course_id))
+            or any(
+                _topic_matches_lesson(wt.topic_tag, lesson)
+                for lesson in Lesson.objects.filter(course_id=course_id)
+            )
         ]
 
     weak_topics_sorted = _sort_weak_topics(weak_rows)
@@ -307,9 +316,11 @@ def generate_learning_path(
     if course_id is not None:
         enrolled_ids = [cid for cid in enrolled_ids if cid == course_id]
 
-    lessons = list(
-        Lesson.objects.filter(course_id__in=enrolled_ids).select_related("course")
-    ) if enrolled_ids else []
+    lessons = (
+        list(Lesson.objects.filter(course_id__in=enrolled_ids).select_related("course"))
+        if enrolled_ids
+        else []
+    )
 
     best_scores = _best_scores_by_lesson(user_id)
     passed_ids = _passed_lesson_ids(user_id, best_scores)
@@ -339,7 +350,9 @@ def generate_learning_path(
         completed_ids,
         recommendations,
     )
-    progress = _path_progress(user_id, learning_path, completed_ids, course_ids=enrolled_ids or None)
+    progress = _path_progress(
+        user_id, learning_path, completed_ids, course_ids=enrolled_ids or None
+    )
 
     explanation = ""
     if include_explanation:

@@ -26,18 +26,18 @@ function formatShortDate(iso) {
 export function QuizScoreTrendChart({ scores = [] }) {
   const chartData = useMemo(
     () =>
-      [...scores]
-        .reverse()
-        .map((row, index) => ({
-          id: `${row.taken_at}-${index}`,
-          label: formatShortDate(row.taken_at) || `#${index + 1}`,
-          score: Number(row.score) || 0,
-        })),
+      [...scores].reverse().map((row, index) => ({
+        id: `${row.taken_at}-${index}`,
+        label: formatShortDate(row.taken_at) || `#${index + 1}`,
+        score: Number(row.score) || 0,
+      })),
     [scores],
   );
 
   if (!chartData.length) {
-    return <p className="text-sm text-muted dark:text-muted">Complete a quiz to see your score trend.</p>;
+    return (
+      <p className="text-sm text-muted dark:text-muted">Complete a quiz to see your score trend.</p>
+    );
   }
 
   return (
@@ -111,7 +111,11 @@ export function LessonsCompletedChart({ completed = 0, remaining = 0, total = 0 
   );
 
   if (!safeTotal) {
-    return <p className="text-sm text-muted dark:text-muted">Enroll in a course to track lesson progress.</p>;
+    return (
+      <p className="text-sm text-muted dark:text-muted">
+        Enroll in a course to track lesson progress.
+      </p>
+    );
   }
 
   const percent = safeTotal ? Math.round((completed / safeTotal) * 100) : 0;
@@ -121,9 +125,18 @@ export function LessonsCompletedChart({ completed = 0, remaining = 0, total = 0 
       <ProgressBar value={percent} label="Overall lesson completion" />
       <div className="h-40 w-full min-w-0">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData} layout="vertical" margin={{ top: 4, right: 16, left: 8, bottom: 4 }}>
+          <BarChart
+            data={chartData}
+            layout="vertical"
+            margin={{ top: 4, right: 16, left: 8, bottom: 4 }}
+          >
             <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11, fill: "#64748b" }} />
-            <YAxis type="category" dataKey="name" width={88} tick={{ fontSize: 11, fill: "#64748b" }} />
+            <YAxis
+              type="category"
+              dataKey="name"
+              width={88}
+              tick={{ fontSize: 11, fill: "#64748b" }}
+            />
             <Tooltip />
             <Bar dataKey="value" radius={[0, 6, 6, 0]} fill="#6366f1" />
           </BarChart>
@@ -137,7 +150,9 @@ export function LessonsCompletedChart({ completed = 0, remaining = 0, total = 0 
 }
 
 export default function DashboardAnalytics({ analytics, weaknesses, enrollments }) {
-  const recentScores = Array.isArray(analytics?.recent_quiz_scores) ? analytics.recent_quiz_scores : [];
+  const recentScores = Array.isArray(analytics?.recent_quiz_scores)
+    ? analytics.recent_quiz_scores
+    : [];
   const completed = analytics?.lessons_passed_quiz ?? 0;
   const remaining = analytics?.lessons_remaining ?? 0;
   const total = analytics?.total_lessons_in_enrolled_courses ?? completed + remaining;
@@ -174,17 +189,14 @@ export default function DashboardAnalytics({ analytics, weaknesses, enrollments 
           </p>
           <div className="mt-3 space-y-3">
             {enrollments?.slice(0, 4).map((course) => (
-              <ProgressBar
-                key={course.id}
-                label={course.title}
-                value={course.progress}
-                size="sm"
-              />
+              <ProgressBar key={course.id} label={course.title} value={course.progress} size="sm" />
             ))}
           </div>
         </div>
         <div className="min-w-0 rounded-xl border border-line/70 bg-cream/80 p-4 dark:border-line/20 dark:bg-black/20">
-          <h3 className="text-sm font-semibold text-ink dark:text-sand">Lessons completed vs remaining</h3>
+          <h3 className="text-sm font-semibold text-ink dark:text-sand">
+            Lessons completed vs remaining
+          </h3>
           <div className="mt-3">
             <LessonsCompletedChart completed={completed} remaining={remaining} total={total} />
           </div>

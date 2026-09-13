@@ -50,7 +50,9 @@ export default function QuizResult() {
   if (!result) {
     return (
       <div className="mx-auto max-w-3xl space-y-4 p-4 md:p-6">
-        <p className="text-sm text-muted dark:text-muted">No quiz result data. Take the quiz first.</p>
+        <p className="text-sm text-muted dark:text-muted">
+          No quiz result data. Take the quiz first.
+        </p>
         <button
           type="button"
           onClick={() => navigate(`/lessons/${lessonId}/quiz`)}
@@ -66,7 +68,9 @@ export default function QuizResult() {
     <div className="mx-auto max-w-3xl space-y-6 overflow-x-hidden p-4 md:p-6">
       <div className="rounded-2xl border border-ocean-600/10 bg-white p-6 text-center shadow-lg dark:border-line/40 dark:bg-ocean-950/50 dark:shadow-xl dark:backdrop-blur-xl">
         <p className="text-sm uppercase tracking-wider text-muted dark:text-muted">Quiz result</p>
-        <p className="mt-2 text-5xl font-bold tabular-nums text-ink dark:text-sand sm:text-6xl">{score}%</p>
+        <p className="mt-2 text-5xl font-bold tabular-nums text-ink dark:text-sand sm:text-6xl">
+          {score}%
+        </p>
         <div className="mt-4 flex justify-center">
           <ScoreBadge score={score} passed={passed} threshold={PASS_THRESHOLD} />
         </div>
@@ -100,7 +104,9 @@ export default function QuizResult() {
                     {item.topic_tag.replace(/_/g, " ")}
                   </p>
                 ) : null}
-                <p className="mt-1 text-ocean-800 dark:text-muted">{item.explanation || "No explanation provided."}</p>
+                <p className="mt-1 text-ocean-800 dark:text-muted">
+                  {item.explanation || "No explanation provided."}
+                </p>
               </li>
             ))}
           </ul>
@@ -109,7 +115,10 @@ export default function QuizResult() {
 
       {affectedTopics.length > 0 ? (
         <section className="rounded-2xl border border-amber-200/70 bg-amber-50/80 p-4 dark:border-amber-400/30 dark:bg-amber-500/10">
-          <SectionHeader title="Weak topics affected" subtitle="These tags may update after analytics refresh." />
+          <SectionHeader
+            title="Weak topics affected"
+            subtitle="These tags may update after analytics refresh."
+          />
           <div className="flex flex-wrap gap-2">
             {affectedTopics.map((tag) => (
               <span
@@ -126,7 +135,11 @@ export default function QuizResult() {
       <section className="rounded-2xl border border-ocean-600/10 bg-white p-4 dark:border-line/40 dark:bg-ocean-950/50">
         <SectionHeader
           title="Recommended next action"
-          subtitle={passed ? "Great work — keep momentum on your path." : "Strengthen weak areas before moving on."}
+          subtitle={
+            passed
+              ? "Great work — keep momentum on your path."
+              : "Strengthen weak areas before moving on."
+          }
         />
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
           {passed ? (
@@ -149,7 +162,9 @@ export default function QuizResult() {
           ) : (
             <>
               {!showRecommendationsButton ? (
-                <p className="text-sm text-amber-900 dark:text-amber-100">Updating weakness profile…</p>
+                <p className="text-sm text-amber-900 dark:text-amber-100">
+                  Updating weakness profile…
+                </p>
               ) : null}
               {showRecommendationsButton ? (
                 <button

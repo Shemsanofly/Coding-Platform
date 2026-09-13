@@ -16,12 +16,10 @@ function QuizCard({ question, selectedAnswer, onSelect, questionNumber, totalQue
       <p className="text-xs font-semibold uppercase tracking-wide text-muted dark:text-muted">
         Question {questionNumber} of {totalQuestions}
       </p>
-      <h2 className="mt-2 text-lg font-semibold text-ink dark:text-sand">{question?.text ?? "Question"}</h2>
-      <div
-        className="mt-4 space-y-3"
-        role="radiogroup"
-        aria-label={`Question ${questionNumber}`}
-      >
+      <h2 className="mt-2 text-lg font-semibold text-ink dark:text-sand">
+        {question?.text ?? "Question"}
+      </h2>
+      <div className="mt-4 space-y-3" role="radiogroup" aria-label={`Question ${questionNumber}`}>
         {options.map((option, index) => {
           const isSelected = selectedAnswer === index;
           return (
@@ -94,22 +92,22 @@ export default function Quiz() {
         queryClient.invalidateQueries({ queryKey: ["student-lesson", lid] });
       }
       if (result?.weakness_detection_triggered === false) {
-        toast.error(
-          "Quiz submitted, but weakness analysis could not update. Try again later.",
-          { id: "quiz-weakness-warn" },
-        );
+        toast.error("Quiz submitted, but weakness analysis could not update. Try again later.", {
+          id: "quiz-weakness-warn",
+        });
       }
       navigate(`/lessons/${lessonId}/quiz/result`, { replace: true, state: { result } });
     },
     onError: (err) => {
       const detail = err?.response?.data?.detail;
-      toast.error(typeof detail === "string" ? detail : "Could not submit quiz.", { id: "quiz-submit-err" });
+      toast.error(typeof detail === "string" ? detail : "Could not submit quiz.", {
+        id: "quiz-submit-err",
+      });
     },
   });
 
   const currentQuestion = questions[currentIndex];
-  const hasSelectedAnswer =
-    currentQuestion && selectedAnswers[currentQuestion.id] !== undefined;
+  const hasSelectedAnswer = currentQuestion && selectedAnswers[currentQuestion.id] !== undefined;
   const isLastQuestion = currentIndex >= questions.length - 1;
   const canSubmitFinal =
     isLastQuestion && hasAllAnswersSelected() && Boolean(quizData?.id ?? quizData?.quiz_id);
@@ -128,7 +126,9 @@ export default function Quiz() {
     const rawAnswers = getOrderedAnswerIndices();
     const quizId = quizData?.id ?? quizData?.quiz_id;
     if (!quizId || rawAnswers.some((value) => value === undefined)) {
-      toast.error("Pick an answer for every question before submitting.", { id: "quiz-answers-err" });
+      toast.error("Pick an answer for every question before submitting.", {
+        id: "quiz-answers-err",
+      });
       return;
     }
 

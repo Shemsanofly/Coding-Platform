@@ -39,7 +39,13 @@ export default function Catalog() {
     return levelFilter;
   }, [levelFilter, user?.experience_level]);
 
-  const { data = [], isLoading, isPending, isError, refetch } = useQuery({
+  const {
+    data = [],
+    isLoading,
+    isPending,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: ["course-catalog", catalogLevel ?? "all"],
     queryFn: () => getCourseCatalog({ level: catalogLevel }),
   });
@@ -61,7 +67,7 @@ export default function Catalog() {
     onSettled: () => setJoiningId(null),
   });
 
-  const allCourses = useMemo(() => (Array.isArray(data) ? data : data?.results ?? []), [data]);
+  const allCourses = useMemo(() => (Array.isArray(data) ? data : (data?.results ?? [])), [data]);
   const courses = useMemo(
     () => allCourses.filter((course) => matchesSearch(course, search.trim())),
     [allCourses, search],
@@ -71,7 +77,9 @@ export default function Catalog() {
 
   const subtitle = useMemo(() => {
     if (levelFilter === "matched" && user?.experience_level) {
-      return `${formatCourseLevel(user.experience_level)} courses matched to your profile. You can switch levels anytime.`;
+      return `${formatCourseLevel(
+        user.experience_level,
+      )} courses matched to your profile. You can switch levels anytime.`;
     }
     return "Find a course, enroll, and continue directly into the lesson path.";
   }, [levelFilter, user?.experience_level]);
@@ -79,10 +87,7 @@ export default function Catalog() {
   return (
     <div className="space-y-5 p-4 md:p-6">
       <section className="rounded-2xl border border-ocean-600/10 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-[#172433]/85">
-        <PageHeader
-          title="Course Catalog"
-          subtitle={subtitle}
-        />
+        <PageHeader title="Course Catalog" subtitle={subtitle} />
 
         <div className="mt-5 grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
           <label className="relative block">
@@ -113,7 +118,9 @@ export default function Catalog() {
         </div>
 
         <div className="mt-4 flex flex-wrap gap-4 text-sm text-muted dark:text-reef/75">
-          <span>{allCourses.length} course{allCourses.length === 1 ? "" : "s"} available</span>
+          <span>
+            {allCourses.length} course{allCourses.length === 1 ? "" : "s"} available
+          </span>
           <span>{enrolledCount} enrolled</span>
           {search.trim() ? <span>{courses.length} match search</span> : null}
         </div>
@@ -122,7 +129,10 @@ export default function Catalog() {
       {showSkeleton ? (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3" aria-busy="true">
           {Array.from({ length: 6 }).map((_, index) => (
-            <div key={index} className="h-[220px] animate-pulse rounded-2xl bg-reef/50 dark:bg-ocean-950/60" />
+            <div
+              key={index}
+              className="h-[220px] animate-pulse rounded-2xl bg-reef/50 dark:bg-ocean-950/60"
+            />
           ))}
         </div>
       ) : null}

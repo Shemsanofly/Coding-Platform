@@ -7,7 +7,7 @@ class IsAdmin(permissions.BasePermission):
         user = request.user
         if not user.is_authenticated:
             return False
-        return user.role == 'admin'
+        return user.role == "admin"
 
 
 class IsRoleStudent(permissions.BasePermission):

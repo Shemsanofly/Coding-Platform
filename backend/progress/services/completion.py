@@ -46,7 +46,9 @@ def passed_lesson_ids_for_user(user_id: int, lesson_ids: list[int]) -> set[int]:
         return set()
 
     best_scores = dict(
-        QuizResult.objects.filter(user_id=user_id, quiz_id__in=[quiz.id for quiz in quizzes.values()])
+        QuizResult.objects.filter(
+            user_id=user_id, quiz_id__in=[quiz.id for quiz in quizzes.values()]
+        )
         .values("quiz_id")
         .annotate(best=Max("score"))
         .values_list("quiz_id", "best")
@@ -65,11 +67,15 @@ def refresh_lesson_official_completion(user_id: int, lesson_id: int) -> bool:
     Sets completed_at when study engagement rules pass.
     Never clears completed_at from here.
     """
-    lesson = Lesson.objects.filter(pk=lesson_id).only(
-        "id",
-        "estimated_minutes",
-        "source_type",
-    ).first()
+    lesson = (
+        Lesson.objects.filter(pk=lesson_id)
+        .only(
+            "id",
+            "estimated_minutes",
+            "source_type",
+        )
+        .first()
+    )
     if lesson is None:
         return False
 
@@ -86,7 +92,9 @@ def refresh_lesson_official_completion(user_id: int, lesson_id: int) -> bool:
 
 
 def student_completion_rate_percent(user_id: int) -> float | None:
-    enrolled_course_ids = Enrollment.objects.filter(user_id=user_id).values_list("course_id", flat=True)
+    enrolled_course_ids = Enrollment.objects.filter(user_id=user_id).values_list(
+        "course_id", flat=True
+    )
     lesson_ids = list(
         Lesson.objects.filter(course_id__in=enrolled_course_ids).values_list("id", flat=True)
     )

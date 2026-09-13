@@ -99,7 +99,9 @@ export default function LessonYouTubeEmbed({ videoId, title, onWatchPercent }) {
         playerVars: {
           enablejsapi: 1,
           origin:
-            typeof window !== "undefined" && window.location?.origin ? window.location.origin : undefined,
+            typeof window !== "undefined" && window.location?.origin
+              ? window.location.origin
+              : undefined,
         },
         events: {
           onReady: (event) => {

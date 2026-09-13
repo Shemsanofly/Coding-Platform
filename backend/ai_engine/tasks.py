@@ -1,5 +1,5 @@
-from collections import defaultdict
 import logging
+from collections import defaultdict
 
 from celery import shared_task
 from django.contrib.auth import get_user_model
@@ -7,7 +7,6 @@ from django.utils.timezone import now
 
 from ai_engine.services.generation_mode import get_ai_generation_mode
 from ai_engine.services.task_queue import run_or_enqueue
-
 
 logger = logging.getLogger(__name__)
 
@@ -74,7 +73,6 @@ def _clear_user_recommendations(user_id):
 
 
 def _lesson_tag_tokens(lesson):
-    from courses.models import Lesson
 
     tags = list(lesson.tags or [])
     if lesson.topic_tag:
@@ -139,7 +137,9 @@ def generate_recommendations(user_id):
     passed_ids = _passed_lesson_ids(user_id, best_scores)
 
     recent_scores = list(
-        QuizResult.objects.filter(user_id=user_id).order_by("-taken_at").values_list("score", flat=True)[:5]
+        QuizResult.objects.filter(user_id=user_id)
+        .order_by("-taken_at")
+        .values_list("score", flat=True)[:5]
     )
     recent_avg = sum(recent_scores) / len(recent_scores) if recent_scores else None
 
@@ -209,20 +209,26 @@ def generate_recommendations(user_id):
         if lesson.id not in passed_ids:
             score += 5
 
-        if LessonProgress.objects.filter(user_id=user_id, lesson=lesson, completed_at__isnull=False).exists():
+        if LessonProgress.objects.filter(
+            user_id=user_id, lesson=lesson, completed_at__isnull=False
+        ).exists():
             score -= 8
 
         if score <= 0:
             continue
 
-        reason = "; ".join(dict.fromkeys(reasons)) if reasons else "Adaptive match for your learning path."
+        reason = (
+            "; ".join(dict.fromkeys(reasons))
+            if reasons
+            else "Adaptive match for your learning path."
+        )
         prev = ranked.get(lesson.id)
         if not prev or score > prev[0]:
             ranked[lesson.id] = (score, lesson, reason)
 
     ordered = sorted(ranked.values(), key=lambda row: (-row[0], row[1].course_id, row[1].order))
     created = 0
-    for score, lesson, reason in ordered[:8]:
+    for _score, lesson, reason in ordered[:8]:
         weak_tag = ""
         for wt in weak_topics:
             t = (wt.topic_tag or "").strip().lower()

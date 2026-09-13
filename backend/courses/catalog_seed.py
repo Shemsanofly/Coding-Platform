@@ -146,6 +146,8 @@ def seed_basic_catalog(creator, *, enroll_students=True):
         "created_count": len(created_ids),
         "created_ids": created_ids,
         "catalog_course_ids": list(
-            Course.objects.filter(created_by=creator, title__in=catalog_titles).values_list("id", flat=True)
+            Course.objects.filter(created_by=creator, title__in=catalog_titles).values_list(
+                "id", flat=True
+            )
         ),
     }

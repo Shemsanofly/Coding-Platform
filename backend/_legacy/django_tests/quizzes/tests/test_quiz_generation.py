@@ -9,7 +9,10 @@ from rest_framework.test import APIClient
 from accounts.models import User
 from ai_engine.models import LessonAIProcessing, WeakTopic
 from ai_engine.services.quiz_persistence import persist_generated_questions, publish_quiz_questions
-from ai_engine.services.youtube_pipeline import bootstrap_youtube_processing, generate_quiz_for_youtube_lesson
+from ai_engine.services.youtube_pipeline import (
+    bootstrap_youtube_processing,
+    generate_quiz_for_youtube_lesson,
+)
 from ai_engine.tests.test_lesson_intelligence import _full_payload_dict
 from courses.models import Course, Lesson
 from progress.models import Enrollment, LessonProgress

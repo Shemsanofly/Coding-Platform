@@ -105,7 +105,9 @@ class StudentQuizFlowTests(TestCase):
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.data["detail"], "Study this lesson to 100% before taking the quiz.")
+        self.assertEqual(
+            response.data["detail"], "Study this lesson to 100% before taking the quiz."
+        )
 
     def test_student_fetches_published_quiz_without_explanations(self):
         self._published_quiz()
@@ -187,7 +189,11 @@ class ManualModeQuizSubmitTests(StudentQuizFlowTests):
         rec_resp = self.client.get(reverse("recommendation-list"))
 
         self.assertEqual(weak_resp.status_code, 200)
-        weak_topics = weak_resp.data.get("topics", weak_resp.data) if isinstance(weak_resp.data, dict) else weak_resp.data
+        weak_topics = (
+            weak_resp.data.get("topics", weak_resp.data)
+            if isinstance(weak_resp.data, dict)
+            else weak_resp.data
+        )
         self.assertGreater(len(weak_topics), 0)
         self.assertEqual(rec_resp.status_code, 200)
         self.assertGreater(len(rec_resp.data), 0)

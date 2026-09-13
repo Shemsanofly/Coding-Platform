@@ -20,7 +20,7 @@ export const getCourseCatalog = async ({ level, page, page_size: pageSize } = {}
     return fetchAllPages(({ page: p, page_size: ps }) =>
       client
         .get("/api/catalog/courses/", { params: { ...params, level, page: p, page_size: ps } })
-        .then((r) => r.data)
+        .then((r) => r.data),
     );
   }
   return unwrapPaginated(data).results;

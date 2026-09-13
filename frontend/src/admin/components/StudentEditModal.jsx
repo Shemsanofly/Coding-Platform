@@ -6,7 +6,14 @@ const LEVEL_OPTIONS = [
   { value: "advanced", label: "Advanced" },
 ];
 
-export default function StudentEditModal({ student, open, onClose, onSave, isSaving, errorMessage }) {
+export default function StudentEditModal({
+  student,
+  open,
+  onClose,
+  onSave,
+  isSaving,
+  errorMessage,
+}) {
   const [email, setEmail] = useState("");
   const [experienceLevel, setExperienceLevel] = useState("beginner");
   const [isActive, setIsActive] = useState(true);
@@ -44,7 +51,10 @@ export default function StudentEditModal({ student, open, onClose, onSave, isSav
         <p className="mt-1 text-sm text-muted">{student.name || student.email}</p>
         <form className="mt-4 space-y-4" onSubmit={handleSubmit}>
           <div>
-            <label htmlFor="student-email" className="mb-1 block text-sm font-medium text-ocean-800">
+            <label
+              htmlFor="student-email"
+              className="mb-1 block text-sm font-medium text-ocean-800"
+            >
               Email
             </label>
             <input
@@ -57,7 +67,10 @@ export default function StudentEditModal({ student, open, onClose, onSave, isSav
             />
           </div>
           <div>
-            <label htmlFor="student-level" className="mb-1 block text-sm font-medium text-ocean-800">
+            <label
+              htmlFor="student-level"
+              className="mb-1 block text-sm font-medium text-ocean-800"
+            >
               Experience level
             </label>
             <select

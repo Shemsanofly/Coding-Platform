@@ -37,10 +37,15 @@ export function handleGenerateResponse(data, { toastIdPrefix = "gen-quiz" } = {}
   return { ok: false };
 }
 
-export function handleRegenerateResponse(data, { isManualMode, toastIdPrefix = "regen-quiz" } = {}) {
+export function handleRegenerateResponse(
+  data,
+  { isManualMode, toastIdPrefix = "regen-quiz" } = {},
+) {
   if (isManualMode) {
     if (data?.success) {
-      toast.success(data.message || "AI quiz regenerated successfully.", { id: `${toastIdPrefix}-ok` });
+      toast.success(data.message || "AI quiz regenerated successfully.", {
+        id: `${toastIdPrefix}-ok`,
+      });
       return { ok: true, queued: false };
     }
     toast.error(friendlyGenerationError(data), { id: `${toastIdPrefix}-fail` });
@@ -48,7 +53,9 @@ export function handleRegenerateResponse(data, { isManualMode, toastIdPrefix = "
   }
 
   if (data?.queued === false) {
-    toast.error(data.message || "AI generation could not be queued.", { id: `${toastIdPrefix}-queue` });
+    toast.error(data.message || "AI generation could not be queued.", {
+      id: `${toastIdPrefix}-queue`,
+    });
     return { ok: false, queued: false };
   }
 

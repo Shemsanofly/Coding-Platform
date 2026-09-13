@@ -53,7 +53,9 @@ def clean_transcript(text: str) -> str:
     return service.normalize(service.clean(text or ""))
 
 
-def chunk_transcript(text: str, *, max_chars: int = CHUNK_SIZE, overlap: int = CHUNK_OVERLAP) -> list[str]:
+def chunk_transcript(
+    text: str, *, max_chars: int = CHUNK_SIZE, overlap: int = CHUNK_OVERLAP
+) -> list[str]:
     cleaned = clean_transcript(text)
     if not cleaned:
         return []
@@ -83,7 +85,9 @@ def _sentences(text: str) -> list[str]:
     return [p.strip() for p in parts if len(p.strip()) > 20]
 
 
-def _rule_based_summary(transcript: str, *, default_title: str = "Lesson Study Notes") -> StudyNotesPayload:
+def _rule_based_summary(
+    transcript: str, *, default_title: str = "Lesson Study Notes"
+) -> StudyNotesPayload:
     cleaned = clean_transcript(transcript)
     sentences = _sentences(cleaned)
     key_concepts = []
@@ -103,7 +107,11 @@ def _rule_based_summary(transcript: str, *, default_title: str = "Lesson Study N
             }
         )
 
-    examples = sentences[1:4] if len(sentences) > 1 else [cleaned[:240] + ("…" if len(cleaned) > 240 else "")]
+    examples = (
+        sentences[1:4]
+        if len(sentences) > 1
+        else [cleaned[:240] + ("…" if len(cleaned) > 240 else "")]
+    )
     important_points = sentences[:6] or [cleaned[:300]]
     revision_notes = [
         "Review key concepts after watching the embedded video.",
@@ -111,7 +119,11 @@ def _rule_based_summary(transcript: str, *, default_title: str = "Lesson Study N
         "Use possible quiz points as self-check questions before taking the lesson quiz.",
     ]
     possible_quiz_points = [
-        f"What is the main idea behind {key_concepts[0]}?" if key_concepts else "What is the main topic of this lesson?",
+        (
+            f"What is the main idea behind {key_concepts[0]}?"
+            if key_concepts
+            else "What is the main topic of this lesson?"
+        ),
         "Which example from the lesson best illustrates the concept?",
         "How would you explain this topic in your own words?",
     ]
@@ -164,7 +176,10 @@ def _validate_payload(data: dict[str, Any], *, default_title: str) -> StudyNotes
     }
     if not payload["definitions"]:
         payload["definitions"] = [
-            {"term": payload["key_concepts"][0], "definition": "Key term introduced in the lesson transcript."}
+            {
+                "term": payload["key_concepts"][0],
+                "definition": "Key term introduced in the lesson transcript.",
+            }
         ]
     return payload
 

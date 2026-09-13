@@ -3,24 +3,39 @@
 # ============================================================
 
 ## IDENTITY
-Django 5 + DRF backend. React 18 + Vite frontend.
-Auth: JWT access token in memory + refresh in httpOnly cookie.
-Database: SQLite (dev) → PostgreSQL (prod).
+Live backend: hand-rolled Flask app in `backend/flask_app.py` (raw SQL, no ORM).
+Frontend: React 18 + Vite.
+Auth: signed bearer access token (itsdangerous) in memory + refresh token in httpOnly cookie.
+Database: SQLite (dev) → PostgreSQL (prod), same schema either way.
+
+Django lives alongside this (`accounts/`, `courses/`, `progress/`, `quizzes/`, `ai_engine/`,
+`core/`) but is legacy: it is **only** used to own migrations/schema via
+`python manage.py migrate`. Its `views.py`/`serializers.py`/`urls.py`/DRF ViewSets are never
+called at runtime — `flask_app.py` does not import them. Do not "fix" a bug by editing Django
+views/serializers; check whether the equivalent Flask route in `flask_app.py` needs the change
+instead. Full picture: see `ARCHITECTURE.md`.
 
 ## FILE LOCATIONS (never deviate)
-models.py · serializers.py · views.py · urls.py · tasks.py
-permissions.py · signals.py · apps.py · admin.py
-src/api/ · src/context/ · src/shared/ · src/student/ · src/admin/ · src/store/
+Backend: `flask_app.py` (all live routes), `app.py` (entrypoint), `core/tests/test_flask_runtime.py`
+  (the only live test suite — add new backend tests here or alongside it).
+Django app dirs' `models.py` + `migrations/` (schema source of truth only).
+Frontend: `src/api/` · `src/context/` · `src/shared/` · `src/student/` · `src/admin/` · `src/store/`
 
 ## BACKEND — MANDATORY PATTERNS
-- Always define __str__, Meta(ordering, verbose_name) on every model
-- Use db_index=True on every FK used in filter/join
-- unique_together in Meta — never rely on application logic
-- Serializers: always ModelSerializer, never fields="__all__"
-- Views: always ViewSets via DefaultRouter; explicit permission_classes on every view
-- ORM: select_related() for FK, prefetch_related() for reverse FK
-- Celery: @shared_task only; import models inside task function, not at module level
-- Permissions: role field only — never is_staff or is_superuser
+- New routes go in `flask_app.py`, registered via the existing `route_api()` helper (mounts
+  under both `/api/...` and `/api/v1/...`).
+- All DB access goes through the existing `query_one` / `query_all` / `execute` helpers, which
+  route through `prepare_sql()` for SQLite/Postgres portability — never call `sqlite3`/`psycopg`
+  directly in a route.
+- Auth checks use the existing `require_auth` / `require_admin` decorators — never re-implement
+  token parsing in a route.
+- If a route needs a new table or column, add a Django migration for it (`python manage.py
+  makemigrations && migrate`) even though Django's views won't use it — migrations are still the
+  schema source of truth.
+- Two features are known-incomplete stubs in Flask: AI PDF note generation
+  (`/lessons/<id>/generate-notes/`) and AI quiz generation
+  (`/admin/.../generate-quiz/`, `.../regenerate-quiz/`). Porting these should reference the
+  existing `ai_engine`/`courses` Django services, not reinvent them.
 
 ## FRONTEND — MANDATORY PATTERNS
 - ALL HTTP calls through src/api/*.js — never fetch/axios in components
@@ -30,26 +45,24 @@ src/api/ · src/context/ · src/shared/ · src/student/ · src/admin/ · src/sto
 - Protected routes via AuthGuard; admin routes via RoleGuard — never check roles in pages
 
 ## NAMING CONVENTIONS
-Django: PascalCase models, ModelSerializer, ModelViewSet, snake_case tasks
+Backend: snake_case functions/routes, matching the existing `flask_app.py` style.
 React: PascalCase components/pages, useCamelCase hooks, camelCase api functions
 
+## CODE QUALITY (enforced by CI — see .github/workflows/ci.yml)
+- Backend: `ruff check .` and `black .` must pass (config in `backend/pyproject.toml`).
+- Frontend: `npm run lint` and `npm run format:check` must pass (config in
+  `frontend/eslint.config.js` / `frontend/.prettierrc.json`).
+- Run `pre-commit install` once to get these checks automatically on `git commit`.
+
 ## WHAT CURSOR MUST NEVER DO
-- Raw SQL (cursor.execute)
+- Add a new Django DRF view/serializer/ViewSet expecting it to be reachable — it won't be,
+  nothing routes to it.
 - localStorage/sessionStorage for tokens
-- fields = "__all__" in serializers
-- Import Celery app in tasks — use @shared_task
+- Raw `sqlite3`/`psycopg` calls outside the `query_one`/`query_all`/`execute` helpers
 - Write CSS files — Tailwind only
 - Add unapproved packages silently
-- Put business logic in views — use service functions or tasks
 - Call axios/fetch directly in components
-
-## APPROVED PACKAGES
-Backend: django, djangorestframework, djangorestframework-simplejwt,
-  celery, redis, django-cors-headers, dj-database-url,
-  requests, beautifulsoup4, spacy, youtube-transcript-api,
-  django-ratelimit, argon2-cffi, psycopg2-binary, python-decouple
-Frontend: react, react-dom, react-router-dom, @tanstack/react-query,
-  axios, recharts, zustand, react-hot-toast, vite
+- Add new tests under `backend/_legacy/` — it's quarantined, not a place for new work
 
 ## SCOPE GUARD
 If a request would add a new model, new package, new route, or
@@ -61,6 +74,6 @@ Do not silently expand scope.
 Every prompt must state:
 1. Target file path
 2. Current state ("does not exist" or "already has X — do not modify")
-3. Specific class/function/component name
+3. Specific function/component name
 4. Inputs and outputs (request body → response shape, or props → rendered output)
 5. One rule from these rules that applies

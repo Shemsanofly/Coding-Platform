@@ -10,7 +10,11 @@ from rest_framework.test import APIClient
 from accounts.models import User
 from courses.models import Course, Lesson
 from progress.models import Certificate, Enrollment, LessonProgress
-from progress.services.certificates import certificate_qr_svg, format_certificate_date, official_person_name
+from progress.services.certificates import (
+    certificate_qr_svg,
+    format_certificate_date,
+    official_person_name,
+)
 from quizzes.models import Question, Quiz, QuizResult
 
 
@@ -162,7 +166,9 @@ class CertificateFeatureTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIsNotNone(response.data["completed_at"])
 
-        response = self.client.get(reverse("student-course-detail", kwargs={"course_id": course.pk}))
+        response = self.client.get(
+            reverse("student-course-detail", kwargs={"course_id": course.pk})
+        )
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["progress_percent"], 100.0)
@@ -174,7 +180,9 @@ class CertificateFeatureTests(TestCase):
         self._make_eligible()
         self.client.force_authenticate(user=self.student)
 
-        response = self.client.post(reverse("student-course-certificate", kwargs={"course_id": self.course.pk}))
+        response = self.client.post(
+            reverse("student-course-certificate", kwargs={"course_id": self.course.pk})
+        )
 
         self.assertEqual(response.status_code, 201)
         self.assertEqual(response.data["student_name"], "Grace Hopper")
@@ -192,7 +200,9 @@ class CertificateFeatureTests(TestCase):
         self._make_eligible()
         self.client.force_authenticate(user=self.student)
 
-        response = self.client.post(reverse("student-course-certificate", kwargs={"course_id": self.course.pk}))
+        response = self.client.post(
+            reverse("student-course-certificate", kwargs={"course_id": self.course.pk})
+        )
 
         self.assertEqual(response.status_code, 201)
         self.assertEqual(response.data["student_name"], "Shemsa Amin")
@@ -220,7 +230,9 @@ class CertificateFeatureTests(TestCase):
         self._make_eligible()
         self.client.force_authenticate(user=self.student)
 
-        response = self.client.post(reverse("student-course-certificate", kwargs={"course_id": self.course.pk}))
+        response = self.client.post(
+            reverse("student-course-certificate", kwargs={"course_id": self.course.pk})
+        )
 
         self.assertEqual(response.status_code, 201)
         self.assertRegex(response.data["certificate_number"], r"^LC-2026-0719-[A-F0-9]{8}$")
@@ -229,7 +241,9 @@ class CertificateFeatureTests(TestCase):
         self._make_eligible()
         self.client.force_authenticate(user=self.student)
 
-        response = self.client.post(reverse("student-course-certificate", kwargs={"course_id": self.course.pk}))
+        response = self.client.post(
+            reverse("student-course-certificate", kwargs={"course_id": self.course.pk})
+        )
 
         self.assertEqual(response.status_code, 201)
         certificate = Certificate.objects.get(pk=response.data["id"])
@@ -247,7 +261,9 @@ class CertificateFeatureTests(TestCase):
         self._make_eligible()
         self.client.force_authenticate(user=self.student)
 
-        response = self.client.post(reverse("student-course-certificate", kwargs={"course_id": self.course.pk}))
+        response = self.client.post(
+            reverse("student-course-certificate", kwargs={"course_id": self.course.pk})
+        )
 
         self.assertEqual(response.status_code, 201)
         certificate = Certificate.objects.get(pk=response.data["id"])
@@ -269,7 +285,9 @@ class CertificateFeatureTests(TestCase):
         self._make_eligible()
         self.client.force_authenticate(user=self.student)
 
-        response = self.client.post(reverse("student-course-certificate", kwargs={"course_id": self.course.pk}))
+        response = self.client.post(
+            reverse("student-course-certificate", kwargs={"course_id": self.course.pk})
+        )
 
         self.assertEqual(response.status_code, 201)
         certificate = Certificate.objects.get(pk=response.data["id"])
@@ -288,20 +306,28 @@ class CertificateFeatureTests(TestCase):
         self.course.save(update_fields=["title"])
         self._make_eligible()
         self.client.force_authenticate(user=self.student)
-        created = self.client.post(reverse("student-course-certificate", kwargs={"course_id": self.course.pk}))
+        created = self.client.post(
+            reverse("student-course-certificate", kwargs={"course_id": self.course.pk})
+        )
 
-        response = self.client.get(reverse("certificate-download", kwargs={"certificate_id": created.data["id"]}))
+        response = self.client.get(
+            reverse("certificate-download", kwargs={"certificate_id": created.data["id"]})
+        )
 
         self.assertEqual(response.status_code, 200)
         disposition = response["Content-Disposition"]
-        self.assertIn("Certificate_Grace_The_Hopper_Pioneer_Python_Foundations_Final_Assessment_", disposition)
+        self.assertIn(
+            "Certificate_Grace_The_Hopper_Pioneer_Python_Foundations_Final_Assessment_", disposition
+        )
         self.assertIn(created.data["certificate_number"], disposition)
         self.assertNotRegex(disposition, r'[<>:"/\\|?&]')
 
     def test_qr_code_svg_contains_public_verification_url_and_no_placeholder_text(self):
         self._make_eligible()
         self.client.force_authenticate(user=self.student)
-        created = self.client.post(reverse("student-course-certificate", kwargs={"course_id": self.course.pk}))
+        created = self.client.post(
+            reverse("student-course-certificate", kwargs={"course_id": self.course.pk})
+        )
         certificate = Certificate.objects.get(pk=created.data["id"])
 
         svg = certificate_qr_svg(certificate)
@@ -322,7 +348,9 @@ class CertificateFeatureTests(TestCase):
         self._make_eligible()
         self.client.force_authenticate(user=self.student)
 
-        response = self.client.post(reverse("student-course-certificate", kwargs={"course_id": self.course.pk}))
+        response = self.client.post(
+            reverse("student-course-certificate", kwargs={"course_id": self.course.pk})
+        )
 
         self.assertEqual(response.status_code, 201)
         certificate = Certificate.objects.get(pk=response.data["id"])
@@ -341,7 +369,9 @@ class CertificateFeatureTests(TestCase):
         self._make_eligible()
         self.client.force_authenticate(user=self.student)
 
-        response = self.client.post(reverse("student-course-certificate", kwargs={"course_id": self.course.pk}))
+        response = self.client.post(
+            reverse("student-course-certificate", kwargs={"course_id": self.course.pk})
+        )
 
         self.assertEqual(response.status_code, 201)
         certificate = Certificate.objects.get(pk=response.data["id"])
@@ -352,8 +382,12 @@ class CertificateFeatureTests(TestCase):
         self._make_eligible()
         self.client.force_authenticate(user=self.student)
 
-        first = self.client.post(reverse("student-course-certificate", kwargs={"course_id": self.course.pk}))
-        second = self.client.post(reverse("student-course-certificate", kwargs={"course_id": self.course.pk}))
+        first = self.client.post(
+            reverse("student-course-certificate", kwargs={"course_id": self.course.pk})
+        )
+        second = self.client.post(
+            reverse("student-course-certificate", kwargs={"course_id": self.course.pk})
+        )
 
         self.assertEqual(first.status_code, 201)
         self.assertEqual(second.status_code, 200)
@@ -362,7 +396,9 @@ class CertificateFeatureTests(TestCase):
     def test_one_student_cannot_download_another_students_certificate(self):
         self._make_eligible()
         self.client.force_authenticate(user=self.student)
-        created = self.client.post(reverse("student-course-certificate", kwargs={"course_id": self.course.pk}))
+        created = self.client.post(
+            reverse("student-course-certificate", kwargs={"course_id": self.course.pk})
+        )
         self.client.force_authenticate(user=self.other_student)
 
         response = self.client.get(
@@ -374,11 +410,16 @@ class CertificateFeatureTests(TestCase):
     def test_public_verification_exposes_safe_certificate_data(self):
         self._make_eligible()
         self.client.force_authenticate(user=self.student)
-        created = self.client.post(reverse("student-course-certificate", kwargs={"course_id": self.course.pk}))
+        created = self.client.post(
+            reverse("student-course-certificate", kwargs={"course_id": self.course.pk})
+        )
         self.client.force_authenticate(user=None)
 
         response = self.client.get(
-            reverse("certificate-verify", kwargs={"verification_code": created.data["verification_code"]})
+            reverse(
+                "certificate-verify",
+                kwargs={"verification_code": created.data["verification_code"]},
+            )
         )
 
         self.assertEqual(response.status_code, 200)
@@ -398,7 +439,9 @@ class CertificateFeatureTests(TestCase):
     def test_public_verification_returns_not_found_state_for_invalid_code(self):
         self.client.force_authenticate(user=None)
 
-        response = self.client.get(reverse("certificate-verify", kwargs={"verification_code": "not-a-real-code"}))
+        response = self.client.get(
+            reverse("certificate-verify", kwargs={"verification_code": "not-a-real-code"})
+        )
 
         self.assertEqual(response.status_code, 200)
         self.assertFalse(response.data["valid"])
@@ -409,7 +452,9 @@ class CertificateFeatureTests(TestCase):
     def test_admin_can_revoke_certificate(self):
         self._make_eligible()
         self.client.force_authenticate(user=self.student)
-        created = self.client.post(reverse("student-course-certificate", kwargs={"course_id": self.course.pk}))
+        created = self.client.post(
+            reverse("student-course-certificate", kwargs={"course_id": self.course.pk})
+        )
         self.client.force_authenticate(user=self.admin)
 
         response = self.client.patch(
@@ -422,13 +467,20 @@ class CertificateFeatureTests(TestCase):
     def test_public_verification_returns_revoked_state(self):
         self._make_eligible()
         self.client.force_authenticate(user=self.student)
-        created = self.client.post(reverse("student-course-certificate", kwargs={"course_id": self.course.pk}))
+        created = self.client.post(
+            reverse("student-course-certificate", kwargs={"course_id": self.course.pk})
+        )
         self.client.force_authenticate(user=self.admin)
-        self.client.patch(reverse("admin-certificate-revoke", kwargs={"certificate_id": created.data["id"]}))
+        self.client.patch(
+            reverse("admin-certificate-revoke", kwargs={"certificate_id": created.data["id"]})
+        )
         self.client.force_authenticate(user=None)
 
         response = self.client.get(
-            reverse("certificate-verify", kwargs={"verification_code": created.data["verification_code"]})
+            reverse(
+                "certificate-verify",
+                kwargs={"verification_code": created.data["verification_code"]},
+            )
         )
 
         self.assertEqual(response.status_code, 200)
@@ -440,13 +492,21 @@ class CertificateFeatureTests(TestCase):
     def test_student_can_fetch_own_certificate_preview_but_not_another_students(self):
         self._make_eligible()
         self.client.force_authenticate(user=self.student)
-        created = self.client.post(reverse("student-course-certificate", kwargs={"course_id": self.course.pk}))
+        created = self.client.post(
+            reverse("student-course-certificate", kwargs={"course_id": self.course.pk})
+        )
 
-        own_response = self.client.get(reverse("certificate-detail", kwargs={"certificate_id": created.data["id"]}))
+        own_response = self.client.get(
+            reverse("certificate-detail", kwargs={"certificate_id": created.data["id"]})
+        )
         self.client.force_authenticate(user=self.other_student)
-        other_response = self.client.get(reverse("certificate-detail", kwargs={"certificate_id": created.data["id"]}))
+        other_response = self.client.get(
+            reverse("certificate-detail", kwargs={"certificate_id": created.data["id"]})
+        )
 
         self.assertEqual(own_response.status_code, 200)
-        self.assertEqual(own_response.data["certificate_number"], created.data["certificate_number"])
+        self.assertEqual(
+            own_response.data["certificate_number"], created.data["certificate_number"]
+        )
         self.assertEqual(own_response.data["ceo_name"], "Shemsa Amin")
         self.assertEqual(other_response.status_code, 403)

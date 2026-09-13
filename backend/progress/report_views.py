@@ -66,7 +66,9 @@ class AdminCoursesReportView(_AdminReportMixin, APIView):
             return Response({"detail": "Invalid course id."}, status=400)
         except ReportDataError as exc:
             return Response({"detail": exc.message}, status=exc.status_code)
-        filename = f"course-report-{course_id}.pdf" if course_id else "course-performance-report.pdf"
+        filename = (
+            f"course-report-{course_id}.pdf" if course_id else "course-performance-report.pdf"
+        )
         return _pdf_http_response(pdf_bytes, filename)
 
 
@@ -86,7 +88,9 @@ class AdminStudentsReportView(_AdminReportMixin, APIView):
             return Response({"detail": "Invalid student id."}, status=400)
         except ReportDataError as exc:
             return Response({"detail": exc.message}, status=exc.status_code)
-        filename = f"student-report-{student_id}.pdf" if student_id else "student-performance-report.pdf"
+        filename = (
+            f"student-report-{student_id}.pdf" if student_id else "student-performance-report.pdf"
+        )
         return _pdf_http_response(pdf_bytes, filename)
 
 

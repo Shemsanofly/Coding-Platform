@@ -11,16 +11,12 @@ export default function UserAvatar({ user, size = "md", className = "" }) {
     lg: "h-20 w-20 text-xl",
   };
 
-  const base = `flex shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-coral to-ocean-600 font-bold text-white ${sizeClasses[size] ?? sizeClasses.md} ${className}`;
+  const base = `flex shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-coral to-ocean-600 font-bold text-white ${
+    sizeClasses[size] ?? sizeClasses.md
+  } ${className}`;
 
   if (imageUrl) {
-    return (
-      <img
-        src={imageUrl}
-        alt={`${label} profile`}
-        className={`${base} object-cover`}
-      />
-    );
+    return <img src={imageUrl} alt={`${label} profile`} className={`${base} object-cover`} />;
   }
 
   return (

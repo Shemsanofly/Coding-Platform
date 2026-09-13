@@ -8,7 +8,11 @@ import EmptyState from "@/admin/components/EmptyState";
 import ErrorState from "@/admin/components/ErrorState";
 import LoadingState from "@/admin/components/LoadingState";
 import Button from "@/shared/components/ui/Button";
-import { CourseLevelBadge, CourseMetric, CourseStatusPill } from "@/shared/components/course/CourseBadges";
+import {
+  CourseLevelBadge,
+  CourseMetric,
+  CourseStatusPill,
+} from "@/shared/components/course/CourseBadges";
 
 const STATUS_FILTERS = [
   { value: "published", label: "Published" },
@@ -77,7 +81,9 @@ export default function CourseList() {
     const studentCount = course.enrolled_students ?? 0;
     const studentNote =
       studentCount > 0
-        ? `\n\n${studentCount} enrolled student${studentCount === 1 ? "" : "s"} will lose access to this course and its progress.`
+        ? `\n\n${studentCount} enrolled student${
+            studentCount === 1 ? "" : "s"
+          } will lose access to this course and its progress.`
         : "";
     const confirmed = window.confirm(
       `Permanently delete "${course.title}"?\n\nThis removes all lessons, quizzes, and enrollments.${studentNote}\n\nThis cannot be undone.`,
@@ -159,7 +165,11 @@ export default function CourseList() {
       label: "Actions",
       render: (row) => (
         <div className="flex flex-wrap gap-2">
-          <button type="button" onClick={() => navigate(`/admin/courses/${row.id}/setup`)} className={actionLinkClass}>
+          <button
+            type="button"
+            onClick={() => navigate(`/admin/courses/${row.id}/setup`)}
+            className={actionLinkClass}
+          >
             Setup
           </button>
           {row.status !== "published" ? (

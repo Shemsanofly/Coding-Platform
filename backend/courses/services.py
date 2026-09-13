@@ -2,15 +2,14 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Iterable
 
 from django.contrib.auth import get_user_model
 from django.db import models
-
-from courses.models import Course, Lesson
 from django.db.models import Count
 
+from courses.models import Course, Lesson
 from quizzes.models import Quiz, QuizResult
 
 User = get_user_model()
@@ -46,9 +45,9 @@ def lesson_gates_for_user(course: Course, user: User) -> list[LessonGate]:
         published_count_by_lesson[q.lesson_id] = q.published_count
 
     best_score: dict[int, int] = {}
-    for result in QuizResult.objects.filter(user=user, quiz__lesson__course_id=course.id).select_related(
-        "quiz"
-    ):
+    for result in QuizResult.objects.filter(
+        user=user, quiz__lesson__course_id=course.id
+    ).select_related("quiz"):
         lid = result.quiz.lesson_id
         best_score[lid] = max(best_score.get(lid, 0), result.score)
 
@@ -57,9 +56,7 @@ def lesson_gates_for_user(course: Course, user: User) -> list[LessonGate]:
         quiz = quiz_by_lesson.get(lesson.id)
         pub_count = published_count_by_lesson.get(lesson.id, 0)
         quiz_ready = bool(
-            quiz
-            and quiz.generation_status == Quiz.GenerationStatus.DONE
-            and pub_count > 0
+            quiz and quiz.generation_status == Quiz.GenerationStatus.DONE and pub_count > 0
         )
         passed = False
         if quiz_ready and quiz is not None:

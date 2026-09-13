@@ -2,7 +2,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
-import { downloadLessonNotes, getLessonNotes, getStudentLesson, postLessonProgress } from "@/api/studentLearning";
+import {
+  downloadLessonNotes,
+  getLessonNotes,
+  getStudentLesson,
+  postLessonProgress,
+} from "@/api/studentLearning";
 import { getLearningPath } from "@/api/studentDashboard";
 import LessonYouTubeEmbed, { extractYoutubeVideoId } from "@/student/components/LessonYouTubeEmbed";
 import PdfNotesReader from "@/student/components/PdfNotesReader";
@@ -25,7 +30,12 @@ export default function LessonDetail() {
     enabled: Number.isFinite(id),
   });
 
-  const { data: lesson, isLoading, isError, error } = useQuery({
+  const {
+    data: lesson,
+    isLoading,
+    isError,
+    error,
+  } = useQuery({
     queryKey: ["student-lesson", id],
     queryFn: () => getStudentLesson(id),
     enabled: Number.isFinite(id),
@@ -35,7 +45,8 @@ export default function LessonDetail() {
       if (!row) return false;
       const ai = row.ai_processing_status;
       const quiz = row.quiz_generation_status;
-      const active = ai === "pending" || ai === "processing" || quiz === "pending" || quiz === "processing";
+      const active =
+        ai === "pending" || ai === "processing" || quiz === "pending" || quiz === "processing";
       return active ? 4000 : false;
     },
   });
@@ -303,76 +314,89 @@ export default function LessonDetail() {
         </div>
 
         {contentTab === "video" ? (
-        <div className="min-h-[320px] overflow-hidden rounded-xl border border-line bg-sand dark:border-line/20 dark:bg-black/30">
-          {isYoutubeLesson && ytEmbed && ytVideoId ? (
-            <LessonYouTubeEmbed
-              key={`yt-${lesson.id}`}
-              videoId={ytVideoId}
-              title={lesson.title}
-              onWatchPercent={onYoutubeWatchPct}
-            />
-          ) : isYoutubeLesson && ytEmbed ? (
-            <iframe
-              title={lesson.title}
-              src={ytEmbed}
-              className="aspect-video h-full min-h-[320px] w-full"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              allowFullScreen
-            />
-          ) : sourceType === "pdf" && resourceUrl ? (
-            <div className="space-y-4 p-6">
-              <p className="text-sm text-muted dark:text-muted">Read the PDF lesson material.</p>
-              <a
-                href={resourceUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex min-h-10 items-center rounded-xl bg-ocean-600 px-4 text-sm font-semibold text-white hover:bg-ocean-700"
-              >
-                Open PDF
-              </a>
-              <iframe title={lesson.title} src={resourceUrl} className="h-[480px] w-full rounded-lg border border-line bg-white" />
-            </div>
-          ) : sourceType === "internal" ? (
-            <div className="space-y-4 p-6">
-              {summaryText ? (
-                <div className="prose prose-sm max-w-none whitespace-pre-wrap text-ink dark:text-sand">{summaryText}</div>
-              ) : (
-                <p className="text-sm text-muted dark:text-muted">Lesson content is being prepared.</p>
-              )}
-              {resourceUrl ? (
+          <div className="min-h-[320px] overflow-hidden rounded-xl border border-line bg-sand dark:border-line/20 dark:bg-black/30">
+            {isYoutubeLesson && ytEmbed && ytVideoId ? (
+              <LessonYouTubeEmbed
+                key={`yt-${lesson.id}`}
+                videoId={ytVideoId}
+                title={lesson.title}
+                onWatchPercent={onYoutubeWatchPct}
+              />
+            ) : isYoutubeLesson && ytEmbed ? (
+              <iframe
+                title={lesson.title}
+                src={ytEmbed}
+                className="aspect-video h-full min-h-[320px] w-full"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+              />
+            ) : sourceType === "pdf" && resourceUrl ? (
+              <div className="space-y-4 p-6">
+                <p className="text-sm text-muted dark:text-muted">Read the PDF lesson material.</p>
                 <a
                   href={resourceUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex text-sm font-semibold text-ocean-800 underline dark:text-reef"
+                  className="inline-flex min-h-10 items-center rounded-xl bg-ocean-600 px-4 text-sm font-semibold text-white hover:bg-ocean-700"
                 >
-                  Open reference link
+                  Open PDF
                 </a>
-              ) : null}
-            </div>
-          ) : resourceUrl ? (
-            <div className="space-y-4 p-6">
-              <p className="text-sm text-muted dark:text-muted">
-                Open the {sourceType === "webpage" ? "web page" : "external resource"} for this lesson.
+                <iframe
+                  title={lesson.title}
+                  src={resourceUrl}
+                  className="h-[480px] w-full rounded-lg border border-line bg-white"
+                />
+              </div>
+            ) : sourceType === "internal" ? (
+              <div className="space-y-4 p-6">
+                {summaryText ? (
+                  <div className="prose prose-sm max-w-none whitespace-pre-wrap text-ink dark:text-sand">
+                    {summaryText}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted dark:text-muted">
+                    Lesson content is being prepared.
+                  </p>
+                )}
+                {resourceUrl ? (
+                  <a
+                    href={resourceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex text-sm font-semibold text-ocean-800 underline dark:text-reef"
+                  >
+                    Open reference link
+                  </a>
+                ) : null}
+              </div>
+            ) : resourceUrl ? (
+              <div className="space-y-4 p-6">
+                <p className="text-sm text-muted dark:text-muted">
+                  Open the {sourceType === "webpage" ? "web page" : "external resource"} for this
+                  lesson.
+                </p>
+                <a
+                  href={resourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex min-h-10 items-center rounded-xl bg-ocean-600 px-4 text-sm font-semibold text-white hover:bg-ocean-700"
+                >
+                  Open resource
+                </a>
+                {sourceType === "webpage" ? (
+                  <iframe
+                    title={lesson.title}
+                    src={resourceUrl}
+                    className="h-[480px] w-full rounded-lg border border-line bg-white"
+                  />
+                ) : null}
+              </div>
+            ) : (
+              <p className="p-6 text-sm text-muted dark:text-muted">
+                No resource configured for this lesson yet. Check back later.
               </p>
-              <a
-                href={resourceUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex min-h-10 items-center rounded-xl bg-ocean-600 px-4 text-sm font-semibold text-white hover:bg-ocean-700"
-              >
-                Open resource
-              </a>
-              {sourceType === "webpage" ? (
-                <iframe title={lesson.title} src={resourceUrl} className="h-[480px] w-full rounded-lg border border-line bg-white" />
-              ) : null}
-            </div>
-          ) : (
-            <p className="p-6 text-sm text-muted dark:text-muted">
-              No resource configured for this lesson yet. Check back later.
-            </p>
-          )}
-        </div>
+            )}
+          </div>
         ) : (
           <div className="space-y-4 rounded-xl border border-line bg-cream p-4 dark:border-line/20 dark:bg-black/20">
             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -403,7 +427,9 @@ export default function LessonDetail() {
             {notesActivity.notes_viewed_at || notesActivity.notes_downloaded_at ? (
               <p className="text-xs text-muted dark:text-reef/70">
                 {notesActivity.notes_viewed_at ? "Notes viewed in platform. " : ""}
-                {notesActivity.notes_downloaded_at ? "Download recorded for your learning analytics." : ""}
+                {notesActivity.notes_downloaded_at
+                  ? "Download recorded for your learning analytics."
+                  : ""}
               </p>
             ) : null}
             {Array.isArray(aiSummary.key_concepts) && aiSummary.key_concepts.length > 0 ? (
@@ -460,7 +486,8 @@ export default function LessonDetail() {
       ) : null}
       {quizFailed ? (
         <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-400/40 dark:bg-red-500/10 dark:text-red-100">
-          Quiz generation failed. {lesson.quiz_generation_error || "The quiz is not ready yet — try again later."}
+          Quiz generation failed.{" "}
+          {lesson.quiz_generation_error || "The quiz is not ready yet — try again later."}
         </p>
       ) : null}
 

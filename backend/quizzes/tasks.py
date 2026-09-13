@@ -112,7 +112,9 @@ def _tag_sentence_bonus(sentence: str, tag_terms: frozenset[str]) -> int:
     return bonus
 
 
-def _score_sentence(sentence: str, high_freq: set[str], tag_terms: frozenset[str] | None = None) -> int:
+def _score_sentence(
+    sentence: str, high_freq: set[str], tag_terms: frozenset[str] | None = None
+) -> int:
     sl = sentence.lower()
     score = 0
     for phrase in high_freq:

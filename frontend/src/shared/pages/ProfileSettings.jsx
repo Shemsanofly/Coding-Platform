@@ -30,7 +30,10 @@ function extractApiError(error) {
   return "Could not save settings.";
 }
 
-export default function ProfileSettings({ heading = "Settings", description = "Update your name and profile photo." }) {
+export default function ProfileSettings({
+  heading = "Settings",
+  description = "Update your name and profile photo.",
+}) {
   const { user, refreshUserProfile } = useAuth();
   const fileInputRef = useRef(null);
 
@@ -180,7 +183,10 @@ export default function ProfileSettings({ heading = "Settings", description = "U
 
         <section className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label htmlFor="settings-first-name" className="mb-1.5 block text-sm font-semibold text-ocean-800 dark:text-reef">
+            <label
+              htmlFor="settings-first-name"
+              className="mb-1.5 block text-sm font-semibold text-ocean-800 dark:text-reef"
+            >
               First name
             </label>
             <input
@@ -194,7 +200,10 @@ export default function ProfileSettings({ heading = "Settings", description = "U
             />
           </div>
           <div>
-            <label htmlFor="settings-last-name" className="mb-1.5 block text-sm font-semibold text-ocean-800 dark:text-reef">
+            <label
+              htmlFor="settings-last-name"
+              className="mb-1.5 block text-sm font-semibold text-ocean-800 dark:text-reef"
+            >
               Last name
             </label>
             <input
@@ -210,7 +219,10 @@ export default function ProfileSettings({ heading = "Settings", description = "U
         </section>
 
         <div>
-          <label htmlFor="settings-email" className="mb-1.5 block text-sm font-semibold text-ocean-800 dark:text-reef">
+          <label
+            htmlFor="settings-email"
+            className="mb-1.5 block text-sm font-semibold text-ocean-800 dark:text-reef"
+          >
             Email
           </label>
           <input
@@ -220,12 +232,17 @@ export default function ProfileSettings({ heading = "Settings", description = "U
             disabled
             className="lc-input cursor-not-allowed opacity-70"
           />
-          <p className="mt-1 text-xs text-muted">Email is used to sign in and cannot be changed here.</p>
+          <p className="mt-1 text-xs text-muted">
+            Email is used to sign in and cannot be changed here.
+          </p>
         </div>
 
         {user?.role === "student" ? (
           <div>
-            <label htmlFor="settings-level" className="mb-1.5 block text-sm font-semibold text-ocean-800 dark:text-reef">
+            <label
+              htmlFor="settings-level"
+              className="mb-1.5 block text-sm font-semibold text-ocean-800 dark:text-reef"
+            >
               Learning level
             </label>
             <select
@@ -244,7 +261,11 @@ export default function ProfileSettings({ heading = "Settings", description = "U
         ) : null}
 
         <div className="flex flex-wrap gap-2 pt-2">
-          <button type="submit" disabled={saveMutation.isPending} className="lc-btn-primary min-h-10 px-5">
+          <button
+            type="submit"
+            disabled={saveMutation.isPending}
+            className="lc-btn-primary min-h-10 px-5"
+          >
             {saveMutation.isPending ? "Saving..." : "Save changes"}
           </button>
         </div>

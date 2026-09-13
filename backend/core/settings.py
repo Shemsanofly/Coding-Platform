@@ -25,67 +25,67 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = config(
-    'SECRET_KEY',
-    default='django-insecure-7h@#xw^yotcv+-ov^qq6%hzw0vcylc-!oe0&xj(zqo$n-4+o_+',
+    "SECRET_KEY",
+    default="django-insecure-7h@#xw^yotcv+-ov^qq6%hzw0vcylc-!oe0&xj(zqo$n-4+o_+",
 )
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = config('DEBUG', default=True, cast=bool)
+DEBUG = config("DEBUG", default=True, cast=bool)
 
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=Csv())
+ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="localhost,127.0.0.1", cast=Csv())
 if DEBUG and "testserver" not in ALLOWED_HOSTS:
     ALLOWED_HOSTS = [*ALLOWED_HOSTS, "testserver"]
 
 # Isolate cookies from other Django apps on the same origin during local development.
-SESSION_COOKIE_NAME = config('SESSION_COOKIE_NAME', default='ai_elearn_sessionid')
-CSRF_COOKIE_NAME = config('CSRF_COOKIE_NAME', default='ai_elearn_csrftoken')
-JWT_REFRESH_COOKIE_NAME = config('JWT_REFRESH_COOKIE_NAME', default='ai_elearn_refresh')
+SESSION_COOKIE_NAME = config("SESSION_COOKIE_NAME", default="ai_elearn_sessionid")
+CSRF_COOKIE_NAME = config("CSRF_COOKIE_NAME", default="ai_elearn_csrftoken")
+JWT_REFRESH_COOKIE_NAME = config("JWT_REFRESH_COOKIE_NAME", default="ai_elearn_refresh")
 
 
 # Application definition
 
 INSTALLED_APPS = [
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-    'rest_framework',
-    'rest_framework_simplejwt.token_blacklist',
-    'corsheaders',
-    'celery',
-    'accounts',
-    'courses',
-    'quizzes',
-    'progress',
-    'ai_engine',
-    'playground',
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    "rest_framework",
+    "rest_framework_simplejwt.token_blacklist",
+    "corsheaders",
+    "celery",
+    "accounts",
+    "courses",
+    "quizzes",
+    "progress",
+    "ai_engine",
+    "playground",
 ]
 
 MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    "django.middleware.security.SecurityMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-ROOT_URLCONF = 'core.urls'
+ROOT_URLCONF = "core.urls"
 
 TEMPLATES = [
     {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
             ],
         },
     },
@@ -94,68 +94,70 @@ TEMPLATES = [
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-_sqlite_url = 'sqlite:///' + str(BASE_DIR / 'db.sqlite3').replace('\\', '/')
+_sqlite_url = "sqlite:///" + str(BASE_DIR / "db.sqlite3").replace("\\", "/")
+_database_url = config("DATABASE_URL", default="").strip() or _sqlite_url
 
 DATABASES = {
-    'default': dj_database_url.parse(
-        config('DATABASE_URL', default=_sqlite_url) or _sqlite_url,
+    "default": dj_database_url.parse(
+        _database_url,
+        conn_max_age=config("DATABASE_CONN_MAX_AGE", default=0, cast=int),
     ),
 }
 
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
-    'DEFAULT_PERMISSION_CLASSES': (
-        'rest_framework.permissions.IsAuthenticated',
-    ),
-    'DEFAULT_PAGINATION_CLASS': 'core.pagination.StandardPagination',
-    'PAGE_SIZE': 20,
-    'EXCEPTION_HANDLER': 'core.exceptions.custom_exception_handler',
+    "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
+    "DEFAULT_PAGINATION_CLASS": "core.pagination.StandardPagination",
+    "PAGE_SIZE": 20,
+    "EXCEPTION_HANDLER": "core.exceptions.custom_exception_handler",
 }
 
 CORS_ALLOWED_ORIGINS = config(
-    'CORS_ALLOWED_ORIGINS',
-    default='http://localhost:5173,http://127.0.0.1:5173',
+    "CORS_ALLOWED_ORIGINS",
+    default="http://localhost:5173,http://127.0.0.1:5173",
     cast=Csv(),
 )
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
-    'ROTATE_REFRESH_TOKENS': True,
-    'BLACKLIST_AFTER_ROTATION': True,
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
 }
 
-CELERY_BROKER_URL = config('CELERY_BROKER_URL', default='redis://localhost:6379/0')
+CELERY_BROKER_URL = config("CELERY_BROKER_URL", default="redis://localhost:6379/0")
 
 # "manual" = admin clicks Generate Quiz (no Redis). "celery" = enqueue after lesson save.
-AI_GENERATION_MODE = config('AI_GENERATION_MODE', default='manual')
+AI_GENERATION_MODE = config("AI_GENERATION_MODE", default="manual")
 
 # When mode is celery and Redis is down, run quiz generation in-process (dev only).
-AI_GENERATION_SYNC_FALLBACK = config('AI_GENERATION_SYNC_FALLBACK', default=False, cast=bool)
+AI_GENERATION_SYNC_FALLBACK = config("AI_GENERATION_SYNC_FALLBACK", default=False, cast=bool)
 
-GEMINI_API_KEY = config('GEMINI_API_KEY', default='')
-GOOGLE_API_KEY = config('GOOGLE_API_KEY', default='')
-GEMINI_MODEL = config('GEMINI_MODEL', default='gemini-3.5-flash')
+GEMINI_API_KEY = config("GEMINI_API_KEY", default="")
+GOOGLE_API_KEY = config("GOOGLE_API_KEY", default="")
+GEMINI_MODEL = config("GEMINI_MODEL", default="gemini-3.5-flash")
 
 # Public frontend URL used in certificate PDF QR codes.
 CERTIFICATE_VERIFY_BASE_URL = config(
-    'CERTIFICATE_VERIFY_BASE_URL',
-    default='http://localhost:5173/verify-certificate',
+    "CERTIFICATE_VERIFY_BASE_URL",
+    default="http://localhost:5173/verify-certificate",
 )
-CERTIFICATE_PLATFORM_NAME = config('CERTIFICATE_PLATFORM_NAME', default='LearnCode')
-CERTIFICATE_PLATFORM_WEBSITE = config('CERTIFICATE_PLATFORM_WEBSITE', default='http://localhost:5173')
-CERTIFICATE_CEO_NAME = config('CERTIFICATE_CEO_NAME', default='Shemsa Amin')
-CERTIFICATE_CEO_TITLE = config('CERTIFICATE_CEO_TITLE', default='Chief Executive Officer')
-CERTIFICATE_ASSET_DIR = BASE_DIR / 'progress' / 'assets' / 'certificates'
+CERTIFICATE_PLATFORM_NAME = config("CERTIFICATE_PLATFORM_NAME", default="LearnCode")
+CERTIFICATE_PLATFORM_WEBSITE = config(
+    "CERTIFICATE_PLATFORM_WEBSITE", default="http://localhost:5173"
+)
+CERTIFICATE_CEO_NAME = config("CERTIFICATE_CEO_NAME", default="Shemsa Amin")
+CERTIFICATE_CEO_TITLE = config("CERTIFICATE_CEO_TITLE", default="Chief Executive Officer")
+CERTIFICATE_ASSET_DIR = BASE_DIR / "progress" / "assets" / "certificates"
 CERTIFICATE_LOGO_PATH = config(
-    'CERTIFICATE_LOGO_PATH',
-    default=str(CERTIFICATE_ASSET_DIR / 'learncode-logo.png'),
+    "CERTIFICATE_LOGO_PATH",
+    default=str(CERTIFICATE_ASSET_DIR / "learncode-logo.png"),
 )
 CERTIFICATE_CEO_SIGNATURE_PATH = config(
-    'CERTIFICATE_CEO_SIGNATURE_PATH',
-    default=str(CERTIFICATE_ASSET_DIR / 'ceo-signature.png'),
+    "CERTIFICATE_CEO_SIGNATURE_PATH",
+    default=str(CERTIFICATE_ASSET_DIR / "ceo-signature.png"),
 )
 
 
@@ -164,16 +166,16 @@ CERTIFICATE_CEO_SIGNATURE_PATH = config(
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
 ]
 
@@ -181,9 +183,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = "UTC"
 
 USE_I18N = True
 
@@ -193,19 +195,19 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = "static/"
 
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-AUTH_USER_MODEL = 'accounts.User'
+AUTH_USER_MODEL = "accounts.User"
 
 CORS_ALLOW_CREDENTIALS = True
 
 # Shared secret used during admin self-registration.
-ADMIN_REGISTRATION_CODE = config('ADMIN_REGISTRATION_CODE', default='Admin2026')
+ADMIN_REGISTRATION_CODE = config("ADMIN_REGISTRATION_CODE", default="Admin2026")

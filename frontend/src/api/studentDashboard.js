@@ -26,7 +26,7 @@ export const getEnrollments = async ({ page, page_size: pageSize } = {}) => {
   const { results } = unwrapPaginated(response.data);
   if (response.data?.next) {
     return fetchAllPages(({ page: p, page_size: ps }) =>
-      client.get("/api/enrollments/", { params: { page: p, page_size: ps } }).then((r) => r.data)
+      client.get("/api/enrollments/", { params: { page: p, page_size: ps } }).then((r) => r.data),
     );
   }
   return results;

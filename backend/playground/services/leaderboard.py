@@ -116,7 +116,9 @@ def build_student_playground_stats(user_id: int) -> dict:
 
     total_submissions = PlaygroundSubmission.objects.filter(user_id=user_id).count()
     passed_submissions = PlaygroundSubmission.objects.filter(user_id=user_id, passed=True).count()
-    pass_rate = round((passed_submissions / total_submissions) * 100, 1) if total_submissions else 0.0
+    pass_rate = (
+        round((passed_submissions / total_submissions) * 100, 1) if total_submissions else 0.0
+    )
 
     tier = _tier_for_xp(practice_xp)
     return {

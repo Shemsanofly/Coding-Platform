@@ -47,7 +47,9 @@ export default function PasswordField({
           type={shown ? "text" : "password"}
           aria-invalid={error ? "true" : undefined}
           aria-describedby={error ? `${inputId}-error` : undefined}
-          className={`lc-input pr-11 ${error ? "border-red-300 focus:border-red-400 focus:ring-red-200" : ""} ${className}`.trim()}
+          className={`lc-input pr-11 ${
+            error ? "border-red-300 focus:border-red-400 focus:ring-red-200" : ""
+          } ${className}`.trim()}
           {...props}
         />
         <VisibilityToggleButton

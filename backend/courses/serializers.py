@@ -30,7 +30,9 @@ class CourseSourceWriteSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"source_type": "This field is required."})
         valid_types = {choice for choice, _ in CourseSource.SourceType.choices}
         if source_type not in valid_types:
-            raise serializers.ValidationError({"source_type": f"Unsupported source type: {source_type}"})
+            raise serializers.ValidationError(
+                {"source_type": f"Unsupported source type: {source_type}"}
+            )
         attrs["source_type"] = source_type
         attrs.pop("type", None)
         return attrs
@@ -102,7 +104,9 @@ class AdminLessonSerializer(serializers.ModelSerializer):
     tags = serializers.ListField(child=serializers.CharField(max_length=80), required=False)
     video_url = serializers.URLField(source="resource_url", required=False)
     difficulty_level = serializers.CharField(source="difficulty", required=False)
-    topic_tags = serializers.ListField(source="tags", child=serializers.CharField(max_length=80), required=False)
+    topic_tags = serializers.ListField(
+        source="tags", child=serializers.CharField(max_length=80), required=False
+    )
     estimated_time = serializers.IntegerField(source="estimated_minutes", required=False)
     has_pdf_notes = serializers.SerializerMethodField()
     pdf_notes_url = serializers.SerializerMethodField()
@@ -112,6 +116,7 @@ class AdminLessonSerializer(serializers.ModelSerializer):
         super().__init__(*args, **kwargs)
         if self.instance is None:
             self.fields["order"].read_only = True
+
     ai_processing_status = serializers.CharField(read_only=True, required=False)
     quiz_generation_status = serializers.CharField(read_only=True, required=False)
     transcript_status = serializers.CharField(read_only=True, required=False)
@@ -207,7 +212,9 @@ class AdminLessonSerializer(serializers.ModelSerializer):
 
         valid_types = {choice for choice, _ in Lesson.SourceType.choices}
         if source_type not in valid_types:
-            raise serializers.ValidationError({"source_type": f"Unsupported source type: {source_type}"})
+            raise serializers.ValidationError(
+                {"source_type": f"Unsupported source type: {source_type}"}
+            )
 
         if source_type in LESSON_SOURCE_TYPES_REQUIRING_URL and not resource_url:
             raise serializers.ValidationError(
@@ -215,7 +222,9 @@ class AdminLessonSerializer(serializers.ModelSerializer):
             )
         if source_type == Lesson.SourceType.INTERNAL and not resource_url and not content:
             raise serializers.ValidationError(
-                {"content": "Provide lesson content or an optional reference URL for platform content."}
+                {
+                    "content": "Provide lesson content or an optional reference URL for platform content."
+                }
             )
 
         course = self.context.get("course")
@@ -260,7 +269,6 @@ class StudentCourseCatalogSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
     def get_is_enrolled(self, obj):
-        user = self.context.get("request").user
         enroll_map = self.context.get("enroll_map") or {}
         return enroll_map.get(obj.id, False)
 
@@ -420,6 +428,7 @@ class StudentLessonDetailSerializer(serializers.ModelSerializer):
 
     def get_quiz_available(self, obj):
         from django.db.models import Count, Q
+
         from quizzes.models import Quiz
 
         quiz = (

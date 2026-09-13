@@ -34,7 +34,10 @@ const Icons = {
   ),
   weak: (
     <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" strokeLinecap="round" />
+      <path
+        d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
+        strokeLinecap="round"
+      />
     </svg>
   ),
 };
@@ -195,7 +198,8 @@ export default function Dashboard() {
   const motivationalMessage = useMemo(() => {
     if (!enrollments.length) return "Enroll in a course to start your personalized study plan.";
     if (stats.avgQuizScore >= 80) return "Excellent work — keep building on your momentum.";
-    if (stats.weakTopicCount > 0) return "Your study plan has focus areas ready — pick up where you left off.";
+    if (stats.weakTopicCount > 0)
+      return "Your study plan has focus areas ready — pick up where you left off.";
     return "Keep going — you're making great progress.";
   }, [enrollments.length, stats.avgQuizScore, stats.weakTopicCount]);
 
@@ -217,10 +221,7 @@ export default function Dashboard() {
       </header>
 
       {isError ? (
-        <ErrorState
-          message={dashboardErrorMessage}
-          onRetry={() => void dashboardQuery.refetch()}
-        />
+        <ErrorState message={dashboardErrorMessage} onRetry={() => void dashboardQuery.refetch()} />
       ) : null}
 
       <section className="rounded-2xl border-2 border-ocean-200/50 bg-gradient-to-br from-reef/40 via-white to-sand p-5 shadow-lg dark:border-ocean-600/25 dark:from-ocean-600/10 dark:via-ocean-950/30 dark:to-coral/10 md:p-6">
@@ -237,7 +238,9 @@ export default function Dashboard() {
               <p className="text-lg font-bold text-ink dark:text-sand sm:text-xl">
                 {continueLearning.courseTitle}
               </p>
-              <p className="mt-1 text-sm text-ocean-800 dark:text-reef">{continueLearning.lessonTitle}</p>
+              <p className="mt-1 text-sm text-ocean-800 dark:text-reef">
+                {continueLearning.lessonTitle}
+              </p>
             </div>
             <ProgressBar value={continueLearning.progressPercent} label="Progress" size="lg" />
             <Button
@@ -258,7 +261,12 @@ export default function Dashboard() {
             <p className="text-sm text-muted dark:text-muted">
               No active lesson yet. Browse the catalog to get started.
             </p>
-            <Button variant="gradient" size="lg" className="w-full sm:w-auto sm:min-w-[180px]" onClick={() => navigate("/catalog")}>
+            <Button
+              variant="gradient"
+              size="lg"
+              className="w-full sm:w-auto sm:min-w-[180px]"
+              onClick={() => navigate("/catalog")}
+            >
               Browse courses
             </Button>
           </div>
@@ -276,15 +284,30 @@ export default function Dashboard() {
             </div>
           ) : (
             <>
-              <MetricCard title="Courses" value={stats.enrolledCount} icon={Icons.courses} color="blue" />
-              <MetricCard title="Lessons" value={stats.lessonsCompleted} icon={Icons.lessons} color="green" />
+              <MetricCard
+                title="Courses"
+                value={stats.enrolledCount}
+                icon={Icons.courses}
+                color="blue"
+              />
+              <MetricCard
+                title="Lessons"
+                value={stats.lessonsCompleted}
+                icon={Icons.lessons}
+                color="green"
+              />
               <MetricCard
                 title="Avg score"
                 value={`${stats.avgQuizScore}%`}
                 icon={Icons.quiz}
                 color="purple"
               />
-              <MetricCard title="Weak topics" value={stats.weakTopicCount} icon={Icons.weak} color="amber" />
+              <MetricCard
+                title="Weak topics"
+                value={stats.weakTopicCount}
+                icon={Icons.weak}
+                color="amber"
+              />
             </>
           )}
         </div>
@@ -295,7 +318,9 @@ export default function Dashboard() {
           title="Your study plan"
           subtitle={
             stats.weakTopicCount > 0
-              ? `${stats.weakTopicCount} topic${stats.weakTopicCount === 1 ? "" : "s"} need attention — review weak areas and suggested lessons.`
+              ? `${stats.weakTopicCount} topic${
+                  stats.weakTopicCount === 1 ? "" : "s"
+                } need attention — review weak areas and suggested lessons.`
               : "Complete a quiz to unlock personalized suggestions."
           }
         />
@@ -339,7 +364,10 @@ export default function Dashboard() {
       </section>
 
       <section className="rounded-2xl border border-ocean-600/10 bg-white p-4 shadow-sm dark:border-line/30 dark:bg-ocean-950/40">
-        <SectionHeader title="Coding playground" subtitle="Practice challenges and earn XP on the leaderboard." />
+        <SectionHeader
+          title="Coding playground"
+          subtitle="Practice challenges and earn XP on the leaderboard."
+        />
         <Button variant="ghost" onClick={() => navigate("/playground")}>
           Open playground
         </Button>

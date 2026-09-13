@@ -14,7 +14,12 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name="PlaygroundChallenge",
             fields=[
-                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
                 ("title", models.CharField(max_length=200)),
                 ("description", models.TextField()),
                 (
@@ -63,7 +68,12 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name="PlaygroundSubmission",
             fields=[
-                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
                 ("code", models.TextField()),
                 ("passed", models.BooleanField(default=False)),
                 ("test_results", models.JSONField(default=list)),

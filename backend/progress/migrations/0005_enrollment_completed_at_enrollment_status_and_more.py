@@ -8,43 +8,86 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('courses', '0006_expand_lesson_source_types'),
-        ('progress', '0004_lesson_pdf_notes'),
+        ("courses", "0006_expand_lesson_source_types"),
+        ("progress", "0004_lesson_pdf_notes"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='enrollment',
-            name='completed_at',
+            model_name="enrollment",
+            name="completed_at",
             field=models.DateTimeField(blank=True, null=True),
         ),
         migrations.AddField(
-            model_name='enrollment',
-            name='status',
-            field=models.CharField(choices=[('ACTIVE', 'Active'), ('COMPLETED', 'Completed')], db_index=True, default='ACTIVE', max_length=16),
+            model_name="enrollment",
+            name="status",
+            field=models.CharField(
+                choices=[("ACTIVE", "Active"), ("COMPLETED", "Completed")],
+                db_index=True,
+                default="ACTIVE",
+                max_length=16,
+            ),
         ),
         migrations.CreateModel(
-            name='Certificate',
+            name="Certificate",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('certificate_number', models.CharField(db_index=True, max_length=40, unique=True)),
-                ('verification_code', models.CharField(db_index=True, max_length=80, unique=True)),
-                ('student_name', models.CharField(max_length=255)),
-                ('course_title', models.CharField(max_length=255)),
-                ('issue_date', models.DateTimeField()),
-                ('file', models.FileField(blank=True, upload_to='certificates/%Y/%m/')),
-                ('status', models.CharField(choices=[('ACTIVE', 'Active'), ('REVOKED', 'Revoked')], db_index=True, default='ACTIVE', max_length=16)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('course', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='certificates', to='courses.course')),
-                ('enrollment', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='certificate', to='progress.enrollment')),
-                ('student', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='certificates', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                ("certificate_number", models.CharField(db_index=True, max_length=40, unique=True)),
+                ("verification_code", models.CharField(db_index=True, max_length=80, unique=True)),
+                ("student_name", models.CharField(max_length=255)),
+                ("course_title", models.CharField(max_length=255)),
+                ("issue_date", models.DateTimeField()),
+                ("file", models.FileField(blank=True, upload_to="certificates/%Y/%m/")),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[("ACTIVE", "Active"), ("REVOKED", "Revoked")],
+                        db_index=True,
+                        default="ACTIVE",
+                        max_length=16,
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "course",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="certificates",
+                        to="courses.course",
+                    ),
+                ),
+                (
+                    "enrollment",
+                    models.OneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="certificate",
+                        to="progress.enrollment",
+                    ),
+                ),
+                (
+                    "student",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="certificates",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'certificate',
-                'verbose_name_plural': 'certificates',
-                'ordering': ('-issue_date',),
-                'constraints': [models.UniqueConstraint(fields=('enrollment',), name='unique_certificate_per_enrollment')],
+                "verbose_name": "certificate",
+                "verbose_name_plural": "certificates",
+                "ordering": ("-issue_date",),
+                "constraints": [
+                    models.UniqueConstraint(
+                        fields=("enrollment",), name="unique_certificate_per_enrollment"
+                    )
+                ],
             },
         ),
     ]

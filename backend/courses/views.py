@@ -2,14 +2,18 @@ from django.db.models import Count, Max, Q
 from django.shortcuts import get_object_or_404
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from core.pagination import paginate_queryset
-
-from accounts.models import User
 from accounts.permissions import STUDENT_ACCESS
+from core.pagination import paginate_queryset
+from courses.admin_services import (
+    admin_analytics_overview,
+    admin_dashboard_summary,
+    course_stats_by_id,
+    lesson_ai_fields_by_id,
+)
+from courses.catalog_seed import seed_basic_catalog
 from courses.models import Course, CourseSource, Lesson
 from courses.permissions import IsRoleAdmin
 from courses.serializers import (
@@ -21,19 +25,15 @@ from courses.serializers import (
     StudentLessonDetailSerializer,
     StudentLessonOutlineSerializer,
 )
-from courses.admin_services import (
-    admin_analytics_overview,
-    admin_dashboard_summary,
-    course_stats_by_id,
-    lesson_ai_fields_by_id,
-)
 from courses.services import lesson_gates_for_user, lesson_unlocked
 from progress.models import Enrollment, LessonProgress
-from progress.services import apply_engagement_update
-from progress.services.certificates import check_certificate_eligibility, maybe_generate_certificate_for_lesson
 from progress.serializers import CertificateSerializer
+from progress.services import apply_engagement_update
+from progress.services.certificates import (
+    check_certificate_eligibility,
+    maybe_generate_certificate_for_lesson,
+)
 from quizzes.models import Quiz
-from courses.catalog_seed import seed_basic_catalog
 
 
 class AdminCourseViewSet(viewsets.ModelViewSet):
@@ -162,9 +162,7 @@ class AdminLessonViewSet(viewsets.ModelViewSet):
         ctx = super().get_serializer_context()
         course_pk = self.kwargs.get("course_pk")
         if course_pk is not None:
-            ctx["course"] = get_object_or_404(
-                Course, pk=course_pk, created_by=self.request.user
-            )
+            ctx["course"] = get_object_or_404(Course, pk=course_pk, created_by=self.request.user)
         return ctx
 
     def get_queryset(self):
@@ -173,11 +171,7 @@ class AdminLessonViewSet(viewsets.ModelViewSet):
             pk=self.kwargs["course_pk"],
             created_by=self.request.user,
         )
-        return (
-            Lesson.objects.filter(course=course)
-            .select_related("course")
-            .order_by("order", "id")
-        )
+        return Lesson.objects.filter(course=course).select_related("course").order_by("order", "id")
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
@@ -197,9 +191,7 @@ class AdminLessonViewSet(viewsets.ModelViewSet):
             created_by=self.request.user,
         )
         max_order = (
-            Lesson.objects.filter(course=course)
-            .aggregate(max_order=Max("order"))
-            .get("max_order")
+            Lesson.objects.filter(course=course).aggregate(max_order=Max("order")).get("max_order")
         )
         next_order = (max_order or 0) + 1
         lesson = serializer.save(
@@ -235,9 +227,9 @@ class StudentCourseCatalogView(APIView):
     permission_classes = STUDENT_ACCESS
 
     def get(self, request):
-        visible = Course.objects.filter(status__in=[Course.Status.READY, Course.Status.PUBLISHED]).annotate(
-            lesson_count=Count("lessons", distinct=True)
-        )
+        visible = Course.objects.filter(
+            status__in=[Course.Status.READY, Course.Status.PUBLISHED]
+        ).annotate(lesson_count=Count("lessons", distinct=True))
         enrolled_ids = list(
             Enrollment.objects.filter(user=request.user).values_list("course_id", flat=True)
         )
@@ -274,7 +266,9 @@ class StudentEnrollmentView(APIView):
         try:
             course_id = int(raw)
         except (TypeError, ValueError):
-            return Response({"detail": "course_id is required."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": "course_id is required."}, status=status.HTTP_400_BAD_REQUEST
+            )
         course = Course.objects.filter(
             pk=course_id,
             status__in=[Course.Status.READY, Course.Status.PUBLISHED],
@@ -282,7 +276,9 @@ class StudentEnrollmentView(APIView):
         if not course:
             return Response({"detail": "Course not found."}, status=status.HTTP_404_NOT_FOUND)
         Enrollment.objects.get_or_create(user=request.user, course=course)
-        return Response({"detail": "Enrolled.", "course_id": course.id}, status=status.HTTP_201_CREATED)
+        return Response(
+            {"detail": "Enrolled.", "course_id": course.id}, status=status.HTTP_201_CREATED
+        )
 
 
 class StudentCourseDetailView(APIView):
@@ -304,8 +300,9 @@ class StudentCourseDetailView(APIView):
         lesson_ids = [lesson.id for lesson in lessons]
         quiz_rows = {
             quiz.lesson_id: quiz
-            for quiz in Quiz.objects.filter(lesson_id__in=lesson_ids)
-            .annotate(published_count=Count("questions", filter=Q(questions__is_published=True)))
+            for quiz in Quiz.objects.filter(lesson_id__in=lesson_ids).annotate(
+                published_count=Count("questions", filter=Q(questions__is_published=True))
+            )
         }
         progress_rows = {
             row.lesson_id: row

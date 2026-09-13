@@ -1,14 +1,15 @@
 import logging
 import re
 
+from celery import chain, shared_task
+from django.db import transaction
+from django.utils import timezone
+
 from ai_engine.services.transcript import (
     TranscriptError,
     TranscriptService,
     normalize_transcript_text,
 )
-from celery import chain, shared_task
-from django.db import transaction
-from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
@@ -108,9 +109,7 @@ def check_course_ready(course_id: int) -> int:
         logger.warning("check_course_ready: Course id=%s not found", course_id)
         return course_id
 
-    lesson_ids = list(
-        Lesson.objects.filter(course_id=course_id).values_list("pk", flat=True)
-    )
+    lesson_ids = list(Lesson.objects.filter(course_id=course_id).values_list("pk", flat=True))
     if not lesson_ids:
         return course_id
 

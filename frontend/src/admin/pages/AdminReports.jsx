@@ -20,7 +20,9 @@ function ReportCard({ title, description, onDownload, isLoading, errorMessage })
       <h3 className="text-base font-semibold text-ink">{title}</h3>
       <p className="mt-2 flex-1 text-sm text-muted">{description}</p>
       {errorMessage ? (
-        <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{errorMessage}</p>
+        <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+          {errorMessage}
+        </p>
       ) : null}
       <button
         type="button"
@@ -69,7 +71,9 @@ export default function AdminReports() {
     onError: (error) => {
       const detail = error?.response?.data?.detail;
       const message =
-        typeof detail === "string" ? detail : "Could not download report. Check that data exists for this report.";
+        typeof detail === "string"
+          ? detail
+          : "Could not download report. Check that data exists for this report.";
       setLastError(message);
       toast.error(message, { id: "reports-center-err" });
       setActiveKey(null);
@@ -107,7 +111,8 @@ export default function AdminReports() {
       <header className="rounded-2xl border border-emerald-100 bg-white/90 p-5 shadow-lg backdrop-blur">
         <h1 className="text-xl font-semibold text-ink">Reports Center</h1>
         <p className="mt-1 text-sm text-muted">
-          Generate official PDF reports for platform performance, courses, students, weaknesses, and AI generation.
+          Generate official PDF reports for platform performance, courses, students, weaknesses, and
+          AI generation.
         </p>
       </header>
 
@@ -119,14 +124,18 @@ export default function AdminReports() {
             description="Platform-wide totals for students, courses, enrollments, quiz activity, weak topics, and AI generation."
             isLoading={activeKey === "summary" && downloadMutation.isPending}
             errorMessage={activeKey === "summary" ? lastError : ""}
-            onDownload={() => download("summary", downloadAdminSummaryReport, "admin-platform-summary.pdf")}
+            onDownload={() =>
+              download("summary", downloadAdminSummaryReport, "admin-platform-summary.pdf")
+            }
           />
           <ReportCard
             title="AI Generation Report"
             description="Status of AI quiz generation across your lessons, including success, failure, and pending runs."
             isLoading={activeKey === "ai" && downloadMutation.isPending}
             errorMessage={activeKey === "ai" ? lastError : ""}
-            onDownload={() => download("ai", downloadAdminAIGenerationReport, "ai-quiz-generation-status.pdf")}
+            onDownload={() =>
+              download("ai", downloadAdminAIGenerationReport, "ai-quiz-generation-status.pdf")
+            }
           />
         </div>
       </section>
@@ -165,8 +174,10 @@ export default function AdminReports() {
               download(
                 "courses",
                 downloadAdminCoursesReport,
-                activeCourseId ? `course-report-${activeCourseId}.pdf` : "course-performance-report.pdf",
-                activeCourseId ? { course_id: activeCourseId } : {}
+                activeCourseId
+                  ? `course-report-${activeCourseId}.pdf`
+                  : "course-performance-report.pdf",
+                activeCourseId ? { course_id: activeCourseId } : {},
               )
             }
           />
@@ -203,8 +214,10 @@ export default function AdminReports() {
               download(
                 "students",
                 downloadAdminStudentsReport,
-                studentFilter ? `student-report-${studentFilter}.pdf` : "student-performance-report.pdf",
-                studentFilter ? { student_id: studentFilter } : {}
+                studentFilter
+                  ? `student-report-${studentFilter}.pdf`
+                  : "student-performance-report.pdf",
+                studentFilter ? { student_id: studentFilter } : {},
               )
             }
           />
@@ -219,7 +232,9 @@ export default function AdminReports() {
             description="Aggregated weak topic levels and student impact across your platform."
             isLoading={activeKey === "weaknesses" && downloadMutation.isPending}
             errorMessage={activeKey === "weaknesses" ? lastError : ""}
-            onDownload={() => download("weaknesses", downloadAdminWeaknessesReport, "weak-topic-summary.pdf")}
+            onDownload={() =>
+              download("weaknesses", downloadAdminWeaknessesReport, "weak-topic-summary.pdf")
+            }
           />
         </div>
       </section>

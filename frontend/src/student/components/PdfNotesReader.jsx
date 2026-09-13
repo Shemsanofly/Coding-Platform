@@ -4,7 +4,10 @@ import EmptyState from "@/student/components/EmptyState";
 import { extractApiError } from "@/shared/utils/extractApiError";
 
 function isPdfBlob(blob) {
-  return blob instanceof Blob && (blob.type === "application/pdf" || blob.type === "application/octet-stream");
+  return (
+    blob instanceof Blob &&
+    (blob.type === "application/pdf" || blob.type === "application/octet-stream")
+  );
 }
 
 export default function PdfNotesReader({ lessonId, lessonTitle, onOpened, onScrollDepth }) {

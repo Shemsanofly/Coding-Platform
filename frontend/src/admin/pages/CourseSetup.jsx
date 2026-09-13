@@ -19,8 +19,16 @@ import SectionHeader from "@/student/components/SectionHeader";
 import Button from "@/shared/components/ui/Button";
 import Card from "@/shared/components/ui/Card";
 import PageHeader from "@/shared/components/ui/PageHeader";
-import { CourseLevelBadge, CourseMetric, CourseStatusPill } from "@/shared/components/course/CourseBadges";
-import { formatSourceTypeLabel, getLessonSourceOption, LESSON_SOURCE_OPTIONS } from "@/shared/constants/lessonSources";
+import {
+  CourseLevelBadge,
+  CourseMetric,
+  CourseStatusPill,
+} from "@/shared/components/course/CourseBadges";
+import {
+  formatSourceTypeLabel,
+  getLessonSourceOption,
+  LESSON_SOURCE_OPTIONS,
+} from "@/shared/constants/lessonSources";
 
 const LEVEL_OPTIONS = [
   { value: "beginner", label: "Beginner" },
@@ -29,7 +37,9 @@ const LEVEL_OPTIONS = [
 ];
 
 function normalizeCourseLevel(raw) {
-  const tier = String(raw ?? "").trim().toLowerCase();
+  const tier = String(raw ?? "")
+    .trim()
+    .toLowerCase();
   if (tier === "beginner" || tier === "intermediate" || tier === "advanced") {
     return tier;
   }
@@ -101,7 +111,11 @@ function LessonForm({
             <label className="mb-1.5 block text-sm font-semibold text-ocean-800 dark:text-reef">
               Source type
             </label>
-            <select value={lessonSource} onChange={(event) => setLessonSource(event.target.value)} className="lc-input">
+            <select
+              value={lessonSource}
+              onChange={(event) => setLessonSource(event.target.value)}
+              className="lc-input"
+            >
               {LESSON_SOURCE_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
@@ -157,7 +171,11 @@ function LessonForm({
             <label className="mb-1.5 block text-sm font-semibold text-ocean-800 dark:text-reef">
               Topic tag
             </label>
-            <input value={lessonTopicTag} onChange={(event) => setLessonTopicTag(event.target.value)} className="lc-input" />
+            <input
+              value={lessonTopicTag}
+              onChange={(event) => setLessonTopicTag(event.target.value)}
+              className="lc-input"
+            />
           </div>
 
           <div className="md:col-span-2">
@@ -185,7 +203,9 @@ function LessonForm({
           </div>
         </div>
 
-        {lessonFormError ? <p className="text-sm font-medium text-red-600">{lessonFormError}</p> : null}
+        {lessonFormError ? (
+          <p className="text-sm font-medium text-red-600">{lessonFormError}</p>
+        ) : null}
         <Button type="submit" loading={isSaving}>
           Add lesson
         </Button>
@@ -202,7 +222,9 @@ function LessonList({ courseId, lessons, loading, deletingId, onDelete }) {
   if (!lessons.length) {
     return (
       <Card variant="subtle">
-        <p className="text-sm text-muted dark:text-reef/75">No lessons yet. Add the first lesson above.</p>
+        <p className="text-sm text-muted dark:text-reef/75">
+          No lessons yet. Add the first lesson above.
+        </p>
       </Card>
     );
   }
@@ -223,7 +245,8 @@ function LessonList({ courseId, lessons, loading, deletingId, onDelete }) {
                 <h3 className="font-semibold text-ink dark:text-sand">{lesson.title}</h3>
               </div>
               <p className="mt-2 text-sm text-muted dark:text-reef/75">
-                {formatSourceTypeLabel(lesson.source_type)} | {lesson.difficulty} | {lesson.estimated_minutes} min
+                {formatSourceTypeLabel(lesson.source_type)} | {lesson.difficulty} |{" "}
+                {lesson.estimated_minutes} min
               </p>
               <div className="mt-3">
                 <LessonAIStatusPanel courseId={courseId} lesson={lesson} />
@@ -300,7 +323,9 @@ export default function CourseSetup() {
       navigate(`/admin/courses/${created.id}/setup`, { state: { courseCreated: true } });
     },
     onError: (error) => {
-      setFormError(extractApiError(error) || "Could not create course. Check your inputs and try again.");
+      setFormError(
+        extractApiError(error) || "Could not create course. Check your inputs and try again.",
+      );
     },
   });
 
@@ -334,7 +359,9 @@ export default function CourseSetup() {
       setLessonTopicTag("");
     },
     onError: (error) => {
-      setLessonFormError(extractApiError(error) || "Could not create lesson. Check the required fields.");
+      setLessonFormError(
+        extractApiError(error) || "Could not create lesson. Check the required fields.",
+      );
     },
   });
 
@@ -422,7 +449,10 @@ export default function CourseSetup() {
 
           <div className="mt-6 space-y-4">
             <div>
-              <label htmlFor="course-topic" className="mb-1.5 block text-sm font-semibold text-ocean-800 dark:text-reef">
+              <label
+                htmlFor="course-topic"
+                className="mb-1.5 block text-sm font-semibold text-ocean-800 dark:text-reef"
+              >
                 Course topic
               </label>
               <input
@@ -437,10 +467,18 @@ export default function CourseSetup() {
             </div>
 
             <div>
-              <label htmlFor="level" className="mb-1.5 block text-sm font-semibold text-ocean-800 dark:text-reef">
+              <label
+                htmlFor="level"
+                className="mb-1.5 block text-sm font-semibold text-ocean-800 dark:text-reef"
+              >
                 Level
               </label>
-              <select id="level" value={level} onChange={(event) => setLevel(event.target.value)} className="lc-input">
+              <select
+                id="level"
+                value={level}
+                onChange={(event) => setLevel(event.target.value)}
+                className="lc-input"
+              >
                 {LEVEL_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
@@ -456,7 +494,11 @@ export default function CourseSetup() {
             <Button type="submit" loading={createCourseMutation.isPending}>
               Create course
             </Button>
-            <Button variant="ghost" loading={bootstrapMutation.isPending} onClick={() => bootstrapMutation.mutate()}>
+            <Button
+              variant="ghost"
+              loading={bootstrapMutation.isPending}
+              onClick={() => bootstrapMutation.mutate()}
+            >
               Load sample catalog
             </Button>
           </div>
@@ -477,7 +519,10 @@ export default function CourseSetup() {
   if (!courseIdNum) {
     return (
       <div className="p-4 md:p-6">
-        <EmptyState title="Course not found" message="Pick a course from the list to manage lessons." />
+        <EmptyState
+          title="Course not found"
+          message="Pick a course from the list to manage lessons."
+        />
       </div>
     );
   }
@@ -502,10 +547,15 @@ export default function CourseSetup() {
         <Card variant="elevated">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0">
-              <Link to="/admin/courses" className="text-sm font-semibold text-ocean-700 hover:underline dark:text-reef">
+              <Link
+                to="/admin/courses"
+                className="text-sm font-semibold text-ocean-700 hover:underline dark:text-reef"
+              >
                 Courses
               </Link>
-              <h1 className="mt-2 text-2xl font-bold text-ink dark:text-sand">{selectedCourseDetail?.title}</h1>
+              <h1 className="mt-2 text-2xl font-bold text-ink dark:text-sand">
+                {selectedCourseDetail?.title}
+              </h1>
               <div className="mt-3 flex flex-wrap gap-2">
                 <CourseLevelBadge level={selectedCourseDetail?.level} />
                 <CourseStatusPill status={selectedCourseDetail?.status} />
@@ -520,7 +570,10 @@ export default function CourseSetup() {
           </div>
 
           <div className="mt-5 grid gap-4 border-t border-line/70 pt-4 sm:grid-cols-3 dark:border-white/10">
-            <CourseMetric label="Lessons" value={selectedCourseDetail?.lesson_count ?? lessonRows.length} />
+            <CourseMetric
+              label="Lessons"
+              value={selectedCourseDetail?.lesson_count ?? lessonRows.length}
+            />
             <CourseMetric label="Status" value={selectedCourseDetail?.status ?? "draft"} />
             <CourseMetric label="Level" value={selectedCourseDetail?.level ?? "beginner"} />
           </div>
@@ -570,7 +623,8 @@ export default function CourseSetup() {
         <Card variant="subtle" padding="md">
           <p className="font-semibold text-ink dark:text-sand">Approval workflow</p>
           <p className="mt-2 text-sm text-muted dark:text-reef/75">
-            Generate or preview quiz questions from a lesson, then approve them before students can take the quiz.
+            Generate or preview quiz questions from a lesson, then approve them before students can
+            take the quiz.
           </p>
         </Card>
       </aside>

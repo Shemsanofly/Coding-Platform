@@ -44,7 +44,9 @@ class Command(BaseCommand):
                 )
             )
         elif options.get("admin_email"):
-            creator = User.objects.filter(email=options["admin_email"], role=User.Role.ADMIN).first()
+            creator = User.objects.filter(
+                email=options["admin_email"], role=User.Role.ADMIN
+            ).first()
             if not creator:
                 raise CommandError(f"No admin user found for email: {options['admin_email']}")
         else:
@@ -56,9 +58,13 @@ class Command(BaseCommand):
                 "python manage.py seed_catalog"
             )
 
-        before_count = Course.objects.filter(status__in=[Course.Status.READY, Course.Status.PUBLISHED]).count()
+        before_count = Course.objects.filter(
+            status__in=[Course.Status.READY, Course.Status.PUBLISHED]
+        ).count()
         result = seed_basic_catalog(creator, enroll_students=not options["skip_enroll"])
-        after_count = Course.objects.filter(status__in=[Course.Status.READY, Course.Status.PUBLISHED]).count()
+        after_count = Course.objects.filter(
+            status__in=[Course.Status.READY, Course.Status.PUBLISHED]
+        ).count()
 
         self.stdout.write(
             self.style.SUCCESS(

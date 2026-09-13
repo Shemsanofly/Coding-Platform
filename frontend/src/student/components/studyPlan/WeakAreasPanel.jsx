@@ -95,8 +95,12 @@ export default function WeakAreasPanel({ courseFilter, onCourseFilterChange }) {
   }, [lessonGroups]);
 
   const stats = useMemo(() => {
-    const highCount = topics.filter((item) => (item.weakness_level || "").toUpperCase() === "HIGH").length;
-    const mediumCount = topics.filter((item) => (item.weakness_level || "").toUpperCase() === "MEDIUM").length;
+    const highCount = topics.filter(
+      (item) => (item.weakness_level || "").toUpperCase() === "HIGH",
+    ).length;
+    const mediumCount = topics.filter(
+      (item) => (item.weakness_level || "").toUpperCase() === "MEDIUM",
+    ).length;
     return { totalWeakTopics: topics.length, highCount, mediumCount };
   }, [topics]);
 
@@ -161,7 +165,10 @@ export default function WeakAreasPanel({ courseFilter, onCourseFilterChange }) {
           <h2 className="text-lg font-semibold text-ink dark:text-sand">Tracked weak topics</h2>
           <ul className="mt-4 divide-y divide-line dark:divide-line/30">
             {topics.map((topic) => (
-              <li key={topic.id ?? topic.topic_tag} className="flex flex-wrap items-center justify-between gap-2 py-3">
+              <li
+                key={topic.id ?? topic.topic_tag}
+                className="flex flex-wrap items-center justify-between gap-2 py-3"
+              >
                 <div>
                   <p className="font-medium text-ink dark:text-sand">
                     {formatTopicLabel(topic.topic_tag)}

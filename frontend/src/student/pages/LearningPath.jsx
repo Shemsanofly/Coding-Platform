@@ -67,13 +67,19 @@ function PathOverviewPanel({ courseFilter, onCourseFilterChange }) {
             <MetricCard
               title="Course progress"
               value={`${progress.percent_complete ?? 0}%`}
-              helper={`${progress.lessons_completed ?? 0} of ${progress.total_enrolled_lessons ?? 0} lessons`}
+              helper={`${progress.lessons_completed ?? 0} of ${
+                progress.total_enrolled_lessons ?? 0
+              } lessons`}
               color="blue"
             />
             <MetricCard
               title="Current step"
               value={hasPath ? currentStepNumber : "—"}
-              helper={hasPath ? `${progress.path_steps ?? path.length} steps in your path` : "No steps yet"}
+              helper={
+                hasPath
+                  ? `${progress.path_steps ?? path.length} steps in your path`
+                  : "No steps yet"
+              }
               color="green"
             />
             <article className="rounded-2xl border border-ocean-600/10 bg-white p-4 shadow-md dark:border-line/40 dark:bg-ocean-950/50">
@@ -82,7 +88,9 @@ function PathOverviewPanel({ courseFilter, onCourseFilterChange }) {
               </p>
               {nextStep ? (
                 <>
-                  <p className="mt-2 text-lg font-bold text-ink dark:text-sand">{nextStep.lesson_title}</p>
+                  <p className="mt-2 text-lg font-bold text-ink dark:text-sand">
+                    {nextStep.lesson_title}
+                  </p>
                   <Button
                     variant="gradient"
                     className="mt-3 w-full sm:w-auto"
@@ -123,7 +131,8 @@ function PathOverviewPanel({ courseFilter, onCourseFilterChange }) {
                         {(topic.topic_tag || topic.topic || "").replace(/_/g, " ")}
                       </p>
                       <p className="text-xs text-muted dark:text-muted">
-                        Accuracy {topic.accuracy_percent ?? topic.score ?? 0}% · {topic.attempt_count ?? 0} attempts
+                        Accuracy {topic.accuracy_percent ?? topic.score ?? 0}% ·{" "}
+                        {topic.attempt_count ?? 0} attempts
                       </p>
                     </div>
                     <SeverityBadge level={topic.weakness_level} />

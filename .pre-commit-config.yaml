@@ -1,0 +1,42 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.7
+    hooks:
+      - id: ruff
+        name: ruff (backend lint)
+        args: [--fix]
+        files: ^backend/.*\.py$
+        exclude: ^backend/(_legacy|.*/migrations)/
+
+  - repo: https://github.com/psf/black
+    rev: 26.5.1
+    hooks:
+      - id: black
+        name: black (backend format)
+        files: ^backend/.*\.py$
+        exclude: ^backend/(_legacy|.*/migrations)/
+
+  - repo: https://github.com/pre-commit/mirrors-eslint
+    rev: v9.39.1
+    hooks:
+      - id: eslint
+        name: eslint (frontend lint)
+        files: ^frontend/src/.*\.jsx?$
+        args: [--config, frontend/eslint.config.js, --fix]
+        additional_dependencies:
+          - eslint@9.39.5
+          - "@eslint/js@9"
+          - globals
+          - eslint-plugin-react
+          - eslint-plugin-react-hooks
+          - eslint-plugin-react-refresh
+          - eslint-config-prettier
+
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v3.1.0
+    hooks:
+      - id: prettier
+        name: prettier (frontend format)
+        files: ^frontend/src/.*\.(js|jsx|css|json)$
+        additional_dependencies:
+          - prettier@3.9.6

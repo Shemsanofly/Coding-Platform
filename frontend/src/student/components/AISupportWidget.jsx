@@ -12,12 +12,7 @@ function AIMessageIcon({ className = "h-6 w-6" }) {
         d="M5 6.75A3.75 3.75 0 0 1 8.75 3h6.5A3.75 3.75 0 0 1 19 6.75v4.8a3.75 3.75 0 0 1-3.75 3.75h-3.6L7.2 19v-3.86A3.75 3.75 0 0 1 5 11.55v-4.8Z"
         fill="currentColor"
       />
-      <path
-        d="M9 10.25h6M9 12.9h3.6"
-        stroke="#0f4c75"
-        strokeWidth="1.7"
-        strokeLinecap="round"
-      />
+      <path d="M9 10.25h6M9 12.9h3.6" stroke="#0f4c75" strokeWidth="1.7" strokeLinecap="round" />
       <path
         d="M16.8 4.9v2.2M15.7 6h2.2"
         stroke="#ff6f61"
@@ -30,7 +25,14 @@ function AIMessageIcon({ className = "h-6 w-6" }) {
 
 function SendIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      aria-hidden="true"
+    >
       <path d="m4 12 16-7-7 16-2-7-7-2Z" strokeLinejoin="round" />
     </svg>
   );
@@ -38,7 +40,14 @@ function SendIcon() {
 
 function CloseIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+    <svg
+      viewBox="0 0 24 24"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      aria-hidden="true"
+    >
       <path d="m6 6 12 12M18 6 6 18" strokeLinecap="round" />
     </svg>
   );
@@ -83,12 +92,13 @@ export default function AISupportWidget({ avoidMobileNav = true }) {
 
     setDraft("");
     setError("");
+    const previousMessages = messages;
+    const studentMessageId = `${previousMessages.length}-${clean.length}-student`;
     const studentMessage = {
-      id: `${Date.now()}-student`,
+      id: studentMessageId,
       role: "student",
       content: clean,
     };
-    const previousMessages = messages;
     setMessages((current) => [...current, studentMessage]);
 
     try {
@@ -100,7 +110,7 @@ export default function AISupportWidget({ avoidMobileNav = true }) {
       setMessages((current) => [
         ...current,
         {
-          id: `${Date.now()}-assistant`,
+          id: `${current.length}-${clean.length}-assistant`,
           role: "assistant",
           content: data?.answer || "I could not produce an answer for that.",
         },
@@ -178,7 +188,10 @@ export default function AISupportWidget({ avoidMobileNav = true }) {
               </div>
             ) : null}
             {error ? (
-              <p className="mb-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700" role="alert">
+              <p
+                className="mb-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700"
+                role="alert"
+              >
                 {error}
               </p>
             ) : null}
@@ -204,7 +217,7 @@ export default function AISupportWidget({ avoidMobileNav = true }) {
               <button
                 type="submit"
                 disabled={!draft.trim() || supportMutation.isPending}
-              className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-ocean-800 text-white transition hover:bg-ocean-700 disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-ocean-800 text-white transition hover:bg-ocean-700 disabled:cursor-not-allowed disabled:opacity-50"
                 aria-label="Send question"
               >
                 <SendIcon />

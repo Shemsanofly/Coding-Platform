@@ -68,8 +68,7 @@ function killPid(pid) {
 }
 
 const port = readDevPort();
-const pids =
-  process.platform === "win32" ? pidsOnPortWindows(port) : pidsOnPortUnix(port);
+const pids = process.platform === "win32" ? pidsOnPortWindows(port) : pidsOnPortUnix(port);
 
 if (pids.length === 0) {
   process.exit(0);

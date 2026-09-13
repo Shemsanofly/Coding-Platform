@@ -53,7 +53,10 @@ export default function CertificateVerification() {
     <div className="student-theme-root student-theme-light min-h-screen bg-lc-page px-4 py-6 text-ink">
       <div className="mx-auto flex min-h-[calc(100vh-3rem)] max-w-5xl flex-col">
         <header className="flex items-center justify-between gap-3">
-          <Link to="/" className="inline-flex items-center gap-2.5 text-lg font-bold text-ocean-800">
+          <Link
+            to="/"
+            className="inline-flex items-center gap-2.5 text-lg font-bold text-ocean-800"
+          >
             <BrandMark />
             <span>LearnCode</span>
           </Link>
@@ -69,7 +72,8 @@ export default function CertificateVerification() {
                 Verify official course completion.
               </h1>
               <p className="mt-3 max-w-xl text-sm leading-6 text-muted dark:text-reef/80">
-                Enter the certificate verification code or scan the QR code printed on a LearnCode certificate.
+                Enter the certificate verification code or scan the QR code printed on a LearnCode
+                certificate.
               </p>
             </div>
 
@@ -111,7 +115,9 @@ export default function CertificateVerification() {
                 <p className="inline-flex rounded-full border border-red-300/60 bg-red-50 px-3 py-1 text-xs font-bold uppercase text-red-800 dark:border-red-300/30 dark:bg-red-500/10 dark:text-red-100">
                   Verification unavailable
                 </p>
-                <p className="text-sm text-muted dark:text-reef/90">Could not verify this certificate.</p>
+                <p className="text-sm text-muted dark:text-reef/90">
+                  Could not verify this certificate.
+                </p>
               </div>
             ) : result?.valid ? (
               <div className="space-y-5">
@@ -122,12 +128,18 @@ export default function CertificateVerification() {
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted dark:text-reef/70">
                     Issued to
                   </p>
-                  <h2 className="mt-1 text-2xl font-bold text-ink dark:text-sand">{result.student_name}</h2>
+                  <h2 className="mt-1 text-2xl font-bold text-ink dark:text-sand">
+                    {result.student_name}
+                  </h2>
                   <p className="mt-3 text-sm leading-6 text-muted dark:text-reef/85">
                     {result.verification_summary || (
                       <>
                         This certificate confirms successful completion of
-                        <span className="font-semibold text-ink dark:text-sand"> {result.course_title}</span>.
+                        <span className="font-semibold text-ink dark:text-sand">
+                          {" "}
+                          {result.course_title}
+                        </span>
+                        .
                       </>
                     )}
                   </p>
@@ -137,7 +149,9 @@ export default function CertificateVerification() {
                     <dt className="text-xs font-semibold uppercase tracking-wide text-muted dark:text-reef/75">
                       Certificate number
                     </dt>
-                    <dd className="mt-1 font-semibold text-ink dark:text-sand">{result.certificate_number}</dd>
+                    <dd className="mt-1 font-semibold text-ink dark:text-sand">
+                      {result.certificate_number}
+                    </dd>
                   </div>
                   <div className="rounded-xl border border-ocean-600/10 bg-cream/80 p-3 dark:border-white/10 dark:bg-[#1b2b3b]/70">
                     <dt className="text-xs font-semibold uppercase tracking-wide text-muted dark:text-reef/75">
@@ -155,13 +169,17 @@ export default function CertificateVerification() {
                     <dt className="text-xs font-semibold uppercase tracking-wide text-muted dark:text-reef/75">
                       Status
                     </dt>
-                    <dd className="mt-1 font-semibold text-ink dark:text-sand">{result.certificate_status}</dd>
+                    <dd className="mt-1 font-semibold text-ink dark:text-sand">
+                      {result.certificate_status}
+                    </dd>
                   </div>
                   <div className="rounded-xl border border-ocean-600/10 bg-cream/80 p-3 dark:border-white/10 dark:bg-[#1b2b3b]/70">
                     <dt className="text-xs font-semibold uppercase tracking-wide text-muted dark:text-reef/75">
                       Organization
                     </dt>
-                    <dd className="mt-1 font-semibold text-ink dark:text-sand">{result.platform_name}</dd>
+                    <dd className="mt-1 font-semibold text-ink dark:text-sand">
+                      {result.platform_name}
+                    </dd>
                   </div>
                 </dl>
               </div>
@@ -171,9 +189,12 @@ export default function CertificateVerification() {
                   Certificate Revoked
                 </p>
                 <div>
-                  <h2 className="text-xl font-bold text-ink dark:text-sand">This certificate is no longer valid</h2>
+                  <h2 className="text-xl font-bold text-ink dark:text-sand">
+                    This certificate is no longer valid
+                  </h2>
                   <p className="mt-2 text-sm leading-6 text-muted dark:text-reef/85">
-                    The registry found this certificate number, but it has been revoked by {result.platform_name || "the issuing organization"}.
+                    The registry found this certificate number, but it has been revoked by{" "}
+                    {result.platform_name || "the issuing organization"}.
                   </p>
                 </div>
                 <dl className="grid gap-3 text-sm sm:grid-cols-2">
@@ -181,13 +202,17 @@ export default function CertificateVerification() {
                     <dt className="text-xs font-semibold uppercase tracking-wide text-muted dark:text-reef/75">
                       Certificate number
                     </dt>
-                    <dd className="mt-1 font-semibold text-ink dark:text-sand">{result.certificate_number}</dd>
+                    <dd className="mt-1 font-semibold text-ink dark:text-sand">
+                      {result.certificate_number}
+                    </dd>
                   </div>
                   <div className="rounded-xl border border-ocean-600/10 bg-cream/80 p-3 dark:border-white/10 dark:bg-[#1b2b3b]/70">
                     <dt className="text-xs font-semibold uppercase tracking-wide text-muted dark:text-reef/75">
                       Status
                     </dt>
-                    <dd className="mt-1 font-semibold text-ink dark:text-sand">{result.certificate_status}</dd>
+                    <dd className="mt-1 font-semibold text-ink dark:text-sand">
+                      {result.certificate_status}
+                    </dd>
                   </div>
                 </dl>
               </div>
@@ -197,9 +222,12 @@ export default function CertificateVerification() {
                   Certificate Not Found
                 </p>
                 <div>
-                  <h2 className="text-xl font-bold text-ink dark:text-sand">This code could not be verified</h2>
+                  <h2 className="text-xl font-bold text-ink dark:text-sand">
+                    This code could not be verified
+                  </h2>
                   <p className="mt-2 text-sm leading-6 text-muted dark:text-reef/85">
-                    The verification code does not match an issued LearnCode certificate. Check the code and try again.
+                    The verification code does not match an issued LearnCode certificate. Check the
+                    code and try again.
                   </p>
                 </div>
               </div>
@@ -209,7 +237,9 @@ export default function CertificateVerification() {
                   Ready to verify
                 </p>
                 <div>
-                  <h2 className="text-xl font-bold text-ink dark:text-sand">Official verification</h2>
+                  <h2 className="text-xl font-bold text-ink dark:text-sand">
+                    Official verification
+                  </h2>
                   <p className="mt-2 text-sm leading-6 text-muted dark:text-reef/85">
                     Scan a certificate QR code or enter a verification code to confirm authenticity.
                   </p>

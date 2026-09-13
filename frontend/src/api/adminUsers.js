@@ -36,7 +36,7 @@ export const getAdminUsers = async (filters = {}) => {
             page_size: pageSize,
           }),
         })
-        .then((r) => r.data)
+        .then((r) => r.data),
     );
   }
   return unwrapPaginated(response.data).results;

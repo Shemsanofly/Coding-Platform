@@ -7,12 +7,16 @@ from typing import Any
 
 from django.db import transaction
 
-from courses.models import Lesson
 from ai_engine.models import LessonAIProcessing
 from ai_engine.services.gemini_service import (
     GeminiQuizError,
     GeminiService,
     intelligence_for_storage,
+)
+from ai_engine.services.generation_mode import (
+    get_ai_generation_mode,
+    is_celery_mode,
+    is_manual_mode,
 )
 from ai_engine.services.quiz_persistence import (
     apply_lesson_intelligence,
@@ -20,9 +24,9 @@ from ai_engine.services.quiz_persistence import (
     persist_generated_questions,
     set_quiz_status,
 )
-from ai_engine.services.generation_mode import get_ai_generation_mode, is_celery_mode, is_manual_mode
 from ai_engine.services.task_queue import safe_delay
 from ai_engine.services.transcript import TranscriptError, TranscriptService
+from courses.models import Lesson
 from quizzes.models import Question, Quiz
 
 logger = logging.getLogger(__name__)
@@ -32,9 +36,7 @@ QUEUE_UNAVAILABLE_MESSAGE = (
     "Start Redis and Celery, then click Regenerate Quiz."
 )
 
-MANUAL_PENDING_HINT = (
-    "Lesson saved. Click Generate Quiz to create AI quiz."
-)
+MANUAL_PENDING_HINT = "Lesson saved. Click Generate Quiz to create AI quiz."
 
 
 def user_facing_generation_error(raw: str) -> str:
@@ -53,7 +55,9 @@ def user_facing_generation_error(raw: str) -> str:
 
 
 @transaction.atomic
-def reset_youtube_lesson_for_regeneration(lesson_id: int, *, for_async: bool = False) -> LessonAIProcessing:
+def reset_youtube_lesson_for_regeneration(
+    lesson_id: int, *, for_async: bool = False
+) -> LessonAIProcessing:
     """
     Clear prior quiz output and reset pipeline state before regeneration.
 
@@ -63,9 +67,7 @@ def reset_youtube_lesson_for_regeneration(lesson_id: int, *, for_async: bool = F
     quiz = ensure_quiz_for_lesson(lesson_id)
     Question.objects.filter(quiz=quiz).delete()
 
-    quiz_status = (
-        Quiz.GenerationStatus.PENDING if for_async else Quiz.GenerationStatus.PROCESSING
-    )
+    quiz_status = Quiz.GenerationStatus.PENDING if for_async else Quiz.GenerationStatus.PROCESSING
     quiz.generation_status = quiz_status
     quiz.generation_error = ""
     quiz.save(update_fields=["generation_status", "generation_error"])

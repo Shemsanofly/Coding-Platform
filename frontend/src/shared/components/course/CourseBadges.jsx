@@ -25,7 +25,9 @@ export function formatCourseLevel(level) {
 export function CourseLevelBadge({ level, className = "" }) {
   return (
     <span
-      className={`inline-flex min-h-6 items-center rounded-full border px-2.5 text-xs font-semibold ${levelStyles[level] ?? levelStyles.beginner} ${className}`.trim()}
+      className={`inline-flex min-h-6 items-center rounded-full border px-2.5 text-xs font-semibold ${
+        levelStyles[level] ?? levelStyles.beginner
+      } ${className}`.trim()}
     >
       {formatCourseLevel(level)}
     </span>
@@ -36,7 +38,9 @@ export function CourseStatusPill({ status, className = "" }) {
   const label = status ? formatCourseLevel(status) : "Draft";
   return (
     <span
-      className={`inline-flex min-h-6 items-center rounded-full border px-2.5 text-xs font-semibold ${statusStyles[status] ?? statusStyles.draft} ${className}`.trim()}
+      className={`inline-flex min-h-6 items-center rounded-full border px-2.5 text-xs font-semibold ${
+        statusStyles[status] ?? statusStyles.draft
+      } ${className}`.trim()}
     >
       {label}
     </span>

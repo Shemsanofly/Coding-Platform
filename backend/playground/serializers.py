@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from playground.models import PlaygroundChallenge, PlaygroundSubmission
+from playground.models import PlaygroundChallenge
 
 
 class PlaygroundChallengeSerializer(serializers.ModelSerializer):

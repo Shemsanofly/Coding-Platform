@@ -19,5 +19,9 @@ urlpatterns = [
         PlaygroundSubmitView.as_view(),
         name="playground-submit",
     ),
-    path("playground/leaderboard/", PlaygroundLeaderboardView.as_view(), name="playground-leaderboard"),
+    path(
+        "playground/leaderboard/",
+        PlaygroundLeaderboardView.as_view(),
+        name="playground-leaderboard",
+    ),
 ]

@@ -1,6 +1,12 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { fetchMe, login as loginRequest, logout as logoutRequest, register as registerRequest, refreshAccessToken } from "@/api/auth";
+import {
+  fetchMe,
+  login as loginRequest,
+  logout as logoutRequest,
+  register as registerRequest,
+  refreshAccessToken,
+} from "@/api/auth";
 import { setAccessToken } from "@/api/client";
 
 const AuthContext = createContext(null);
@@ -33,20 +39,17 @@ export function AuthProvider({ children }) {
     void bootstrap();
   }, [bootstrap]);
 
-  const login = useCallback(
-    async (credentials) => {
-      const data = await loginRequest(credentials);
-      const access = data?.access;
-      if (!access) {
-        throw new Error("Missing access token");
-      }
-      setAccessToken(access);
-      const me = await fetchMe();
-      setUser(me);
-      return me;
-    },
-    []
-  );
+  const login = useCallback(async (credentials) => {
+    const data = await loginRequest(credentials);
+    const access = data?.access;
+    if (!access) {
+      throw new Error("Missing access token");
+    }
+    setAccessToken(access);
+    const me = await fetchMe();
+    setUser(me);
+    return me;
+  }, []);
 
   const register = useCallback(async (payload) => {
     return registerRequest(payload);
@@ -82,7 +85,7 @@ export function AuthProvider({ children }) {
       refreshSession: bootstrap,
       refreshUserProfile,
     }),
-    [user, status, login, register, logout, bootstrap, refreshUserProfile]
+    [user, status, login, register, logout, bootstrap, refreshUserProfile],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

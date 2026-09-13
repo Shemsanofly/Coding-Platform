@@ -50,9 +50,7 @@ def build_student_analytics_summary(user):
 
 
 def build_student_enrollments(user):
-    course_ids = list(
-        Enrollment.objects.filter(user=user).values_list("course_id", flat=True)
-    )
+    course_ids = list(Enrollment.objects.filter(user=user).values_list("course_id", flat=True))
     if not course_ids:
         return []
 

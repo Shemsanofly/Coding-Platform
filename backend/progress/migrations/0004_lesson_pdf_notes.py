@@ -6,18 +6,26 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('progress', '0003_lessonprogress_engagement'),
+        ("progress", "0003_lessonprogress_engagement"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='lessonprogress',
-            name='notes_downloaded_at',
-            field=models.DateTimeField(blank=True, help_text='When the student downloaded PDF study notes for this lesson.', null=True),
+            model_name="lessonprogress",
+            name="notes_downloaded_at",
+            field=models.DateTimeField(
+                blank=True,
+                help_text="When the student downloaded PDF study notes for this lesson.",
+                null=True,
+            ),
         ),
         migrations.AddField(
-            model_name='lessonprogress',
-            name='notes_viewed_at',
-            field=models.DateTimeField(blank=True, help_text='When the student opened PDF study notes for this lesson.', null=True),
+            model_name="lessonprogress",
+            name="notes_viewed_at",
+            field=models.DateTimeField(
+                blank=True,
+                help_text="When the student opened PDF study notes for this lesson.",
+                null=True,
+            ),
         ),
     ]

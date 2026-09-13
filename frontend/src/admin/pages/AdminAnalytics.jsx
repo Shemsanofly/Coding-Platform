@@ -27,11 +27,12 @@ export default function AdminAnalytics() {
   });
 
   const completionData = useMemo(
-    () => (data?.course_completion_distribution || []).map((row, index) => ({
-      name: `${row.bucket}%`,
-      count: row.count,
-      fill: BUCKET_COLORS[index % BUCKET_COLORS.length],
-    })),
+    () =>
+      (data?.course_completion_distribution || []).map((row, index) => ({
+        name: `${row.bucket}%`,
+        count: row.count,
+        fill: BUCKET_COLORS[index % BUCKET_COLORS.length],
+      })),
     [data],
   );
 
@@ -49,7 +50,8 @@ export default function AdminAnalytics() {
       (data?.avg_quiz_score_by_course || [])
         .filter((row) => row.avg_score != null)
         .map((row) => ({
-          name: row.course_title?.length > 18 ? `${row.course_title.slice(0, 16)}…` : row.course_title,
+          name:
+            row.course_title?.length > 18 ? `${row.course_title.slice(0, 16)}…` : row.course_title,
           score: row.avg_score,
         })),
     [data],
@@ -58,7 +60,9 @@ export default function AdminAnalytics() {
   const enrollmentData = useMemo(
     () =>
       (data?.enrollment_trend || []).map((row) => ({
-        date: row.date ? new Date(row.date).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "",
+        date: row.date
+          ? new Date(row.date).toLocaleDateString(undefined, { month: "short", day: "numeric" })
+          : "",
         count: row.count,
       })),
     [data],
@@ -159,7 +163,13 @@ export default function AdminAnalytics() {
                 <XAxis dataKey="date" tick={{ fontSize: 11 }} />
                 <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
                 <Tooltip />
-                <Line type="monotone" dataKey="count" stroke="#0ea5e9" strokeWidth={2} dot={{ r: 3 }} />
+                <Line
+                  type="monotone"
+                  dataKey="count"
+                  stroke="#0ea5e9"
+                  strokeWidth={2}
+                  dot={{ r: 3 }}
+                />
               </LineChart>
             </ResponsiveContainer>
           </div>

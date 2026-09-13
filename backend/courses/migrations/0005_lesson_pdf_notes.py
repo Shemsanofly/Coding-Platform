@@ -6,33 +6,33 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('courses', '0004_youtube_only_sources'),
+        ("courses", "0004_youtube_only_sources"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='lesson',
-            name='ai_summary',
+            model_name="lesson",
+            name="ai_summary",
             field=models.JSONField(blank=True, null=True),
         ),
         migrations.AddField(
-            model_name='lesson',
-            name='embedded_url',
+            model_name="lesson",
+            name="embedded_url",
             field=models.URLField(blank=True, max_length=500),
         ),
         migrations.AddField(
-            model_name='lesson',
-            name='notes_generated_at',
+            model_name="lesson",
+            name="notes_generated_at",
             field=models.DateTimeField(blank=True, null=True),
         ),
         migrations.AddField(
-            model_name='lesson',
-            name='pdf_notes',
-            field=models.FileField(blank=True, upload_to='pdf_notes/'),
+            model_name="lesson",
+            name="pdf_notes",
+            field=models.FileField(blank=True, upload_to="pdf_notes/"),
         ),
         migrations.AddField(
-            model_name='lesson',
-            name='transcript_text',
+            model_name="lesson",
+            name="transcript_text",
             field=models.TextField(blank=True),
         ),
     ]

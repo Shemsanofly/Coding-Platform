@@ -24,7 +24,8 @@ export default function CertificateDetail() {
   const downloadMutation = useMutation({
     mutationFn: () => downloadCertificate(id),
     onSuccess: (response) => triggerBlobDownload(response, "certificate.pdf"),
-    onError: () => toast.error("Could not download certificate.", { id: "certificate-detail-download-error" }),
+    onError: () =>
+      toast.error("Could not download certificate.", { id: "certificate-detail-download-error" }),
   });
 
   const certificate = certificateQuery.data;
@@ -48,7 +49,11 @@ export default function CertificateDetail() {
             <Link className="lc-btn-ghost min-h-10 px-4" to="/certificates">
               Back
             </Link>
-            <Button variant="gradient" loading={downloadMutation.isPending} onClick={() => downloadMutation.mutate()}>
+            <Button
+              variant="gradient"
+              loading={downloadMutation.isPending}
+              onClick={() => downloadMutation.mutate()}
+            >
               Download PDF
             </Button>
           </>
@@ -58,7 +63,10 @@ export default function CertificateDetail() {
       {certificateQuery.isLoading ? (
         <LoadingState label="Loading certificate..." rows={5} />
       ) : certificateQuery.isError ? (
-        <ErrorState message="Could not load this certificate." onRetry={() => void certificateQuery.refetch()} />
+        <ErrorState
+          message="Could not load this certificate."
+          onRetry={() => void certificateQuery.refetch()}
+        />
       ) : (
         <>
           <Card variant="subtle" className="flex flex-wrap items-center justify-between gap-3">

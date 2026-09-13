@@ -1,6 +1,13 @@
 import ResponsiveDataCard from "@/admin/components/ResponsiveDataCard";
 
-export default function AdminTable({ columns, rows, emptyMessage = "No data.", loading, error, onRetry }) {
+export default function AdminTable({
+  columns,
+  rows,
+  emptyMessage = "No data.",
+  loading,
+  error,
+  onRetry,
+}) {
   if (loading) {
     return <p className="px-4 py-8 text-sm text-muted">Loading…</p>;
   }

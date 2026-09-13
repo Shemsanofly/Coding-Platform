@@ -23,7 +23,10 @@ function formatLevel(level) {
 
 export default function Profile() {
   const { user } = useAuth();
-  const analyticsQuery = useQuery({ queryKey: ["analytics-summary"], queryFn: getAnalyticsSummary });
+  const analyticsQuery = useQuery({
+    queryKey: ["analytics-summary"],
+    queryFn: getAnalyticsSummary,
+  });
 
   const downloadReport = useMutation({
     mutationFn: async ({ fn, filename }) => {
@@ -35,9 +38,21 @@ export default function Profile() {
   });
 
   const reportActions = [
-    { label: "Download My Progress Report", fn: downloadMyProgressReport, filename: "my-learning-progress.pdf" },
-    { label: "Download My Quiz Report", fn: downloadMyQuizPerformanceReport, filename: "my-quiz-performance.pdf" },
-    { label: "Download My Weakness Report", fn: downloadMyWeaknessesReport, filename: "my-weak-topics.pdf" },
+    {
+      label: "Download My Progress Report",
+      fn: downloadMyProgressReport,
+      filename: "my-learning-progress.pdf",
+    },
+    {
+      label: "Download My Quiz Report",
+      fn: downloadMyQuizPerformanceReport,
+      filename: "my-quiz-performance.pdf",
+    },
+    {
+      label: "Download My Weakness Report",
+      fn: downloadMyWeaknessesReport,
+      filename: "my-weak-topics.pdf",
+    },
   ];
 
   const displayName = getDisplayName(user);

@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 from django.db.models import Avg, Count, Q
+from django.db.models.functions import TruncDate
 
 from ai_engine.models import LessonAIProcessing, WeakTopic
 from courses.models import Course, Lesson
-from django.db.models.functions import TruncDate
-
 from progress.models import Enrollment
 from quizzes.models import Question, Quiz, QuizResult
 
@@ -100,8 +99,7 @@ def lesson_ai_fields_by_id(lesson_ids: list[int]) -> dict[int, dict]:
         return {}
 
     processing_map = {
-        row.lesson_id: row
-        for row in LessonAIProcessing.objects.filter(lesson_id__in=lesson_ids)
+        row.lesson_id: row for row in LessonAIProcessing.objects.filter(lesson_id__in=lesson_ids)
     }
     quiz_map = {row.lesson_id: row for row in Quiz.objects.filter(lesson_id__in=lesson_ids)}
     question_counts = {
@@ -138,7 +136,9 @@ def lesson_ai_fields_by_id(lesson_ids: list[int]) -> dict[int, dict]:
         payload[lid] = {
             "ai_processing_status": ai_status,
             "quiz_generation_status": quiz_status,
-            "transcript_status": "ready" if processing and processing.transcript_text else "pending",
+            "transcript_status": (
+                "ready" if processing and processing.transcript_text else "pending"
+            ),
             "generated_question_count": total_q,
             "published_question_count": published_q,
             "approval_status": approval_status,
@@ -174,7 +174,9 @@ def admin_dashboard_summary(admin_user) -> dict:
     pending_approval = 0
     if lesson_ids:
         done_lessons = set(
-            quiz_qs.filter(generation_status=Quiz.GenerationStatus.DONE).values_list("lesson_id", flat=True)
+            quiz_qs.filter(generation_status=Quiz.GenerationStatus.DONE).values_list(
+                "lesson_id", flat=True
+            )
         )
         pending_approval = (
             Question.objects.filter(quiz__lesson_id__in=done_lessons, is_published=False)
@@ -217,7 +219,8 @@ def admin_dashboard_summary(admin_user) -> dict:
         "pending_quiz_approvals": pending_approval,
         "failed_ai_generations": failed_ai_generations,
         "top_weak_topics": [
-            {"topic_tag": row["topic_tag"], "student_count": row["student_count"]} for row in top_weak
+            {"topic_tag": row["topic_tag"], "student_count": row["student_count"]}
+            for row in top_weak
         ],
         "recent_activity": recent_activity,
     }
@@ -272,9 +275,11 @@ def admin_analytics_overview(admin_user) -> dict:
         {
             "course_id": course.id,
             "course_title": course.title,
-            "avg_score": round(float(avg_score_map[course.id]), 1)
-            if avg_score_map.get(course.id) is not None
-            else None,
+            "avg_score": (
+                round(float(avg_score_map[course.id]), 1)
+                if avg_score_map.get(course.id) is not None
+                else None
+            ),
         }
         for course in courses.order_by("title")
     ]
@@ -300,16 +305,15 @@ def admin_analytics_overview(admin_user) -> dict:
         )
         for row in trend_rows[-14:]:
             day = row["day"]
-            enrollment_trend.append(
-                {"date": day.isoformat() if day else "", "count": row["count"]}
-            )
+            enrollment_trend.append({"date": day.isoformat() if day else "", "count": row["count"]})
 
     return {
         "course_completion_distribution": [
             {"bucket": key, "count": value} for key, value in completion_buckets.items()
         ],
         "top_weak_topics": [
-            {"topic_tag": row["topic_tag"], "student_count": row["student_count"]} for row in top_weak
+            {"topic_tag": row["topic_tag"], "student_count": row["student_count"]}
+            for row in top_weak
         ],
         "avg_quiz_score_by_course": avg_score_by_course,
         "ai_generation_counts": ai_generation,

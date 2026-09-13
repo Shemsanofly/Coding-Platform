@@ -21,7 +21,9 @@ export default function SeverityBadge({ level, value }) {
     "border-line bg-sand text-ocean-800 dark:border-line/40 dark:bg-ocean-950/50 dark:text-sand";
 
   return (
-    <span className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold uppercase tracking-wide ${tone}`}>
+    <span
+      className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold uppercase tracking-wide ${tone}`}
+    >
       {text}
     </span>
   );

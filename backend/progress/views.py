@@ -1,30 +1,21 @@
 import logging
 
 from django.contrib.auth import get_user_model
-from django.http import FileResponse
 from django.db.models import Avg, Count, Max, Q
+from django.http import FileResponse
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
-
-from accounts.permissions import STUDENT_ACCESS
-from core.pagination import paginate_queryset
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from accounts.permissions import STUDENT_ACCESS
 from ai_engine.models import WeakTopic
+from core.pagination import paginate_queryset
 from courses.models import Course, Lesson
-from progress.models import Enrollment, LessonProgress
-from progress.models import Certificate
-from progress.services import quiz_passed_for_lesson
-from progress.services.certificates import (
-    certificate_download_filename,
-    certificate_file_path,
-    check_certificate_eligibility,
-    generate_or_get_certificate,
-)
 from playground.serializers import PlaygroundLeaderboardSerializer
 from playground.services.leaderboard import build_playground_leaderboard
+from progress.models import Certificate, Enrollment, LessonProgress
 from progress.serializers import (
     AdminQuizLogSerializer,
     AdminStudentUpdateSerializer,
@@ -39,6 +30,12 @@ from progress.serializers import (
     StudentAnalyticsSummarySerializer,
     WeaknessListResponseSerializer,
     WeakTopicSerializer,
+)
+from progress.services.certificates import (
+    certificate_download_filename,
+    certificate_file_path,
+    check_certificate_eligibility,
+    generate_or_get_certificate,
 )
 from quizzes.models import QuizResult
 
@@ -81,8 +78,8 @@ class WeaknessListView(APIView):
         from progress.services.weakness_context import (
             build_lesson_weakness_groups,
             build_topic_context_index,
-            ensure_enrolled_in_course,
             enrich_weak_topic_payload,
+            ensure_enrolled_in_course,
             list_enrolled_courses_for_filter,
             topic_matches_course,
         )
@@ -97,10 +94,14 @@ class WeaknessListView(APIView):
             course_ids = [course_id]
 
         context_index = build_topic_context_index(request.user.id, course_ids=course_ids)
-        topics_qs = WeakTopic.objects.filter(user=request.user).order_by("-last_updated", "topic_tag")
+        topics_qs = WeakTopic.objects.filter(user=request.user).order_by(
+            "-last_updated", "topic_tag"
+        )
         topics_payload = []
         for topic in topics_qs:
-            if course_id is not None and not topic_matches_course(topic.topic_tag, course_id, context_index):
+            if course_id is not None and not topic_matches_course(
+                topic.topic_tag, course_id, context_index
+            ):
                 continue
             topics_payload.append(enrich_weak_topic_payload(topic, context_index))
 
@@ -176,8 +177,8 @@ class RecommendationListView(APIView):
         from ai_engine.models import Recommendation
         from progress.services.weakness_context import (
             build_topic_context_index,
-            ensure_enrolled_in_course,
             enrich_recommendation_payload,
+            ensure_enrolled_in_course,
         )
 
         course_id = _parse_course_id(request)
@@ -272,9 +273,11 @@ def _certificate_eligibility_payload(result, request):
         "total_lessons": result.total_lessons,
         "final_score": result.final_score,
         "passing_score": result.passing_score,
-        "certificate": CertificateSerializer(result.certificate, context={"request": request}).data
-        if result.certificate
-        else None,
+        "certificate": (
+            CertificateSerializer(result.certificate, context={"request": request}).data
+            if result.certificate
+            else None
+        ),
     }
 
 
@@ -323,7 +326,9 @@ class MyCertificatesView(APIView):
             .select_related("course", "enrollment")
             .order_by("-issue_date")
         )
-        return Response(CertificateSerializer(certificates, many=True, context={"request": request}).data)
+        return Response(
+            CertificateSerializer(certificates, many=True, context={"request": request}).data
+        )
 
 
 class CertificateDetailView(APIView):
@@ -348,7 +353,9 @@ class CertificateDownloadView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, certificate_id):
-        certificate = Certificate.objects.select_related("student").filter(pk=certificate_id).first()
+        certificate = (
+            Certificate.objects.select_related("student").filter(pk=certificate_id).first()
+        )
         if certificate is None:
             return Response({"detail": "Certificate not found."}, status=status.HTTP_404_NOT_FOUND)
         is_owner = request.user.pk == certificate.student_id
@@ -358,9 +365,13 @@ class CertificateDownloadView(APIView):
 
         path = certificate_file_path(certificate)
         if path is None or not path.exists():
-            return Response({"detail": "Certificate PDF not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"detail": "Certificate PDF not found."}, status=status.HTTP_404_NOT_FOUND
+            )
         response = FileResponse(open(path, "rb"), content_type="application/pdf")
-        response["Content-Disposition"] = f"attachment; filename={certificate_download_filename(certificate)}"
+        response["Content-Disposition"] = (
+            f"attachment; filename={certificate_download_filename(certificate)}"
+        )
         return response
 
 
@@ -513,7 +524,9 @@ class AdminUsersView(_AdminRoleRequiredMixin, APIView):
             .values("user_id")
             .annotate(total=Count("id"))
         }
-        weak_topics = WeakTopic.objects.filter(user_id__in=user_ids).order_by("user_id", "-last_updated")
+        weak_topics = WeakTopic.objects.filter(user_id__in=user_ids).order_by(
+            "user_id", "-last_updated"
+        )
         top_weakness_by_user = {}
         for topic in weak_topics:
             if topic.user_id not in top_weakness_by_user:
@@ -720,9 +733,11 @@ class AdminUserWeaknessesView(_AdminRoleRequiredMixin, APIView):
                 "weakness_level": topic.weakness_level,
                 "attempt_count": topic.attempt_count,
                 "correct_count": topic.correct_count,
-                "score": round((topic.correct_count / topic.attempt_count) * 100, 1)
-                if topic.attempt_count
-                else 0,
+                "score": (
+                    round((topic.correct_count / topic.attempt_count) * 100, 1)
+                    if topic.attempt_count
+                    else 0
+                ),
                 "last_updated": topic.last_updated,
             }
             for topic in topics
@@ -790,9 +805,7 @@ class AdminUserQuizLogView(_AdminRoleRequiredMixin, APIView):
 
 
 def _build_next_course_recommendations(user):
-    enrolled_ids = set(
-        Enrollment.objects.filter(user=user).values_list("course_id", flat=True)
-    )
+    enrolled_ids = set(Enrollment.objects.filter(user=user).values_list("course_id", flat=True))
     weakness_topics = list(
         WeakTopic.objects.filter(user=user, weakness_level__in=["HIGH", "MEDIUM"]).values_list(
             "topic_tag",

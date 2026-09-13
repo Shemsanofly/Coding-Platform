@@ -76,9 +76,9 @@ def _weekly_activity(user_id: int, now=None) -> list[dict]:
     now = now or timezone.now()
     start = (now - timedelta(days=6)).date()
     counts = defaultdict(int)
-    for taken_at in QuizResult.objects.filter(user_id=user_id, taken_at__date__gte=start).values_list(
-        "taken_at", flat=True
-    ):
+    for taken_at in QuizResult.objects.filter(
+        user_id=user_id, taken_at__date__gte=start
+    ).values_list("taken_at", flat=True):
         if taken_at:
             counts[taken_at.date()] += 1
     labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
@@ -104,9 +104,7 @@ def build_student_practice_stats(user_id: int) -> dict:
         return {}
 
     results = list(
-        QuizResult.objects.filter(user_id=user_id)
-        .select_related("quiz")
-        .order_by("-taken_at")
+        QuizResult.objects.filter(user_id=user_id).select_related("quiz").order_by("-taken_at")
     )
     quiz_attempts = len(results)
     scores = [row.score for row in results]
@@ -119,16 +117,24 @@ def build_student_practice_stats(user_id: int) -> dict:
 
     exercises_passed = 0
     for lesson_id, best_score in best_by_lesson.items():
-        quiz = Quiz.objects.filter(lesson_id=lesson_id).only("passing_score", "generation_status").first()
-        if quiz and quiz.generation_status == Quiz.GenerationStatus.DONE and best_score >= quiz.passing_score:
+        quiz = (
+            Quiz.objects.filter(lesson_id=lesson_id)
+            .only("passing_score", "generation_status")
+            .first()
+        )
+        if (
+            quiz
+            and quiz.generation_status == Quiz.GenerationStatus.DONE
+            and best_score >= quiz.passing_score
+        ):
             exercises_passed += 1
 
     lessons_mastered = sum(
-        1
-        for lesson_id in best_by_lesson
-        if quiz_passed_for_lesson(user_id, lesson_id)
+        1 for lesson_id in best_by_lesson if quiz_passed_for_lesson(user_id, lesson_id)
     )
-    official_completed = LessonProgress.objects.filter(user_id=user_id, completed_at__isnull=False).count()
+    official_completed = LessonProgress.objects.filter(
+        user_id=user_id, completed_at__isnull=False
+    ).count()
 
     xp = quiz_attempts * 10
     for best_score in best_by_lesson.values():

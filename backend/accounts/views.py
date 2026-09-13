@@ -15,7 +15,7 @@ from .serializers import (
     UserSerializer,
 )
 
-REFRESH_COOKIE_NAME = getattr(settings, 'JWT_REFRESH_COOKIE_NAME', 'refresh')
+REFRESH_COOKIE_NAME = getattr(settings, "JWT_REFRESH_COOKIE_NAME", "refresh")
 
 
 def _refresh_cookie_max_age():
@@ -29,16 +29,16 @@ def _set_refresh_cookie(response, refresh_token_str):
         max_age=_refresh_cookie_max_age(),
         httponly=True,
         secure=not settings.DEBUG,
-        samesite='Lax',
-        path='/',
+        samesite="Lax",
+        path="/",
     )
 
 
 def _clear_refresh_cookie(response):
     response.delete_cookie(
         REFRESH_COOKIE_NAME,
-        path='/',
-        samesite='Lax',
+        path="/",
+        samesite="Lax",
     )
 
 
@@ -51,7 +51,7 @@ class RegisterView(APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(
-            {'detail': 'Account created successfully. Please sign in.'},
+            {"detail": "Account created successfully. Please sign in."},
             status=status.HTTP_201_CREATED,
         )
 
@@ -63,9 +63,9 @@ class LoginView(APIView):
     def post(self, request):
         serializer = EmailTokenObtainPairSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        access = serializer.validated_data['access']
-        refresh = serializer.validated_data['refresh']
-        response = Response({'access': access})
+        access = serializer.validated_data["access"]
+        refresh = serializer.validated_data["refresh"]
+        response = Response({"access": access})
         _set_refresh_cookie(response, refresh)
         return response
 
@@ -78,21 +78,21 @@ class RefreshView(APIView):
         raw = request.COOKIES.get(REFRESH_COOKIE_NAME)
         if not raw:
             return Response(
-                {'detail': 'Refresh token not provided.'},
+                {"detail": "Refresh token not provided."},
                 status=status.HTTP_401_UNAUTHORIZED,
             )
-        serializer = TokenRefreshSerializer(data={'refresh': raw})
+        serializer = TokenRefreshSerializer(data={"refresh": raw})
         if not serializer.is_valid():
             response = Response(
-                {'detail': 'Invalid or expired refresh token.'},
+                {"detail": "Invalid or expired refresh token."},
                 status=status.HTTP_401_UNAUTHORIZED,
             )
             _clear_refresh_cookie(response)
             return response
 
-        access = serializer.validated_data['access']
-        response = Response({'access': access})
-        new_refresh = serializer.validated_data.get('refresh')
+        access = serializer.validated_data["access"]
+        response = Response({"access": access})
+        new_refresh = serializer.validated_data.get("refresh")
         if new_refresh:
             _set_refresh_cookie(response, new_refresh)
         return response
@@ -119,7 +119,7 @@ class MeView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        return Response(UserSerializer(request.user, context={'request': request}).data)
+        return Response(UserSerializer(request.user, context={"request": request}).data)
 
     def patch(self, request):
         serializer = ProfileUpdateSerializer(
@@ -129,4 +129,4 @@ class MeView(APIView):
         )
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
-        return Response(UserSerializer(user, context={'request': request}).data)
+        return Response(UserSerializer(user, context={"request": request}).data)

@@ -59,21 +59,21 @@ export default function App() {
           {/* Student experience routes — admins are redirected to the admin dashboard. */}
           <Route element={<RoleGuard allowedRoles={["student"]} redirectTo="/admin/dashboard" />}>
             <Route element={<StudentLayout />}>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/playground" element={<PlaygroundPage />} />
-            <Route path="/catalog" element={<Catalog />} />
-            <Route path="/weakness" element={<Weakness />} />
-            <Route path="/recommendations" element={<Recommendations />} />
-            <Route path="/learning-path" element={<LearningPath />} />
-            <Route path="/analytics" element={<StudentAnalytics />} />
-            <Route path="/certificates" element={<MyCertificates />} />
-            <Route path="/certificates/:certificateId" element={<CertificateDetail />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/settings" element={<ProfileSettings />} />
-            <Route path="/courses/:courseId" element={<CourseDetail />} />
-            <Route path="/lessons/:lessonId" element={<LessonDetail />} />
-            <Route path="/lessons/:lessonId/quiz" element={<Quiz />} />
-            <Route path="/lessons/:lessonId/quiz/result" element={<QuizResult />} />
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/playground" element={<PlaygroundPage />} />
+              <Route path="/catalog" element={<Catalog />} />
+              <Route path="/weakness" element={<Weakness />} />
+              <Route path="/recommendations" element={<Recommendations />} />
+              <Route path="/learning-path" element={<LearningPath />} />
+              <Route path="/analytics" element={<StudentAnalytics />} />
+              <Route path="/certificates" element={<MyCertificates />} />
+              <Route path="/certificates/:certificateId" element={<CertificateDetail />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/settings" element={<ProfileSettings />} />
+              <Route path="/courses/:courseId" element={<CourseDetail />} />
+              <Route path="/lessons/:lessonId" element={<LessonDetail />} />
+              <Route path="/lessons/:lessonId/quiz" element={<Quiz />} />
+              <Route path="/lessons/:lessonId/quiz/result" element={<QuizResult />} />
             </Route>
           </Route>
 
@@ -105,6 +105,5 @@ export default function App() {
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Suspense>
-
   );
 }

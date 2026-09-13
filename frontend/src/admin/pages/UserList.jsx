@@ -85,10 +85,16 @@ export default function UserList() {
       weaknessLevel,
       ordering,
     }),
-    [search, weaknessLevel, ordering]
+    [search, weaknessLevel, ordering],
   );
 
-  const { data = [], isLoading, isPending, isError, refetch } = useQuery({
+  const {
+    data = [],
+    isLoading,
+    isPending,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: ["admin-users", filters],
     queryFn: () => getAdminUsers(filters),
   });
@@ -125,7 +131,7 @@ export default function UserList() {
   const handleDeactivate = (student) => {
     const label = student.name || student.email;
     const confirmed = window.confirm(
-      `Deactivate ${label} (${student.email})?\n\nThey will no longer be able to sign in. You can delete the account permanently afterward to free space.`
+      `Deactivate ${label} (${student.email})?\n\nThey will no longer be able to sign in. You can delete the account permanently afterward to free space.`,
     );
     if (confirmed) {
       deactivateMutation.mutate(student.id);
@@ -135,7 +141,7 @@ export default function UserList() {
   const handlePermanentDelete = (student) => {
     const label = student.name || student.email;
     const confirmed = window.confirm(
-      `Permanently delete ${label} (${student.email})?\n\nThis cannot be undone. All enrollments, progress, and quiz history for this student will be removed.`
+      `Permanently delete ${label} (${student.email})?\n\nThis cannot be undone. All enrollments, progress, and quiz history for this student will be removed.`,
     );
     if (confirmed) {
       purgeMutation.mutate(student.id);
@@ -166,8 +172,7 @@ export default function UserList() {
     {
       key: "avg_score",
       label: "Avg score",
-      render: (row) =>
-        row.avg_score != null ? `${Math.round(Number(row.avg_score))}%` : "N/A",
+      render: (row) => (row.avg_score != null ? `${Math.round(Number(row.avg_score))}%` : "N/A"),
     },
     {
       key: "weak_topics_count",

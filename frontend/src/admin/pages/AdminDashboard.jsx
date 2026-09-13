@@ -140,7 +140,10 @@ export default function AdminDashboard() {
           <p className="mt-1 text-sm text-muted">Latest quiz attempts in your courses.</p>
           {activity.length === 0 ? (
             <div className="mt-4">
-              <EmptyState title="No recent activity" message="Quiz attempts from enrolled students will show here." />
+              <EmptyState
+                title="No recent activity"
+                message="Quiz attempts from enrolled students will show here."
+              />
             </div>
           ) : (
             <ul className="mt-4 max-h-72 space-y-2 overflow-y-auto">
@@ -162,8 +165,8 @@ export default function AdminDashboard() {
 
       {(data?.pending_quiz_approvals ?? 0) > 0 ? (
         <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          <span className="font-semibold">{data.pending_quiz_approvals} lesson(s)</span> need quiz approval before
-          students can take them. Open{" "}
+          <span className="font-semibold">{data.pending_quiz_approvals} lesson(s)</span> need quiz
+          approval before students can take them. Open{" "}
           <Link to="/admin/courses" className="font-semibold underline">
             course setup
           </Link>{" "}
@@ -173,8 +176,8 @@ export default function AdminDashboard() {
 
       {(data?.failed_ai_generations ?? 0) > 0 ? (
         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-          <span className="font-semibold">{data.failed_ai_generations} failed</span> AI generation(s). Check lesson
-          errors in course setup.
+          <span className="font-semibold">{data.failed_ai_generations} failed</span> AI
+          generation(s). Check lesson errors in course setup.
         </div>
       ) : null}
     </div>

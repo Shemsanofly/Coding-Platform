@@ -45,22 +45,16 @@ _ALLOWED_YOUTUBE_HOSTS = frozenset(
 )
 
 # --- Cleaning patterns ---
-_TIMESTAMP_RE = re.compile(
-    r"(?:^|\s)(?:\d{1,2}:)?\d{1,2}:\d{2}(?:\.\d+)?(?:\s|$)", re.MULTILINE
-)
+_TIMESTAMP_RE = re.compile(r"(?:^|\s)(?:\d{1,2}:)?\d{1,2}:\d{2}(?:\.\d+)?(?:\s|$)", re.MULTILINE)
 _SPEAKER_ARROW_RE = re.compile(r"^\s*>>\s*\S+?:\s*", re.MULTILINE)
 _SPEAKER_BRACKET_RE = re.compile(r"\[[^\]]{1,40}\]:\s*")
-_MUSIC_BRACKET_RE = re.compile(
-    r"\[(?:music|applause|laughter|silence|inaudible)\]", re.IGNORECASE
-)
+_MUSIC_BRACKET_RE = re.compile(r"\[(?:music|applause|laughter|silence|inaudible)\]", re.IGNORECASE)
 _HTML_TAG_RE = re.compile(r"<[^>]+>")
 _ZERO_WIDTH_RE = re.compile(r"[\u200b-\u200d\ufeff]")
 
 # --- Validation heuristics ---
 _WORD_RE = re.compile(r"[a-zA-Z][a-zA-Z0-9'-]{1,}")
-_ARTIFACT_ONLY_RE = re.compile(
-    r"^[\s\[\]\(\):;,\d>>\-–—.!?]*$", re.IGNORECASE
-)
+_ARTIFACT_ONLY_RE = re.compile(r"^[\s\[\]\(\):;,\d>>\-–—.!?]*$", re.IGNORECASE)
 
 
 class TranscriptError(Exception):
@@ -117,22 +111,16 @@ class TranscriptService:
             )
 
         if _ARTIFACT_ONLY_RE.match(normalized):
-            raise TranscriptValidationError(
-                "Transcript contains insufficient educational content."
-            )
+            raise TranscriptValidationError("Transcript contains insufficient educational content.")
 
         words = _WORD_RE.findall(normalized)
         if len(words) < 40:
-            raise TranscriptValidationError(
-                "Transcript contains insufficient educational content."
-            )
+            raise TranscriptValidationError("Transcript contains insufficient educational content.")
 
         artifact_stripped = _MUSIC_BRACKET_RE.sub("", normalized)
         artifact_stripped = _TIMESTAMP_RE.sub("", artifact_stripped).strip()
         if len(artifact_stripped) < MIN_TRANSCRIPT_CHARS:
-            raise TranscriptValidationError(
-                "Transcript contains only transcript artifacts."
-            )
+            raise TranscriptValidationError("Transcript contains only transcript artifacts.")
 
     def clean(self, text: str) -> str:
         """Remove captions noise and collapse whitespace."""
@@ -212,9 +200,7 @@ class TranscriptService:
         ]
 
     def _language_from_fetched(self, fetched) -> str | None:
-        code = getattr(fetched, "language_code", None) or getattr(
-            fetched, "language", None
-        )
+        code = getattr(fetched, "language_code", None) or getattr(fetched, "language", None)
         return str(code) if code else None
 
     def _fetch_transcript(self, video_id: str) -> tuple[list[dict[str, Any]], str | None]:
@@ -246,17 +232,13 @@ class TranscriptService:
                 fetched = self._fetch_any_available(api, video_id)
 
             raw = self._fetched_to_blocks(fetched)
-            language = self._language_from_fetched(fetched) or self._detect_language(
-                raw
-            )
+            language = self._language_from_fetched(fetched) or self._detect_language(raw)
             return raw, language
 
         except NoTranscriptFound as exc:
             raise TranscriptExtractionError("Transcript unavailable.") from exc
         except TranscriptsDisabled as exc:
-            raise TranscriptExtractionError(
-                "Transcripts are disabled for this video."
-            ) from exc
+            raise TranscriptExtractionError("Transcripts are disabled for this video.") from exc
         except VideoUnavailable as exc:
             raise TranscriptExtractionError(
                 "Video is unavailable, private, age-restricted, or removed."

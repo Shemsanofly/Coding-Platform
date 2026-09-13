@@ -21,11 +21,15 @@ class PlaygroundChallenge(models.Model):
     )
     title = models.CharField(max_length=200)
     description = models.TextField()
-    difficulty = models.CharField(max_length=16, choices=Difficulty.choices, default=Difficulty.BEGINNER)
+    difficulty = models.CharField(
+        max_length=16, choices=Difficulty.choices, default=Difficulty.BEGINNER
+    )
     starter_code = models.TextField()
     test_cases = models.JSONField(default=list)
     xp_reward = models.PositiveIntegerField(default=50)
-    status = models.CharField(max_length=16, choices=Status.choices, default=Status.ACTIVE, db_index=True)
+    status = models.CharField(
+        max_length=16, choices=Status.choices, default=Status.ACTIVE, db_index=True
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     solved_at = models.DateTimeField(null=True, blank=True)
 

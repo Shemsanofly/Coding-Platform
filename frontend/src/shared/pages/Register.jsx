@@ -39,7 +39,9 @@ export default function Register() {
       if (parsed.form) {
         toast.error(parsed.form, { id: "register-error" });
       } else if (!error?.response) {
-        toast.error("Cannot reach the server. Ensure the backend is running.", { id: "register-error" });
+        toast.error("Cannot reach the server. Ensure the backend is running.", {
+          id: "register-error",
+        });
       }
     },
   });
@@ -79,7 +81,10 @@ export default function Register() {
   return (
     <div className="lc-auth-shell">
       <div className="lc-auth-card max-w-lg">
-        <Link to="/" className="relative z-[1] inline-flex items-center gap-3 text-xl font-bold text-ocean-800">
+        <Link
+          to="/"
+          className="relative z-[1] inline-flex items-center gap-3 text-xl font-bold text-ocean-800"
+        >
           <BrandMark />
           LearnCode
         </Link>
@@ -87,7 +92,9 @@ export default function Register() {
         <div className="relative z-[1] mt-6">
           <p className="lc-tag">Join now</p>
           <h1 className="mt-2 text-3xl font-bold text-ocean-950">Create your account</h1>
-          <p className="mt-2 text-sm leading-relaxed text-muted">Sign up as a student to start learning.</p>
+          <p className="mt-2 text-sm leading-relaxed text-muted">
+            Sign up as a student to start learning.
+          </p>
         </div>
 
         <form className="relative z-[1] mt-6 grid gap-4" onSubmit={handleSubmit} noValidate>

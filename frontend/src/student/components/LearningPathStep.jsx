@@ -30,7 +30,9 @@ export default function LearningPathStep({ step, onSelect }) {
         {step.weakness_level ? <SeverityBadge level={step.weakness_level} /> : null}
       </div>
       <p className="mt-1 text-xs text-muted dark:text-reef/90">{step.course_title}</p>
-      {step.reason ? <p className="mt-2 text-xs text-muted dark:text-muted">{step.reason}</p> : null}
+      {step.reason ? (
+        <p className="mt-2 text-xs text-muted dark:text-muted">{step.reason}</p>
+      ) : null}
     </>
   );
 
@@ -48,9 +50,5 @@ export default function LearningPathStep({ step, onSelect }) {
     );
   }
 
-  return (
-    <li className={`rounded-xl border p-4 ${shell}`}>
-      {inner}
-    </li>
-  );
+  return <li className={`rounded-xl border p-4 ${shell}`}>{inner}</li>;
 }

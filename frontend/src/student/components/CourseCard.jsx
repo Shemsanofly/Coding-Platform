@@ -1,5 +1,9 @@
 import Button from "@/shared/components/ui/Button";
-import { CourseLevelBadge, CourseMetric, CourseStatusPill } from "@/shared/components/course/CourseBadges";
+import {
+  CourseLevelBadge,
+  CourseMetric,
+  CourseStatusPill,
+} from "@/shared/components/course/CourseBadges";
 
 export default function CourseCard({ course, onOpen, onEnroll, enrolling }) {
   const isEnrolled = Boolean(course.is_enrolled);

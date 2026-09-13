@@ -13,8 +13,7 @@ const trimmedApiUrl =
 
 // Dev: empty base URL uses the Vite dev server origin so `/api` and `/auth` go through the proxy (avoids CORS).
 // Prod: set VITE_API_URL or fall back to localhost for same-machine APIs.
-const baseURL =
-  trimmedApiUrl || (import.meta.env.DEV ? "" : "http://localhost:8000");
+const baseURL = trimmedApiUrl || (import.meta.env.DEV ? "" : "http://localhost:8000");
 
 const client = axios.create({
   baseURL,
@@ -56,7 +55,7 @@ client.interceptors.response.use(
     }
 
     return Promise.reject(error);
-  }
+  },
 );
 
 export default client;

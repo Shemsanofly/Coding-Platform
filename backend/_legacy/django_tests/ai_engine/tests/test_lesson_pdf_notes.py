@@ -119,7 +119,9 @@ class LessonNotesAPITests(TestCase):
     @patch("ai_engine.services.lesson_notes.generate_study_notes")
     @patch("ai_engine.services.lesson_notes.save_notes_pdf")
     def test_admin_can_generate_notes(self, mock_save, mock_summary, mock_transcript):
-        mock_transcript.return_value = type("R", (), {"video_id": "dQw4w9WgXcQ", "text": _sample_transcript()})()
+        mock_transcript.return_value = type(
+            "R", (), {"video_id": "dQw4w9WgXcQ", "text": _sample_transcript()}
+        )()
         mock_summary.return_value = _sample_summary(self.lesson.title)
         mock_save.return_value = f"pdf_notes/lesson_{self.lesson.pk}_notes.pdf"
 
@@ -293,8 +295,12 @@ class LessonNotesAPITests(TestCase):
     @patch("ai_engine.services.lesson_notes.fetch_transcript")
     @patch("ai_engine.services.lesson_notes.generate_study_notes")
     @patch("ai_engine.services.lesson_notes.save_notes_pdf")
-    def test_generate_lesson_pdf_notes_orchestration(self, mock_save, mock_summary, mock_transcript):
-        mock_transcript.return_value = type("R", (), {"video_id": "abc123XYZ_1", "text": _sample_transcript()})()
+    def test_generate_lesson_pdf_notes_orchestration(
+        self, mock_save, mock_summary, mock_transcript
+    ):
+        mock_transcript.return_value = type(
+            "R", (), {"video_id": "abc123XYZ_1", "text": _sample_transcript()}
+        )()
         mock_summary.return_value = _sample_summary()
         mock_save.return_value = f"pdf_notes/lesson_{self.lesson.pk}_notes.pdf"
 

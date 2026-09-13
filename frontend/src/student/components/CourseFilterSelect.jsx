@@ -2,7 +2,10 @@ import { useEffect, useMemo } from "react";
 
 export default function CourseFilterSelect({ courses = [], value, onChange, className = "" }) {
   const firstCourseId = courses[0]?.id ? String(courses[0].id) : "";
-  const validCourseIds = useMemo(() => new Set(courses.map((course) => String(course.id))), [courses]);
+  const validCourseIds = useMemo(
+    () => new Set(courses.map((course) => String(course.id))),
+    [courses],
+  );
   const selectedValue = value && validCourseIds.has(String(value)) ? String(value) : firstCourseId;
 
   useEffect(() => {

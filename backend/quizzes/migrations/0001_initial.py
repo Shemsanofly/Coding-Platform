@@ -9,40 +9,76 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('courses', '0001_initial'),
+        ("courses", "0001_initial"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Quiz',
+            name="Quiz",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('passing_score', models.PositiveSmallIntegerField(default=60)),
-                ('generation_status', models.CharField(choices=[('pending', 'Pending'), ('processing', 'Processing'), ('done', 'Done'), ('failed', 'Failed')], default='pending', max_length=16)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('lesson', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='quiz', to='courses.lesson')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                ("passing_score", models.PositiveSmallIntegerField(default=60)),
+                (
+                    "generation_status",
+                    models.CharField(
+                        choices=[
+                            ("pending", "Pending"),
+                            ("processing", "Processing"),
+                            ("done", "Done"),
+                            ("failed", "Failed"),
+                        ],
+                        default="pending",
+                        max_length=16,
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "lesson",
+                    models.OneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="quiz",
+                        to="courses.lesson",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Quiz',
-                'verbose_name_plural': 'Quizzes',
-                'ordering': ['-created_at'],
+                "verbose_name": "Quiz",
+                "verbose_name_plural": "Quizzes",
+                "ordering": ["-created_at"],
             },
         ),
         migrations.CreateModel(
-            name='Question',
+            name="Question",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('order', models.PositiveSmallIntegerField(default=0)),
-                ('stem', models.TextField()),
-                ('choices', models.JSONField()),
-                ('correct_index', models.PositiveSmallIntegerField()),
-                ('topic_tag', models.CharField(max_length=100)),
-                ('quiz', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='questions', to='quizzes.quiz')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                ("order", models.PositiveSmallIntegerField(default=0)),
+                ("stem", models.TextField()),
+                ("choices", models.JSONField()),
+                ("correct_index", models.PositiveSmallIntegerField()),
+                ("topic_tag", models.CharField(max_length=100)),
+                (
+                    "quiz",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="questions",
+                        to="quizzes.quiz",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Question',
-                'verbose_name_plural': 'Questions',
-                'ordering': ['order', 'pk'],
+                "verbose_name": "Question",
+                "verbose_name_plural": "Questions",
+                "ordering": ["order", "pk"],
             },
         ),
     ]

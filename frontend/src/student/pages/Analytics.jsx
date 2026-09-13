@@ -1,9 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import {
-  getAnalyticsSummary,
-  getEnrollments,
-  getWeaknesses,
-} from "@/api/studentDashboard";
+import { getAnalyticsSummary, getEnrollments, getWeaknesses } from "@/api/studentDashboard";
 import DashboardAnalytics from "@/student/components/DashboardAnalytics";
 import LoadingState from "@/student/components/LoadingState";
 import SectionHeader from "@/student/components/SectionHeader";
@@ -12,14 +8,16 @@ import Card from "@/shared/components/ui/Card";
 import ErrorState from "@/shared/components/ErrorState";
 
 export default function Analytics() {
-  const analyticsQuery = useQuery({ queryKey: ["analytics-summary"], queryFn: getAnalyticsSummary });
+  const analyticsQuery = useQuery({
+    queryKey: ["analytics-summary"],
+    queryFn: getAnalyticsSummary,
+  });
   const enrollmentsQuery = useQuery({ queryKey: ["enrollments"], queryFn: getEnrollments });
   const weaknessesQuery = useQuery({ queryKey: ["weaknesses"], queryFn: getWeaknesses });
 
   const isLoading =
     analyticsQuery.isLoading || enrollmentsQuery.isLoading || weaknessesQuery.isLoading;
-  const isError =
-    analyticsQuery.isError || enrollmentsQuery.isError || weaknessesQuery.isError;
+  const isError = analyticsQuery.isError || enrollmentsQuery.isError || weaknessesQuery.isError;
 
   const refetchAll = () => {
     void analyticsQuery.refetch();
@@ -62,7 +60,9 @@ export default function Analytics() {
             <Card padding="sm">
               <p className="text-xs text-muted dark:text-reef/80">Weak topics</p>
               <p className="mt-1 text-xl font-bold text-ink dark:text-sand">
-                {analyticsQuery.data?.weak_topics_tracked ?? weaknessesQuery.data?.topics?.length ?? 0}
+                {analyticsQuery.data?.weak_topics_tracked ??
+                  weaknessesQuery.data?.topics?.length ??
+                  0}
               </p>
             </Card>
           </section>

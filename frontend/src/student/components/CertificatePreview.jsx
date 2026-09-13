@@ -61,7 +61,9 @@ export default function CertificatePreview({ certificate }) {
   const ceoName = clean(certificate?.ceo_name, "Shemsa Amin");
   const ceoTitle = clean(certificate?.ceo_title, "Chief Executive Officer");
   const issueDate = formatCertificateDate(certificate?.issue_date);
-  const completionDate = formatCertificateDate(certificate?.completion_date || certificate?.issue_date);
+  const completionDate = formatCertificateDate(
+    certificate?.completion_date || certificate?.issue_date,
+  );
   const qrCode = clean(certificate?.qr_code_data_url);
 
   return (
@@ -504,10 +506,16 @@ export default function CertificatePreview({ certificate }) {
               </div>
 
               <p className="lc-cert-present">We proudly present this certificate to</p>
-              <p className="lc-cert-recipient" style={{ fontSize: fitTextSize(recipientName, 60, 48, 38) }}>
+              <p
+                className="lc-cert-recipient"
+                style={{ fontSize: fitTextSize(recipientName, 60, 48, 38) }}
+              >
                 {recipientName}
               </p>
-              <p className="lc-cert-course" style={{ fontSize: fitTextSize(courseTitle, 30, 26, 22) }}>
+              <p
+                className="lc-cert-course"
+                style={{ fontSize: fitTextSize(courseTitle, 30, 26, 22) }}
+              >
                 for completing the course <strong>{courseTitle}</strong>
               </p>
             </main>

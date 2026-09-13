@@ -31,10 +31,7 @@ export default function LessonAIStatusPanel({ courseId, lesson, onEdit }) {
       const ai = query.state.data?.ai_processing_status;
       const quiz = query.state.data?.quiz_generation_status;
       const active =
-        ai === "pending" ||
-        ai === "processing" ||
-        quiz === "pending" ||
-        quiz === "processing";
+        ai === "pending" || ai === "processing" || quiz === "pending" || quiz === "processing";
       return active ? 3000 : false;
     },
   });
@@ -48,8 +45,7 @@ export default function LessonAIStatusPanel({ courseId, lesson, onEdit }) {
         ? "ready"
         : "pending"
       : lesson?.transcript_status,
-    generated_question_count:
-      status?.question_count ?? lesson?.generated_question_count ?? 0,
+    generated_question_count: status?.question_count ?? lesson?.generated_question_count ?? 0,
     published_question_count:
       status?.published_question_count ?? lesson?.published_question_count ?? 0,
     approval_status: status?.approval_status ?? lesson?.approval_status,
@@ -75,7 +71,7 @@ export default function LessonAIStatusPanel({ courseId, lesson, onEdit }) {
           timeoutMessage:
             "Request timed out. Quiz generation can take up to two minutes. Try again or refresh status.",
         }),
-        { id: "gen-quiz-err" }
+        { id: "gen-quiz-err" },
       );
     },
   });
@@ -95,7 +91,7 @@ export default function LessonAIStatusPanel({ courseId, lesson, onEdit }) {
         }),
         {
           id: "regen-quiz-err",
-        }
+        },
       );
     },
   });
@@ -122,7 +118,7 @@ export default function LessonAIStatusPanel({ courseId, lesson, onEdit }) {
         {
           timeoutMessage:
             "Request timed out. PDF notes can take a few minutes for long videos. Try again or refresh the lesson status.",
-        }
+        },
       );
       toast.error(message, { id: "gen-notes-err" });
     },
@@ -132,7 +128,8 @@ export default function LessonAIStatusPanel({ courseId, lesson, onEdit }) {
     return (
       <p className="text-xs text-muted">
         AI quiz pipeline applies to YouTube lessons. Students open{" "}
-        <span className="font-medium capitalize">{lesson?.source_type}</span> resources from the lesson page.
+        <span className="font-medium capitalize">{lesson?.source_type}</span> resources from the
+        lesson page.
       </p>
     );
   }
@@ -140,11 +137,10 @@ export default function LessonAIStatusPanel({ courseId, lesson, onEdit }) {
   const canApprove =
     merged.quiz_generation_status === "done" && (merged.published_question_count ?? 0) === 0;
   const isProcessing =
-    merged.ai_processing_status === "processing" ||
-    merged.quiz_generation_status === "processing";
-  const isGenerating =
-    generateMutation.isPending || regenerateMutation.isPending || isProcessing;
-  const showRegenerateQuiz = !showGenerateQuiz && (!isManualMode || merged.quiz_generation_status === "done");
+    merged.ai_processing_status === "processing" || merged.quiz_generation_status === "processing";
+  const isGenerating = generateMutation.isPending || regenerateMutation.isPending || isProcessing;
+  const showRegenerateQuiz =
+    !showGenerateQuiz && (!isManualMode || merged.quiz_generation_status === "done");
   const isQueueFailure =
     !isManualMode &&
     String(merged.generation_error || "")
@@ -169,7 +165,8 @@ export default function LessonAIStatusPanel({ courseId, lesson, onEdit }) {
           <p>
             <span className="text-muted">Questions:</span>{" "}
             <span className="font-medium">
-              {merged.generated_question_count} generated / {merged.published_question_count} published
+              {merged.generated_question_count} generated / {merged.published_question_count}{" "}
+              published
             </span>
           </p>
         </div>
@@ -185,9 +182,7 @@ export default function LessonAIStatusPanel({ courseId, lesson, onEdit }) {
         {isQueueFailure ? (
           <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
             <p className="font-medium">Lesson saved, but AI generation could not be queued.</p>
-            <p className="mt-1">
-              Start Redis and Celery, then click Regenerate Quiz.
-            </p>
+            <p className="mt-1">Start Redis and Celery, then click Regenerate Quiz.</p>
           </div>
         ) : null}
         {merged.generation_error && !isQueueFailure ? (
@@ -199,7 +194,9 @@ export default function LessonAIStatusPanel({ courseId, lesson, onEdit }) {
         {lesson?.has_pdf_notes ? (
           <p className="text-xs text-emerald-700">
             PDF study notes ready
-            {lesson?.notes_generated_at ? ` (generated ${new Date(lesson.notes_generated_at).toLocaleString()})` : ""}
+            {lesson?.notes_generated_at
+              ? ` (generated ${new Date(lesson.notes_generated_at).toLocaleString()})`
+              : ""}
           </p>
         ) : null}
         {showGenerateQuiz && !isProcessing ? (

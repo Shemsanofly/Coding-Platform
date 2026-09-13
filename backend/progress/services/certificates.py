@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import logging
 import base64
+import logging
 import re
 import secrets
 from dataclasses import dataclass
@@ -13,17 +13,14 @@ from django.core.files.base import ContentFile
 from django.db import IntegrityError, transaction
 from django.db.models import Count, Max, Q
 from django.utils import timezone
-from reportlab.graphics import renderPDF
-from reportlab.graphics import renderSVG
+from reportlab.graphics import renderPDF, renderSVG
 from reportlab.graphics.barcode import qr
 from reportlab.graphics.shapes import Drawing
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, landscape
-from reportlab.lib.units import inch
 from reportlab.lib.utils import ImageReader
 from reportlab.pdfgen import canvas
 
-from accounts.serializers import build_full_name
 from courses.models import Course, Lesson
 from progress.models import Certificate, Enrollment, LessonProgress
 from quizzes.models import Quiz, QuizResult
@@ -83,7 +80,10 @@ def _instructor_name(course: Course) -> str:
 
 
 def _verification_url(verification_code: str) -> str:
-    base_url = getattr(settings, "CERTIFICATE_VERIFY_BASE_URL", "") or "http://localhost:5173/verify-certificate"
+    base_url = (
+        getattr(settings, "CERTIFICATE_VERIFY_BASE_URL", "")
+        or "http://localhost:5173/verify-certificate"
+    )
     return f"{base_url.rstrip('/')}/{verification_code}"
 
 
@@ -213,7 +213,9 @@ def check_certificate_eligibility(user, course: Course) -> CertificateEligibilit
     elif completed_lessons < total_lessons:
         reasons.append("Complete all required lessons.")
 
-    final_score, passing_score, final_passed, assessment_status = _final_assessment_score(user.id, course)
+    final_score, passing_score, final_passed, assessment_status = _final_assessment_score(
+        user.id, course
+    )
     if not final_passed:
         if assessment_status == "unavailable":
             reasons.append("Final assessment is not available yet.")
@@ -235,10 +237,14 @@ def check_certificate_eligibility(user, course: Course) -> CertificateEligibilit
     )
 
 
-def _fit_font_size(text: str, font: str, starting_size: int, max_width: float, minimum_size: int) -> int:
+def _fit_font_size(
+    text: str, font: str, starting_size: int, max_width: float, minimum_size: int
+) -> int:
     size = starting_size
     text = _clean_text(text)
-    while size > minimum_size and canvas.Canvas(BytesIO()).stringWidth(text, font, size) > max_width:
+    while (
+        size > minimum_size and canvas.Canvas(BytesIO()).stringWidth(text, font, size) > max_width
+    ):
         size -= 1
     return size
 
@@ -328,8 +334,14 @@ def _draw_geometric_background(c: canvas.Canvas, width: float, height: float) ->
 
     _draw_polygon(c, [(0, height), (220, height), (172, height - 92), (0, height - 62)], NAVY)
     _draw_polygon(c, [(0, height), (96, height), (62, height - 182), (0, height - 150)], OCEAN)
-    _draw_polygon(c, [(94, height), (360, height), (310, height - 72), (52, height - 72)], ocean_light)
-    _draw_polygon(c, [(280, height), (486, height), (520, height - 74), (342, height - 78)], colors.HexColor("#FF8A7E"))
+    _draw_polygon(
+        c, [(94, height), (360, height), (310, height - 72), (52, height - 72)], ocean_light
+    )
+    _draw_polygon(
+        c,
+        [(280, height), (486, height), (520, height - 74), (342, height - 78)],
+        colors.HexColor("#FF8A7E"),
+    )
     _draw_polygon(c, [(430, height), (690, height), (720, height - 88), (482, height - 72)], teal)
     _draw_polygon(c, [(width - 234, 0), (width, 0), (width, 118), (width - 155, 84)], OCEAN)
     _draw_polygon(c, [(width - 70, 0), (width, 0), (width, 212), (width - 54, 168)], NAVY)
@@ -363,7 +375,9 @@ def _draw_wave_pattern(c: canvas.Canvas, x: float, y: float, width: float, heigh
     c.restoreState()
 
 
-def _draw_image_preserved(c: canvas.Canvas, path: Path, x: float, y: float, max_width: float, max_height: float) -> bool:
+def _draw_image_preserved(
+    c: canvas.Canvas, path: Path, x: float, y: float, max_width: float, max_height: float
+) -> bool:
     try:
         image = ImageReader(str(path))
         original_width, original_height = image.getSize()
@@ -407,7 +421,14 @@ def _draw_corner_ornament(c: canvas.Canvas, x: float, y: float, sx: int, sy: int
     c.line(x, y, x + sx * 42, y)
     c.line(x, y, x, y + sy * 42)
     c.setLineWidth(0.6)
-    c.arc(x + sx * 10 - (20 if sx < 0 else 0), y + sy * 10 - (20 if sy < 0 else 0), x + sx * 52, y + sy * 52, 0, 90)
+    c.arc(
+        x + sx * 10 - (20 if sx < 0 else 0),
+        y + sy * 10 - (20 if sy < 0 else 0),
+        x + sx * 52,
+        y + sy * 52,
+        0,
+        90,
+    )
     c.restoreState()
 
 
@@ -441,8 +462,18 @@ def _draw_official_seal(
     c.circle(center_x, center_y, radius * 0.83, fill=0, stroke=1)
     c.setStrokeColor(PALE_GOLD)
     for offset in (-32 * scale, 32 * scale):
-        c.line(center_x + offset - 9 * scale, center_y - 5 * scale, center_x + offset + 9 * scale, center_y + 10 * scale)
-        c.line(center_x + offset - 9 * scale, center_y + 10 * scale, center_x + offset + 9 * scale, center_y - 5 * scale)
+        c.line(
+            center_x + offset - 9 * scale,
+            center_y - 5 * scale,
+            center_x + offset + 9 * scale,
+            center_y + 10 * scale,
+        )
+        c.line(
+            center_x + offset - 9 * scale,
+            center_y + 10 * scale,
+            center_x + offset + 9 * scale,
+            center_y - 5 * scale,
+        )
     c.setFillColor(GOLD)
     c.setFont("Helvetica-Bold", 8 * scale)
     c.drawCentredString(center_x - 28 * scale, center_y + 26 * scale, "*")
@@ -459,7 +490,9 @@ def _draw_official_seal(
     c.restoreState()
 
 
-def _draw_signature(c: canvas.Canvas, x: float, y: float, width: float, certificate: Certificate) -> None:
+def _draw_signature(
+    c: canvas.Canvas, x: float, y: float, width: float, certificate: Certificate
+) -> None:
     line_y = y + 34
     c.saveState()
     c.setStrokeColor(INK)
@@ -485,12 +518,22 @@ def _draw_signature(c: canvas.Canvas, x: float, y: float, width: float, certific
     c.drawCentredString(x + width / 2, line_y - 35, certificate.ceo_title)
 
 
-def _draw_qr(c: canvas.Canvas, certificate: Certificate, x: float, y: float, qr_size: float = 112) -> None:
+def _draw_qr(
+    c: canvas.Canvas, certificate: Certificate, x: float, y: float, qr_size: float = 112
+) -> None:
     quiet = max(5, qr_size * 0.08)
     platform_name = _clean_text(certificate.platform_name, "LearnCode")
     c.setFillColor(colors.white)
     c.rect(x - quiet, y - quiet, qr_size + quiet * 2, qr_size + quiet * 2, fill=1, stroke=0)
-    renderPDF.draw(_qr_drawing(certificate.verification_url or _verification_url(certificate.verification_code), qr_size), c, x, y)
+    renderPDF.draw(
+        _qr_drawing(
+            certificate.verification_url or _verification_url(certificate.verification_code),
+            qr_size,
+        ),
+        c,
+        x,
+        y,
+    )
     c.setFillColor(NAVY)
     c.setFont("Helvetica-Bold", 6.2)
     c.drawCentredString(x + qr_size / 2, y - 13, f"Scan to verify at {platform_name}")
@@ -523,7 +566,14 @@ def _certificate_pdf_bytes(certificate: Certificate) -> bytes:
 
     _draw_logo(c, width / 2 - 18, panel_top - 55, 36, platform_name)
     _draw_centered(c, platform_name.upper(), panel_top - 72, "Helvetica-Bold", 14, INK)
-    _draw_centered(c, certificate.platform_website or _platform_website(), panel_top - 90, "Helvetica", 10.5, MUTED)
+    _draw_centered(
+        c,
+        certificate.platform_website or _platform_website(),
+        panel_top - 90,
+        "Helvetica",
+        10.5,
+        MUTED,
+    )
 
     c.setFillColor(MUTED)
     c.setFont("Helvetica-Bold", 7.5)
@@ -546,11 +596,15 @@ def _certificate_pdf_bytes(certificate: Certificate) -> bytes:
         6.8,
         OCEAN,
     )
-    _draw_centered(c, "WE PROUDLY PRESENT THIS CERTIFICATE TO", panel_top - 266, "Helvetica-Bold", 17, INK)
+    _draw_centered(
+        c, "WE PROUDLY PRESENT THIS CERTIFICATE TO", panel_top - 266, "Helvetica-Bold", 17, INK
+    )
     _draw_centered(c, "Awarded to", panel_top - 298, "Helvetica", 10, MUTED)
 
     name_size = _fit_font_size(certificate.student_name, "Times-BoldItalic", 42, width - 190, 26)
-    _draw_centered(c, certificate.student_name, panel_top - 352, "Times-BoldItalic", name_size, OCEAN)
+    _draw_centered(
+        c, certificate.student_name, panel_top - 352, "Times-BoldItalic", name_size, OCEAN
+    )
     course_size = _fit_font_size(
         f"for completing the course {certificate.course_title}",
         "Helvetica-Bold",
@@ -578,7 +632,9 @@ def _certificate_pdf_bytes(certificate: Certificate) -> bytes:
     c.line(panel_x + 58, bottom_y + 62, panel_x + 196, bottom_y + 62)
     c.setFillColor(INK)
     c.setFont("Helvetica-Bold", 15)
-    c.drawString(panel_x + 58, bottom_y + 39, _clean_text(certificate.instructor_name or "Course Instructor"))
+    c.drawString(
+        panel_x + 58, bottom_y + 39, _clean_text(certificate.instructor_name or "Course Instructor")
+    )
     c.setFillColor(MUTED)
     c.setFont("Helvetica", 10)
     c.drawString(panel_x + 58, bottom_y + 17, "COURSE SPEAKER")
@@ -587,14 +643,22 @@ def _certificate_pdf_bytes(certificate: Certificate) -> bytes:
 
     c.setFillColor(INK)
     c.setFont("Helvetica-Bold", 13)
-    c.drawRightString(panel_x + panel_w - 106, bottom_y + 52, f"ISSUING DATE - {issue_date.upper()}")
+    c.drawRightString(
+        panel_x + panel_w - 106, bottom_y + 52, f"ISSUING DATE - {issue_date.upper()}"
+    )
     c.setFont("Helvetica", 11)
-    c.drawRightString(panel_x + panel_w - 106, bottom_y + 30, f"CERTIFICATE ID - {certificate.certificate_number}")
+    c.drawRightString(
+        panel_x + panel_w - 106, bottom_y + 30, f"CERTIFICATE ID - {certificate.certificate_number}"
+    )
     c.setFont("Helvetica", 8.2)
     c.setFillColor(MUTED)
-    c.drawRightString(panel_x + panel_w - 106, bottom_y + 12, f"Course completed - {completion_date}")
+    c.drawRightString(
+        panel_x + panel_w - 106, bottom_y + 12, f"Course completed - {completion_date}"
+    )
     if certificate.course_duration:
-        c.drawRightString(panel_x + panel_w - 106, bottom_y - 2, f"Duration - {certificate.course_duration}")
+        c.drawRightString(
+            panel_x + panel_w - 106, bottom_y - 2, f"Duration - {certificate.course_duration}"
+        )
 
     c.setFillColor(OCEAN)
     c.setFont("Helvetica-Bold", 6.5)
@@ -625,7 +689,9 @@ def certificate_download_filename(certificate: Certificate) -> str:
     return f"Certificate_{student}_{course}_{number}.pdf"
 
 
-def generate_or_get_certificate(user, course_id: int) -> tuple[Certificate, bool, CertificateEligibility]:
+def generate_or_get_certificate(
+    user, course_id: int
+) -> tuple[Certificate, bool, CertificateEligibility]:
     with transaction.atomic():
         course = Course.objects.select_related("created_by").filter(pk=course_id).first()
         if course is None:
@@ -655,7 +721,10 @@ def generate_or_get_certificate(user, course_id: int) -> tuple[Certificate, bool
                 existing.save(update_fields=updates)
             return existing, False, eligibility
         if not eligibility.eligible:
-            raise ValueError("; ".join(eligibility.reasons) or "Certificate eligibility requirements are not met.")
+            raise ValueError(
+                "; ".join(eligibility.reasons)
+                or "Certificate eligibility requirements are not met."
+            )
 
         now = timezone.now()
         if enrollment.status != Enrollment.Status.COMPLETED or enrollment.completed_at is None:
@@ -708,7 +777,11 @@ def maybe_generate_certificate_for_course(user, course_id: int) -> Certificate |
         certificate, _, _ = generate_or_get_certificate(user, course_id)
         return certificate
     except Exception:
-        logger.exception("Automatic certificate generation failed for user_id=%s course_id=%s", user.pk, course_id)
+        logger.exception(
+            "Automatic certificate generation failed for user_id=%s course_id=%s",
+            user.pk,
+            course_id,
+        )
         return None
 
 
@@ -727,6 +800,10 @@ def certificate_file_path(certificate: Certificate) -> Path | None:
     try:
         path.relative_to(media_root)
     except ValueError:
-        logger.warning("Blocked certificate file outside MEDIA_ROOT certificate_id=%s path=%s", certificate.pk, path)
+        logger.warning(
+            "Blocked certificate file outside MEDIA_ROOT certificate_id=%s path=%s",
+            certificate.pk,
+            path,
+        )
         return None
     return path

@@ -73,7 +73,10 @@ const replacements = [
   ["border-slate-700/60", "border-ocean-600/20"],
   ["border-slate-500", "border-line"],
   ["border-slate-200/80 bg-slate-50", "border-line bg-cream"],
-  ["shadow-lg dark:border-white/20 dark:bg-white/10 dark:shadow-xl dark:backdrop-blur-xl", "shadow-panel dark:border-line/30 dark:bg-ocean-950/50 dark:shadow-none"],
+  [
+    "shadow-lg dark:border-white/20 dark:bg-white/10 dark:shadow-xl dark:backdrop-blur-xl",
+    "shadow-panel dark:border-line/30 dark:bg-ocean-950/50 dark:shadow-none",
+  ],
   ["dark:text-indigo-100", "dark:text-reef"],
   ["dark:text-indigo-300", "dark:text-reef"],
   ["dark:text-indigo-100/70", "dark:text-reef/70"],
@@ -123,7 +126,11 @@ function walk(dir, files = []) {
 }
 
 for (const file of walk(root)) {
-  if (file.includes("StudentLayout") || file.includes("AdminLayout") || file.includes("Login.jsx")) {
+  if (
+    file.includes("StudentLayout") ||
+    file.includes("AdminLayout") ||
+    file.includes("Login.jsx")
+  ) {
     continue;
   }
   let content = fs.readFileSync(file, "utf8");

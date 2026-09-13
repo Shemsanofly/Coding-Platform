@@ -199,7 +199,9 @@ def _pick_fallback(level: str, *, exclude_titles: set[str] | None = None) -> Cha
     if level == "beginner":
         weighted = [item for item in pool if item["difficulty"] == "beginner"] or pool
     elif level == "intermediate":
-        weighted = [item for item in pool if item["difficulty"] in {"beginner", "intermediate"}] or pool
+        weighted = [
+            item for item in pool if item["difficulty"] in {"beginner", "intermediate"}
+        ] or pool
     else:
         weighted = pool
     return dict(random.choice(weighted or FALLBACK_CHALLENGES))

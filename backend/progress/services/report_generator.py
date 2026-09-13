@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from io import BytesIO
-from typing import Any
 
 from django.contrib.auth import get_user_model
 from django.db.models import Avg, Count, Q
@@ -79,7 +78,9 @@ def _draw_pdf_footer(canvas, doc) -> None:
     canvas.setFont("Helvetica", 8)
     canvas.setFillColor(colors.HexColor("#64748b"))
     canvas.drawString(doc.leftMargin, 0.45 * inch, FOOTER_TEXT)
-    canvas.drawRightString(doc.pagesize[0] - doc.rightMargin, 0.45 * inch, f"Page {canvas.getPageNumber()}")
+    canvas.drawRightString(
+        doc.pagesize[0] - doc.rightMargin, 0.45 * inch, f"Page {canvas.getPageNumber()}"
+    )
     canvas.setStrokeColor(colors.HexColor("#cbd5e1"))
     canvas.line(doc.leftMargin, 0.62 * inch, doc.pagesize[0] - doc.rightMargin, 0.62 * inch)
     canvas.restoreState()
@@ -197,7 +198,9 @@ def _pdf_response(
     return buffer.getvalue()
 
 
-def build_admin_summary_report(admin_user, *, from_date: str | None = None, to_date: str | None = None) -> bytes:
+def build_admin_summary_report(
+    admin_user, *, from_date: str | None = None, to_date: str | None = None
+) -> bytes:
     start = _parse_date(from_date)
     end = _parse_date(to_date)
     course_ids = _admin_course_ids(admin_user)
@@ -206,10 +209,16 @@ def build_admin_summary_report(admin_user, *, from_date: str | None = None, to_d
     total_students = User.objects.filter(role=User.Role.STUDENT).count()
     total_courses = len(course_ids)
     total_lessons = len(lesson_ids)
-    total_enrollments = Enrollment.objects.filter(course_id__in=course_ids).count() if course_ids else 0
+    total_enrollments = (
+        Enrollment.objects.filter(course_id__in=course_ids).count() if course_ids else 0
+    )
 
     quiz_filter = _date_range_filter(start, end)
-    quiz_results = QuizResult.objects.filter(quiz__lesson_id__in=lesson_ids).filter(quiz_filter) if lesson_ids else QuizResult.objects.none()
+    quiz_results = (
+        QuizResult.objects.filter(quiz__lesson_id__in=lesson_ids).filter(quiz_filter)
+        if lesson_ids
+        else QuizResult.objects.none()
+    )
     total_quizzes_taken = quiz_results.count()
     avg_score = quiz_results.aggregate(value=Avg("score"))["value"]
 
@@ -235,7 +244,10 @@ def build_admin_summary_report(admin_user, *, from_date: str | None = None, to_d
                 ("Total lessons", total_lessons),
                 ("Total enrollments", total_enrollments),
                 ("Quizzes taken", total_quizzes_taken),
-                ("Average quiz score", round(float(avg_score), 1) if avg_score is not None else "—"),
+                (
+                    "Average quiz score",
+                    round(float(avg_score), 1) if avg_score is not None else "—",
+                ),
                 ("Total weak topics tracked", total_weak_topics),
                 ("Active recommendations", active_recommendations),
             ],
@@ -288,10 +300,18 @@ def build_admin_summary_report(admin_user, *, from_date: str | None = None, to_d
     )
 
 
-def build_admin_courses_report(admin_user, *, course_id: int | None = None, from_date: str | None = None, to_date: str | None = None) -> bytes:
+def build_admin_courses_report(
+    admin_user,
+    *,
+    course_id: int | None = None,
+    from_date: str | None = None,
+    to_date: str | None = None,
+) -> bytes:
     start = _parse_date(from_date)
     end = _parse_date(to_date)
-    courses = Course.objects.filter(created_by=admin_user).annotate(lesson_count=Count("lessons", distinct=True))
+    courses = Course.objects.filter(created_by=admin_user).annotate(
+        lesson_count=Count("lessons", distinct=True)
+    )
     if course_id:
         courses = courses.filter(pk=course_id)
         if not courses.exists():
@@ -306,9 +326,17 @@ def build_admin_courses_report(admin_user, *, course_id: int | None = None, from
         lesson_ids = list(course.lessons.values_list("id", flat=True))
         enrolled = Enrollment.objects.filter(course_id=course.id).count()
         quiz_filter = _date_range_filter(start, end)
-        results = QuizResult.objects.filter(quiz__lesson_id__in=lesson_ids).filter(quiz_filter) if lesson_ids else QuizResult.objects.none()
+        results = (
+            QuizResult.objects.filter(quiz__lesson_id__in=lesson_ids).filter(quiz_filter)
+            if lesson_ids
+            else QuizResult.objects.none()
+        )
         avg_score = results.aggregate(value=Avg("score"))["value"]
-        passed_lessons = sum(1 for lid in lesson_ids if QuizResult.objects.filter(quiz__lesson_id=lid, score__gte=60).exists())
+        passed_lessons = sum(
+            1
+            for lid in lesson_ids
+            if QuizResult.objects.filter(quiz__lesson_id=lid, score__gte=60).exists()
+        )
         completion_pct = round((passed_lessons / len(lesson_ids)) * 100, 1) if lesson_ids else 0
         common_weak = (
             WeakTopic.objects.filter(user__enrollments__course_id=course.id)
@@ -333,7 +361,15 @@ def build_admin_courses_report(admin_user, *, course_id: int | None = None, from
     tables = [
         {
             "title": "Course Details",
-            "headers": ["Course", "Level", "Lessons", "Enrolled", "Avg Score", "Completion", "Common Weak Topics"],
+            "headers": [
+                "Course",
+                "Level",
+                "Lessons",
+                "Enrolled",
+                "Avg Score",
+                "Completion",
+                "Common Weak Topics",
+            ],
             "rows": rows,
         }
     ]
@@ -347,7 +383,13 @@ def build_admin_courses_report(admin_user, *, course_id: int | None = None, from
     )
 
 
-def build_admin_students_report(admin_user, *, student_id: int | None = None, from_date: str | None = None, to_date: str | None = None) -> bytes:
+def build_admin_students_report(
+    admin_user,
+    *,
+    student_id: int | None = None,
+    from_date: str | None = None,
+    to_date: str | None = None,
+) -> bytes:
     start = _parse_date(from_date)
     end = _parse_date(to_date)
     course_ids = _admin_course_ids(admin_user)
@@ -397,7 +439,17 @@ def build_admin_students_report(admin_user, *, student_id: int | None = None, fr
     tables = [
         {
             "title": "Student Metrics",
-            "headers": ["Email", "Level", "Enrolled", "Completed", "Attempts", "Avg Score", "Passed", "Failed", "Weak Topics"],
+            "headers": [
+                "Email",
+                "Level",
+                "Enrolled",
+                "Completed",
+                "Attempts",
+                "Avg Score",
+                "Passed",
+                "Failed",
+                "Weak Topics",
+            ],
             "rows": rows,
         }
     ]
@@ -427,13 +479,17 @@ def _build_single_student_admin_report(
         .values_list("title", flat=True)
     )
     completed = LessonProgress.objects.filter(user=student, completed_at__isnull=False).count()
-    results = QuizResult.objects.filter(user=student).filter(quiz_filter).select_related("quiz__lesson")
+    results = (
+        QuizResult.objects.filter(user=student).filter(quiz_filter).select_related("quiz__lesson")
+    )
     attempts = results.count()
     avg_score = results.aggregate(value=Avg("score"))["value"]
     passed = results.filter(score__gte=60).values("quiz_id").distinct().count()
     failed = max(0, attempts - passed)
     weak_topics = list(
-        WeakTopic.objects.filter(user=student).order_by("-last_updated").values_list("topic_tag", flat=True)[:10]
+        WeakTopic.objects.filter(user=student)
+        .order_by("-last_updated")
+        .values_list("topic_tag", flat=True)[:10]
     )
     recs = list(
         Recommendation.objects.filter(user=student, status="active")
@@ -481,7 +537,9 @@ def _build_single_student_admin_report(
     )
 
 
-def build_admin_weaknesses_report(admin_user, *, from_date: str | None = None, to_date: str | None = None) -> bytes:
+def build_admin_weaknesses_report(
+    admin_user, *, from_date: str | None = None, to_date: str | None = None
+) -> bytes:
     _parse_date(from_date)
     _parse_date(to_date)
     course_ids = _admin_course_ids(admin_user)
@@ -588,7 +646,9 @@ def build_student_progress_report(user) -> bytes:
         raise ReportDataError("Student reports are available to students only.", status_code=403)
 
     enrolled_ids = list(Enrollment.objects.filter(user=user).values_list("course_id", flat=True))
-    lesson_ids = list(Lesson.objects.filter(course_id__in=enrolled_ids).values_list("id", flat=True))
+    lesson_ids = list(
+        Lesson.objects.filter(course_id__in=enrolled_ids).values_list("id", flat=True)
+    )
     if not enrolled_ids:
         raise ReportDataError("No enrollment data available for report.", status_code=404)
 
@@ -648,7 +708,9 @@ def build_student_progress_report(user) -> bytes:
     )
 
 
-def build_student_quiz_performance_report(user, *, from_date: str | None = None, to_date: str | None = None) -> bytes:
+def build_student_quiz_performance_report(
+    user, *, from_date: str | None = None, to_date: str | None = None
+) -> bytes:
     if user.role != User.Role.STUDENT:
         raise ReportDataError("Student reports are available to students only.", status_code=403)
 
@@ -664,7 +726,11 @@ def build_student_quiz_performance_report(user, *, from_date: str | None = None,
     if not results:
         raise ReportDataError("No quiz performance data available.", status_code=404)
 
-    avg_score = QuizResult.objects.filter(user=user).filter(quiz_filter).aggregate(value=Avg("score"))["value"]
+    avg_score = (
+        QuizResult.objects.filter(user=user)
+        .filter(quiz_filter)
+        .aggregate(value=Avg("score"))["value"]
+    )
     passed = results.filter(score__gte=60).count()
     sections = [
         (
@@ -712,7 +778,11 @@ def build_student_weaknesses_report(user) -> bytes:
 
     rows = []
     for topic in topics:
-        accuracy = round((topic.correct_count / topic.attempt_count) * 100, 1) if topic.attempt_count else 0
+        accuracy = (
+            round((topic.correct_count / topic.attempt_count) * 100, 1)
+            if topic.attempt_count
+            else 0
+        )
         rows.append(
             [
                 topic.topic_tag,
@@ -773,7 +843,11 @@ def build_student_learning_path_report(user) -> bytes:
         for step in learning_path[:20]
     ]
     weak_rows = [
-        [wt.get("topic_tag", "—"), wt.get("weakness_level", "—"), str(wt.get("accuracy_percent", "—"))]
+        [
+            wt.get("topic_tag", "—"),
+            wt.get("weakness_level", "—"),
+            str(wt.get("accuracy_percent", "—")),
+        ]
         for wt in path.get("weak_topics", [])[:10]
     ]
     tables = [

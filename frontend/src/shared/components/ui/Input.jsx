@@ -12,7 +12,9 @@ export default function Input({ label, error, helperText, id, className = "", ..
         id={inputId}
         aria-invalid={error ? "true" : undefined}
         aria-describedby={error ? `${inputId}-error` : helperText ? `${inputId}-helper` : undefined}
-        className={`lc-input ${error ? "border-red-300 focus:border-red-400 focus:ring-red-200" : ""} ${className}`.trim()}
+        className={`lc-input ${
+          error ? "border-red-300 focus:border-red-400 focus:ring-red-200" : ""
+        } ${className}`.trim()}
         {...props}
       />
       {helperText && !error ? (

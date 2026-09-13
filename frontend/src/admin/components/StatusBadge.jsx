@@ -13,12 +13,16 @@ const STYLE_MAP = {
 };
 
 export default function StatusBadge({ status, label }) {
-  const normalized = String(status || "pending").toLowerCase().replace(/\s+/g, "_");
+  const normalized = String(status || "pending")
+    .toLowerCase()
+    .replace(/\s+/g, "_");
   const display = label || normalized.replace(/_/g, " ");
 
   return (
     <span
-      className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold capitalize ${STYLE_MAP[normalized] || STYLE_MAP.pending}`}
+      className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold capitalize ${
+        STYLE_MAP[normalized] || STYLE_MAP.pending
+      }`}
     >
       {display}
     </span>

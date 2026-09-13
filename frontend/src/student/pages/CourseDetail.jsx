@@ -8,30 +8,62 @@ import SectionHeader from "@/student/components/SectionHeader";
 import LoadingState from "@/student/components/LoadingState";
 import Button from "@/shared/components/ui/Button";
 import Card from "@/shared/components/ui/Card";
-import { CourseLevelBadge, CourseMetric, CourseStatusPill } from "@/shared/components/course/CourseBadges";
+import {
+  CourseLevelBadge,
+  CourseMetric,
+  CourseStatusPill,
+} from "@/shared/components/course/CourseBadges";
 import { formatSourceTypeLabel } from "@/shared/constants/lessonSources";
 import { triggerBlobDownload } from "@/shared/utils/downloadBlob";
 
 function lessonState(lesson) {
   if (lesson.quiz_passed) {
-    return { label: "Complete", className: "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-400/30 dark:bg-emerald-500/15 dark:text-emerald-100" };
+    return {
+      label: "Complete",
+      className:
+        "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-400/30 dark:bg-emerald-500/15 dark:text-emerald-100",
+    };
   }
   if (!lesson.unlocked) {
-    return { label: "Locked", className: "border-slate-200 bg-slate-50 text-slate-700 dark:border-white/10 dark:bg-white/10 dark:text-reef" };
+    return {
+      label: "Locked",
+      className:
+        "border-slate-200 bg-slate-50 text-slate-700 dark:border-white/10 dark:bg-white/10 dark:text-reef",
+    };
   }
   if (lesson.quiz_generation_status === "failed") {
-    return { label: "Quiz failed", className: "border-red-200 bg-red-50 text-red-700 dark:border-red-400/30 dark:bg-red-500/15 dark:text-red-100" };
+    return {
+      label: "Quiz failed",
+      className:
+        "border-red-200 bg-red-50 text-red-700 dark:border-red-400/30 dark:bg-red-500/15 dark:text-red-100",
+    };
   }
   if (lesson.lesson_officially_completed && (lesson.quiz_available || lesson.quiz_ready)) {
-    return { label: "Quiz required", className: "border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-400/30 dark:bg-blue-500/15 dark:text-blue-100" };
+    return {
+      label: "Quiz required",
+      className:
+        "border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-400/30 dark:bg-blue-500/15 dark:text-blue-100",
+    };
   }
   if (lesson.lesson_officially_completed) {
-    return { label: "Studied", className: "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-400/30 dark:bg-emerald-500/15 dark:text-emerald-100" };
+    return {
+      label: "Studied",
+      className:
+        "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-400/30 dark:bg-emerald-500/15 dark:text-emerald-100",
+    };
   }
   if (lesson.quiz_available || lesson.quiz_ready) {
-    return { label: "Study first", className: "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-400/30 dark:bg-amber-500/15 dark:text-amber-100" };
+    return {
+      label: "Study first",
+      className:
+        "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-400/30 dark:bg-amber-500/15 dark:text-amber-100",
+    };
   }
-  return { label: "Studying", className: "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-400/30 dark:bg-amber-500/15 dark:text-amber-100" };
+  return {
+    label: "Studying",
+    className:
+      "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-400/30 dark:bg-amber-500/15 dark:text-amber-100",
+  };
 }
 
 function LessonRow({ lesson, index, previousLesson, onStudy, onQuiz }) {
@@ -49,7 +81,9 @@ function LessonRow({ lesson, index, previousLesson, onStudy, onQuiz }) {
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="font-semibold text-ink dark:text-sand">{lesson.title}</h3>
-            <span className={`inline-flex min-h-6 items-center rounded-full border px-2.5 text-xs font-semibold ${state.className}`}>
+            <span
+              className={`inline-flex min-h-6 items-center rounded-full border px-2.5 text-xs font-semibold ${state.className}`}
+            >
               {state.label}
             </span>
           </div>
@@ -60,16 +94,28 @@ function LessonRow({ lesson, index, previousLesson, onStudy, onQuiz }) {
           </p>
           {!lesson.unlocked ? (
             <p className="mt-2 text-xs text-muted dark:text-reef/70">
-              {previousLesson ? `Pass "${previousLesson.title}" to unlock this lesson.` : "Pass the prior quiz to unlock this lesson."}
+              {previousLesson
+                ? `Pass "${previousLesson.title}" to unlock this lesson.`
+                : "Pass the prior quiz to unlock this lesson."}
             </p>
           ) : null}
         </div>
 
         <div className="flex flex-wrap gap-2 lg:justify-end">
-          <Button variant="ghost" size="sm" disabled={!lesson.unlocked} onClick={() => onStudy(lesson.id)}>
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={!lesson.unlocked}
+            onClick={() => onStudy(lesson.id)}
+          >
             Study
           </Button>
-          <Button variant="gradient" size="sm" disabled={!lesson.unlocked || !quizAvailable || !studyComplete} onClick={() => onQuiz(lesson.id)}>
+          <Button
+            variant="gradient"
+            size="sm"
+            disabled={!lesson.unlocked || !quizAvailable || !studyComplete}
+            onClick={() => onQuiz(lesson.id)}
+          >
             Quiz
           </Button>
         </div>
@@ -78,8 +124,20 @@ function LessonRow({ lesson, index, previousLesson, onStudy, onQuiz }) {
   );
 }
 
-function CertificatePanel({ course, courseProgress, certificate, eligible, reasons, onGenerate, onDownload, generating, downloading }) {
-  const issueDate = certificate?.issue_date ? new Date(certificate.issue_date).toLocaleDateString() : "";
+function CertificatePanel({
+  course,
+  courseProgress,
+  certificate,
+  eligible,
+  reasons,
+  onGenerate,
+  onDownload,
+  generating,
+  downloading,
+}) {
+  const issueDate = certificate?.issue_date
+    ? new Date(certificate.issue_date).toLocaleDateString()
+    : "";
 
   return (
     <Card variant="subtle" padding="md">
@@ -117,7 +175,12 @@ function CertificatePanel({ course, courseProgress, certificate, eligible, reaso
               >
                 View
               </Link>
-              <Button variant="gradient" size="sm" loading={downloading} onClick={() => onDownload(certificate.id)}>
+              <Button
+                variant="gradient"
+                size="sm"
+                loading={downloading}
+                onClick={() => onDownload(certificate.id)}
+              >
                 Download
               </Button>
             </>
@@ -161,7 +224,9 @@ export default function CourseDetail() {
     },
     onError: (e) => {
       const detail = e?.response?.data?.detail;
-      toast.error(typeof detail === "string" ? detail : "Enrollment failed.", { id: "cd-enroll-err" });
+      toast.error(typeof detail === "string" ? detail : "Enrollment failed.", {
+        id: "cd-enroll-err",
+      });
     },
   });
 
@@ -183,7 +248,8 @@ export default function CourseDetail() {
   const downloadMutation = useMutation({
     mutationFn: (certificateId) => downloadCertificate(certificateId),
     onSuccess: (response) => triggerBlobDownload(response, "certificate.pdf"),
-    onError: () => toast.error("Could not download certificate.", { id: "certificate-download-error" }),
+    onError: () =>
+      toast.error("Could not download certificate.", { id: "certificate-download-error" }),
   });
 
   const status = error?.response?.status;
@@ -217,7 +283,11 @@ export default function CourseDetail() {
             Join this course to access lessons, quizzes, and your study plan.
           </p>
           <div className="mt-4 flex flex-wrap gap-3">
-            <Button variant="gradient" loading={enrollMutation.isPending} onClick={() => enrollMutation.mutate()}>
+            <Button
+              variant="gradient"
+              loading={enrollMutation.isPending}
+              onClick={() => enrollMutation.mutate()}
+            >
               Enroll now
             </Button>
             <Link to="/catalog" className="lc-btn-ghost">
@@ -242,7 +312,8 @@ export default function CourseDetail() {
 
   const lessons = Array.isArray(course.lessons) ? course.lessons : [];
   const completedCount =
-    Number(course.completed_lessons) || lessons.filter((lesson) => lesson.lesson_officially_completed || lesson.quiz_passed).length;
+    Number(course.completed_lessons) ||
+    lessons.filter((lesson) => lesson.lesson_officially_completed || lesson.quiz_passed).length;
   const courseProgress =
     typeof course.progress_percent === "number"
       ? Math.round(course.progress_percent)
@@ -251,29 +322,42 @@ export default function CourseDetail() {
         : 0;
   const certificate = generateMutation.data ?? course.certificate ?? null;
   const certificateEligible = Boolean(course.certificate_eligible || certificate);
-  const certificateReasons = Array.isArray(course.certificate_reasons) ? course.certificate_reasons : [];
-  const readyQuizzes = lessons.filter((lesson) => lesson.quiz_available || lesson.quiz_ready).length;
+  const certificateReasons = Array.isArray(course.certificate_reasons)
+    ? course.certificate_reasons
+    : [];
+  const readyQuizzes = lessons.filter(
+    (lesson) => lesson.quiz_available || lesson.quiz_ready,
+  ).length;
 
   return (
     <div className="space-y-5 p-4 md:p-6">
       <section className="rounded-2xl border border-ocean-600/10 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-[#172433]/85">
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-end">
           <div className="min-w-0">
-            <Link to="/catalog" className="text-sm font-semibold text-ocean-700 hover:underline dark:text-reef">
+            <Link
+              to="/catalog"
+              className="text-sm font-semibold text-ocean-700 hover:underline dark:text-reef"
+            >
               Back to catalog
             </Link>
             <div className="mt-3 flex flex-wrap gap-2">
               <CourseLevelBadge level={course.level} />
               <CourseStatusPill status={course.status || "published"} />
             </div>
-            <h1 className="mt-3 text-2xl font-bold text-ink dark:text-sand md:text-3xl">{course.title}</h1>
+            <h1 className="mt-3 text-2xl font-bold text-ink dark:text-sand md:text-3xl">
+              {course.title}
+            </h1>
             <p className="mt-2 max-w-2xl text-sm text-muted dark:text-reef/75">
-              Work through the lessons in order, then use the quizzes to confirm mastery and unlock completion.
+              Work through the lessons in order, then use the quizzes to confirm mastery and unlock
+              completion.
             </p>
           </div>
 
           <div className="rounded-xl border border-line/70 bg-cream p-4 dark:border-white/10 dark:bg-ocean-950/35">
-            <ProgressBar value={courseProgress} label={`${completedCount} of ${lessons.length} lessons complete`} />
+            <ProgressBar
+              value={courseProgress}
+              label={`${completedCount} of ${lessons.length} lessons complete`}
+            />
           </div>
         </div>
 

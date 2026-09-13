@@ -12,14 +12,13 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.models import User
-from ai_engine.services.pdf_service import PDFGenerationError
-from courses.models import Course, Lesson
-from courses.services import lesson_unlocked
 from ai_engine.services.lesson_notes import (
-    TRANSCRIPT_UNAVAILABLE_MESSAGE,
     TranscriptUnavailableError,
     generate_lesson_pdf_notes,
 )
+from ai_engine.services.pdf_service import PDFGenerationError
+from courses.models import Course, Lesson
+from courses.services import lesson_unlocked
 from progress.models import Enrollment, LessonProgress
 
 
@@ -30,7 +29,11 @@ def _validate_pdf_bytes(header: bytes) -> bool:
 def _resolve_lesson_pdf(lesson: Lesson):
     """Return an open file handle or raise with a user-facing error message."""
     if not lesson.pdf_notes:
-        return None, "PDF study notes are not available for this lesson yet.", status.HTTP_404_NOT_FOUND
+        return (
+            None,
+            "PDF study notes are not available for this lesson yet.",
+            status.HTTP_404_NOT_FOUND,
+        )
 
     try:
         file_handle = lesson.pdf_notes.open("rb")
@@ -44,7 +47,11 @@ def _resolve_lesson_pdf(lesson: Lesson):
         file_handle.seek(0)
         if not _validate_pdf_bytes(header):
             file_handle.close()
-            return None, "PDF file appears to be corrupted or invalid.", status.HTTP_422_UNPROCESSABLE_ENTITY
+            return (
+                None,
+                "PDF file appears to be corrupted or invalid.",
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
     except OSError:
         file_handle.close()
         return None, "Could not read PDF file.", status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -52,7 +59,9 @@ def _resolve_lesson_pdf(lesson: Lesson):
     return file_handle, None, status.HTTP_200_OK
 
 
-def _record_notes_activity(user, lesson: Lesson, *, opened: bool = False, downloaded: bool = False) -> None:
+def _record_notes_activity(
+    user, lesson: Lesson, *, opened: bool = False, downloaded: bool = False
+) -> None:
     """Record PDF notes analytics on existing LessonProgress fields."""
     if user.role != User.Role.STUDENT:
         return
@@ -81,12 +90,20 @@ def _student_can_access_lesson(user, lesson: Lesson) -> tuple[bool, str | None, 
     if not Enrollment.objects.filter(user=user, course=course).exists():
         return False, "Enroll in this course to access lessons.", status.HTTP_403_FORBIDDEN
     if not lesson_unlocked(course, user, lesson):
-        return False, "Complete prior lessons and quizzes to unlock this lesson.", status.HTTP_403_FORBIDDEN
+        return (
+            False,
+            "Complete prior lessons and quizzes to unlock this lesson.",
+            status.HTTP_403_FORBIDDEN,
+        )
     return True, None, status.HTTP_200_OK
 
 
 def _admin_owns_lesson(user, lesson: Lesson) -> bool:
-    return user.is_authenticated and user.role == User.Role.ADMIN and lesson.course.created_by_id == user.pk
+    return (
+        user.is_authenticated
+        and user.role == User.Role.ADMIN
+        and lesson.course.created_by_id == user.pk
+    )
 
 
 class LessonGenerateNotesView(APIView):
@@ -127,7 +144,10 @@ class LessonGenerateNotesView(APIView):
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as exc:
             return Response(
-                {"detail": f"Could not generate study notes: {exc}", "error_code": "ai_service_failed"},
+                {
+                    "detail": f"Could not generate study notes: {exc}",
+                    "error_code": "ai_service_failed",
+                },
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 

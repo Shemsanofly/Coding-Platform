@@ -5,7 +5,14 @@ export const login = async ({ email, password }) => {
   return data;
 };
 
-export const register = async ({ email, password, confirm_password, role, admin_code, experience_level }) => {
+export const register = async ({
+  email,
+  password,
+  confirm_password,
+  role,
+  admin_code,
+  experience_level,
+}) => {
   const body = {
     email,
     password,

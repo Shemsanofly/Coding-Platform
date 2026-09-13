@@ -27,7 +27,9 @@ export default function Login() {
       if (parsed.form) {
         toast.error(parsed.form, { id: "login-error" });
       } else if (!error?.response) {
-        toast.error("Cannot reach the server. Ensure the backend is running.", { id: "login-error" });
+        toast.error("Cannot reach the server. Ensure the backend is running.", {
+          id: "login-error",
+        });
       }
     },
     onSuccess: (user) => {
@@ -62,7 +64,10 @@ export default function Login() {
   return (
     <div className="lc-auth-shell">
       <div className="lc-auth-card">
-        <Link to="/" className="relative z-[1] inline-flex items-center gap-3 text-xl font-bold text-ocean-800">
+        <Link
+          to="/"
+          className="relative z-[1] inline-flex items-center gap-3 text-xl font-bold text-ocean-800"
+        >
           <BrandMark />
           LearnCode
         </Link>
@@ -70,7 +75,9 @@ export default function Login() {
         <div className="relative z-[1] mt-6">
           <p className="lc-tag">Welcome back</p>
           <h1 className="mt-2 text-3xl font-bold text-ocean-950">Sign in</h1>
-          <p className="mt-2 text-sm leading-relaxed text-muted">Use your email and password to continue learning.</p>
+          <p className="mt-2 text-sm leading-relaxed text-muted">
+            Use your email and password to continue learning.
+          </p>
         </div>
 
         <form className="relative z-[1] mt-6 grid gap-4" onSubmit={handleSubmit} noValidate>
@@ -82,7 +89,8 @@ export default function Login() {
             value={email}
             onChange={(e) => {
               setEmail(e.target.value);
-              if (fieldErrors.email) setFieldErrors((current) => ({ ...current, email: undefined }));
+              if (fieldErrors.email)
+                setFieldErrors((current) => ({ ...current, email: undefined }));
             }}
             error={fieldErrors.email}
           />
@@ -95,7 +103,8 @@ export default function Login() {
             onToggleVisibility={() => setShowPassword((current) => !current)}
             onChange={(e) => {
               setPassword(e.target.value);
-              if (fieldErrors.password) setFieldErrors((current) => ({ ...current, password: undefined }));
+              if (fieldErrors.password)
+                setFieldErrors((current) => ({ ...current, password: undefined }));
             }}
             error={fieldErrors.password}
           />

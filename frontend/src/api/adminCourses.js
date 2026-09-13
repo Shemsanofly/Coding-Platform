@@ -56,7 +56,10 @@ export const createAdminLesson = async (courseId, payload) => {
 };
 
 export const updateAdminLesson = async (courseId, lessonId, payload) => {
-  const response = await client.patch(`/api/admin/courses/${courseId}/lessons/${lessonId}/`, payload);
+  const response = await client.patch(
+    `/api/admin/courses/${courseId}/lessons/${lessonId}/`,
+    payload,
+  );
   return response.data;
 };
 
@@ -66,13 +69,15 @@ export const deleteAdminLesson = async (courseId, lessonId) => {
 
 export const getAdminLessonProcessingStatus = async (courseId, lessonId) => {
   const response = await client.get(
-    `/api/admin/courses/${courseId}/lessons/${lessonId}/processing-status/`
+    `/api/admin/courses/${courseId}/lessons/${lessonId}/processing-status/`,
   );
   return response.data;
 };
 
 export const getAdminLessonQuizPreview = async (courseId, lessonId) => {
-  const response = await client.get(`/api/admin/courses/${courseId}/lessons/${lessonId}/quiz-preview/`);
+  const response = await client.get(
+    `/api/admin/courses/${courseId}/lessons/${lessonId}/quiz-preview/`,
+  );
   return response.data;
 };
 
@@ -84,7 +89,7 @@ export const generateAdminLessonQuiz = async (courseId, lessonId) => {
   const response = await client.post(
     `/api/admin/courses/${courseId}/lessons/${lessonId}/generate-quiz/`,
     {},
-    { timeout: AI_PIPELINE_TIMEOUT_MS }
+    { timeout: AI_PIPELINE_TIMEOUT_MS },
   );
   return response.data;
 };
@@ -93,13 +98,15 @@ export const regenerateAdminLessonQuiz = async (courseId, lessonId) => {
   const response = await client.post(
     `/api/admin/courses/${courseId}/lessons/${lessonId}/regenerate-quiz/`,
     {},
-    { timeout: AI_PIPELINE_TIMEOUT_MS }
+    { timeout: AI_PIPELINE_TIMEOUT_MS },
   );
   return response.data;
 };
 
 export const approveAdminLessonQuiz = async (courseId, lessonId) => {
-  const response = await client.post(`/api/admin/courses/${courseId}/lessons/${lessonId}/approve-quiz/`);
+  const response = await client.post(
+    `/api/admin/courses/${courseId}/lessons/${lessonId}/approve-quiz/`,
+  );
   return response.data;
 };
 
@@ -107,7 +114,7 @@ export const generateAdminLessonNotes = async (lessonId) => {
   const response = await client.post(
     `/api/lessons/${lessonId}/generate-notes/`,
     {},
-    { timeout: PDF_NOTES_TIMEOUT_MS }
+    { timeout: PDF_NOTES_TIMEOUT_MS },
   );
   return response.data;
 };

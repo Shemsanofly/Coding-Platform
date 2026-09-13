@@ -7,7 +7,7 @@ import os
 import secrets
 import sqlite3
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from urllib.parse import parse_qs, quote, urlparse
 
@@ -15,12 +15,12 @@ from flask import Flask, Response, g, jsonify, make_response, request, send_file
 from flask_cors import CORS
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 
-
 BASE_DIR = Path(__file__).resolve().parent
 DEFAULT_DB_PATH = BASE_DIR / "db.sqlite3"
 ACCESS_TOKEN_MAX_AGE = 15 * 60
 REFRESH_TOKEN_MAX_AGE = 7 * 24 * 60 * 60
 PASSWORD_ITERATIONS = 1000000
+POSTGRES_SCHEMES = {"postgres", "postgresql"}
 
 
 def load_dotenv(path=BASE_DIR / ".env"):
@@ -32,6 +32,44 @@ def load_dotenv(path=BASE_DIR / ".env"):
             continue
         key, value = line.split("=", 1)
         os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
+
+
+def database_engine(database_url):
+    if not database_url:
+        return "sqlite"
+    scheme = urlparse(database_url).scheme.lower()
+    if scheme in POSTGRES_SCHEMES:
+        return "postgres"
+    if scheme == "sqlite":
+        return "sqlite"
+    raise ValueError(f"Unsupported DATABASE_URL scheme: {scheme or '<empty>'}")
+
+
+def sqlite_database_url(path):
+    return "sqlite:///" + str(Path(path)).replace("\\", "/")
+
+
+def prepare_sql(sql, params=(), engine="sqlite"):
+    if engine != "postgres":
+        return sql, params
+
+    prepared = sql.replace("INSERT OR IGNORE INTO", "INSERT INTO")
+    prepared = prepared.replace("?", "%s")
+    prepared = prepared.replace(
+        "max(max_scroll_depth_pct, %s)",
+        "GREATEST(max_scroll_depth_pct, %s)",
+    )
+    prepared = prepared.replace(
+        "max(coalesce(video_watch_pct, 0), %s)",
+        "GREATEST(COALESCE(video_watch_pct, 0), %s)",
+    )
+    for column in ("is_active", "is_staff", "is_superuser", "is_published", "is_auto_generated"):
+        prepared = prepared.replace(f"{column}=1", f"{column}=TRUE")
+        prepared = prepared.replace(f"{column}=0", f"{column}=FALSE")
+    if "INSERT OR IGNORE INTO" in sql and "ON CONFLICT" not in prepared.upper():
+        prepared = prepared.rstrip()
+        prepared = f"{prepared} ON CONFLICT DO NOTHING"
+    return prepared, params
 
 
 def _reexec_from_local_venv():
@@ -49,7 +87,7 @@ _reexec_from_local_venv()
 
 
 def utcnow():
-    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    return datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
 
 def parse_json(value, fallback=None):
@@ -69,7 +107,9 @@ def rows_to_dicts(rows):
 
 def django_pbkdf2_hash(password, salt=None, iterations=PASSWORD_ITERATIONS):
     salt = salt or secrets.token_urlsafe(16)[:22]
-    digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt.encode("utf-8"), iterations)
+    digest = hashlib.pbkdf2_hmac(
+        "sha256", password.encode("utf-8"), salt.encode("utf-8"), iterations
+    )
     encoded = base64.b64encode(digest).decode("ascii").strip()
     return f"pbkdf2_sha256${iterations}${salt}${encoded}"
 
@@ -80,7 +120,9 @@ def check_password(password, encoded):
     if encoded.startswith("pbkdf2_sha256$"):
         try:
             _, iterations, salt, expected = encoded.split("$", 3)
-            candidate = django_pbkdf2_hash(password, salt=salt, iterations=int(iterations)).rsplit("$", 1)[1]
+            candidate = django_pbkdf2_hash(password, salt=salt, iterations=int(iterations)).rsplit(
+                "$", 1
+            )[1]
             return hmac.compare_digest(candidate, expected)
         except (TypeError, ValueError):
             return False
@@ -103,15 +145,27 @@ def make_paginated(items, page=1, page_size=20):
 
 def create_app(config=None):
     load_dotenv()
+    database_url = os.environ.get("DATABASE_URL", "").strip()
+    database_path = os.environ.get("DATABASE_PATH", str(DEFAULT_DB_PATH))
+    if not database_url:
+        database_url = sqlite_database_url(database_path)
+    engine = database_engine(database_url)
+
     app = Flask(__name__)
     app.config.update(
-        DATABASE_PATH=os.environ.get("DATABASE_PATH", str(DEFAULT_DB_PATH)),
+        DATABASE_ENGINE=engine,
+        DATABASE_PATH=database_path,
+        DATABASE_URL=database_url,
         SECRET_KEY=os.environ.get("SECRET_KEY", "flask-dev-secret-change-me"),
         REFRESH_COOKIE_NAME=os.environ.get("JWT_REFRESH_COOKIE_NAME", "ai_elearn_refresh"),
         TESTING=False,
     )
     if config:
         app.config.update(config)
+        app.config["DATABASE_URL"] = app.config.get("DATABASE_URL", "").strip()
+        if not app.config["DATABASE_URL"]:
+            app.config["DATABASE_URL"] = sqlite_database_url(app.config["DATABASE_PATH"])
+        app.config["DATABASE_ENGINE"] = database_engine(app.config["DATABASE_URL"])
 
     CORS(
         app,
@@ -127,9 +181,17 @@ def create_app(config=None):
 
     def db():
         if "db" not in g:
-            con = sqlite3.connect(app.config["DATABASE_PATH"])
-            con.row_factory = sqlite3.Row
-            con.execute("PRAGMA foreign_keys = ON")
+            if app.config["DATABASE_ENGINE"] == "postgres":
+                try:
+                    import psycopg
+                    from psycopg.rows import dict_row
+                except ImportError as exc:
+                    raise RuntimeError("Install psycopg to use PostgreSQL DATABASE_URL.") from exc
+                con = psycopg.connect(app.config["DATABASE_URL"], row_factory=dict_row)
+            else:
+                con = sqlite3.connect(app.config["DATABASE_PATH"])
+                con.row_factory = sqlite3.Row
+                con.execute("PRAGMA foreign_keys = ON")
             g.db = con
         return g.db
 
@@ -140,19 +202,40 @@ def create_app(config=None):
             con.close()
 
     def query_one(sql, params=()):
-        return db().execute(sql, params).fetchone()
+        prepared, prepared_params = prepare_sql(sql, params, app.config["DATABASE_ENGINE"])
+        return db().execute(prepared, prepared_params).fetchone()
 
     def query_all(sql, params=()):
-        return db().execute(sql, params).fetchall()
+        prepared, prepared_params = prepare_sql(sql, params, app.config["DATABASE_ENGINE"])
+        return db().execute(prepared, prepared_params).fetchall()
 
-    def execute(sql, params=()):
+    def execute(sql, params=(), returning_id=False):
         con = db()
-        cur = con.execute(sql, params)
+        prepared, prepared_params = prepare_sql(sql, params, app.config["DATABASE_ENGINE"])
+        if returning_id and app.config["DATABASE_ENGINE"] == "postgres":
+            prepared = f"{prepared.rstrip()} RETURNING id"
+        cur = con.execute(prepared, prepared_params)
+        lastrowid = getattr(cur, "lastrowid", None)
+        if returning_id and app.config["DATABASE_ENGINE"] == "postgres":
+            row = cur.fetchone()
+            lastrowid = row["id"] if row else None
         con.commit()
+        if app.config["DATABASE_ENGINE"] == "postgres":
+            return type("CursorResult", (), {"lastrowid": lastrowid, "rowcount": cur.rowcount})()
         return cur
 
     def table_exists(name):
-        row = query_one("SELECT name FROM sqlite_master WHERE type='table' AND name=?", (name,))
+        if app.config["DATABASE_ENGINE"] == "postgres":
+            row = query_one(
+                """
+                SELECT tablename AS name
+                FROM pg_catalog.pg_tables
+                WHERE schemaname='public' AND tablename=?
+                """,
+                (name,),
+            )
+        else:
+            row = query_one("SELECT name FROM sqlite_master WHERE type='table' AND name=?", (name,))
         return bool(row)
 
     def json_error(detail, status=400, errors=None):
@@ -164,7 +247,9 @@ def create_app(config=None):
     def user_payload(user):
         first = user["first_name"] or ""
         last = user["last_name"] or ""
-        full_name = f"{first} {last}".strip() or (user["email"].split("@")[0] if user["email"] else "User")
+        full_name = f"{first} {last}".strip() or (
+            user["email"].split("@")[0] if user["email"] else "User"
+        )
         image = user["profile_image"] or ""
         return {
             "id": user["id"],
@@ -231,7 +316,9 @@ def create_app(config=None):
         return decorator
 
     def lesson_count(course_id):
-        return query_one("SELECT COUNT(*) AS c FROM courses_lesson WHERE course_id=?", (course_id,))["c"]
+        return query_one(
+            "SELECT COUNT(*) AS c FROM courses_lesson WHERE course_id=?", (course_id,)
+        )["c"]
 
     def course_payload(course, include_admin=False):
         payload = {
@@ -243,20 +330,28 @@ def create_app(config=None):
             "created_at": course["created_at"],
         }
         if include_admin:
-            enrolled = query_one(
-                "SELECT COUNT(*) AS c FROM progress_enrollment WHERE course_id=?",
-                (course["id"],),
-            )["c"] if table_exists("progress_enrollment") else 0
-            quiz_done = query_one(
-                """
+            enrolled = (
+                query_one(
+                    "SELECT COUNT(*) AS c FROM progress_enrollment WHERE course_id=?",
+                    (course["id"],),
+                )["c"]
+                if table_exists("progress_enrollment")
+                else 0
+            )
+            quiz_done = (
+                query_one(
+                    """
                 SELECT COUNT(DISTINCT q.lesson_id) AS c
                 FROM quizzes_quiz q
                 JOIN quizzes_question qq ON qq.quiz_id=q.id
                 JOIN courses_lesson l ON l.id=q.lesson_id
                 WHERE l.course_id=? AND q.generation_status='done' AND qq.is_published=1
                 """,
-                (course["id"],),
-            )["c"] if table_exists("quizzes_quiz") and table_exists("quizzes_question") else 0
+                    (course["id"],),
+                )["c"]
+                if table_exists("quizzes_quiz") and table_exists("quizzes_question")
+                else 0
+            )
             payload.update(
                 {
                     "enrolled_students": enrolled,
@@ -310,7 +405,11 @@ def create_app(config=None):
                 "SELECT * FROM progress_lessonprogress WHERE user_id=? AND lesson_id=?",
                 (user_id, lesson["id"]),
             )
-        quiz = query_one("SELECT * FROM quizzes_quiz WHERE lesson_id=?", (lesson["id"],)) if table_exists("quizzes_quiz") else None
+        quiz = (
+            query_one("SELECT * FROM quizzes_quiz WHERE lesson_id=?", (lesson["id"],))
+            if table_exists("quizzes_quiz")
+            else None
+        )
         question_count = (
             query_one(
                 "SELECT COUNT(*) AS c FROM quizzes_question WHERE quiz_id=? AND is_published=1",
@@ -325,8 +424,16 @@ def create_app(config=None):
                 "SELECT MAX(score) AS score FROM quizzes_quizresult WHERE user_id=? AND quiz_id=?",
                 (user_id, quiz["id"]),
             )
-            quiz_passed = bool(row and row["score"] is not None and row["score"] >= quiz["passing_score"])
-        ai = query_one("SELECT * FROM ai_engine_lessonaiprocessing WHERE lesson_id=?", (lesson["id"],)) if table_exists("ai_engine_lessonaiprocessing") else None
+            quiz_passed = bool(
+                row and row["score"] is not None and row["score"] >= quiz["passing_score"]
+            )
+        ai = (
+            query_one(
+                "SELECT * FROM ai_engine_lessonaiprocessing WHERE lesson_id=?", (lesson["id"],)
+            )
+            if table_exists("ai_engine_lessonaiprocessing")
+            else None
+        )
         analysis = parse_json(ai["analysis_json"], {}) if ai else {}
         content = lesson["content"] or ""
         base = {
@@ -350,7 +457,9 @@ def create_app(config=None):
             "lesson_officially_completed": bool(progress and progress["completed_at"]),
             "unlocked": True,
             "has_pdf_notes": bool(lesson["pdf_notes"]),
-            "pdf_notes_url": f"/api/lessons/{lesson['id']}/view-notes/" if lesson["pdf_notes"] else "",
+            "pdf_notes_url": (
+                f"/api/lessons/{lesson['id']}/view-notes/" if lesson["pdf_notes"] else ""
+            ),
         }
         if detail:
             course = query_one("SELECT * FROM courses_course WHERE id=?", (lesson["course_id"],))
@@ -358,15 +467,26 @@ def create_app(config=None):
                 {
                     "course_id": lesson["course_id"],
                     "course_title": course["title"] if course else "",
-                    "summary": (analysis.get("summary") if isinstance(analysis, dict) else None) or content,
-                    "learning_objectives": (analysis.get("learning_objectives") if isinstance(analysis, dict) else None) or [],
-                    "key_concepts": (analysis.get("key_concepts") if isinstance(analysis, dict) else None) or [],
+                    "summary": (analysis.get("summary") if isinstance(analysis, dict) else None)
+                    or content,
+                    "learning_objectives": (
+                        analysis.get("learning_objectives") if isinstance(analysis, dict) else None
+                    )
+                    or [],
+                    "key_concepts": (
+                        analysis.get("key_concepts") if isinstance(analysis, dict) else None
+                    )
+                    or [],
                     "seconds_engaged": progress["seconds_engaged"] if progress else 0,
                     "max_scroll_depth_pct": progress["max_scroll_depth_pct"] if progress else 0,
                     "video_watch_pct": progress["video_watch_pct"] if progress else None,
                     "engagement_required_seconds": lesson_engagement_required_seconds(lesson),
                     "engagement_satisfied": lesson_study_complete(lesson, progress),
-                    "youtube_embed_url": youtube_embed_url(lesson["resource_url"]) if lesson["source_type"] == "youtube" else "",
+                    "youtube_embed_url": (
+                        youtube_embed_url(lesson["resource_url"])
+                        if lesson["source_type"] == "youtube"
+                        else ""
+                    ),
                     "notes_viewed_at": progress["notes_viewed_at"] if progress else None,
                     "notes_downloaded_at": progress["notes_downloaded_at"] if progress else None,
                 }
@@ -399,16 +519,18 @@ def create_app(config=None):
         if errors:
             return json_error("Validation failed.", 400, errors)
         if query_one("SELECT id FROM accounts_user WHERE lower(email)=lower(?)", (email,)):
-            return json_error("Validation failed.", 400, {"email": "A user with this email already exists."})
+            return json_error(
+                "Validation failed.", 400, {"email": "A user with this email already exists."}
+            )
         now = utcnow()
         execute(
             """
             INSERT INTO accounts_user
                 (password, last_login, is_superuser, first_name, last_name, is_staff,
                  is_active, date_joined, email, role, created_at, experience_level, profile_image)
-            VALUES (?, NULL, 0, '', '', 0, 1, ?, ?, 'student', ?, ?, '')
+            VALUES (?, NULL, ?, '', '', ?, ?, ?, ?, 'student', ?, ?, '')
             """,
-            (django_pbkdf2_hash(password), now, email, now, level),
+            (django_pbkdf2_hash(password), False, False, True, now, email, now, level),
         )
         return jsonify({"detail": "Account created successfully. Please sign in."}), 201
 
@@ -446,7 +568,9 @@ def create_app(config=None):
             response = make_response(jsonify({"detail": "Invalid or expired refresh token."}), 401)
             response.delete_cookie(app.config["REFRESH_COOKIE_NAME"], path="/", samesite="Lax")
             return response
-        user = query_one("SELECT * FROM accounts_user WHERE id=? AND is_active=1", (data.get("user_id"),))
+        user = query_one(
+            "SELECT * FROM accounts_user WHERE id=? AND is_active=1", (data.get("user_id"),)
+        )
         if not user:
             return json_error("Invalid or expired refresh token.", 401)
         return jsonify({"access": make_token(user["id"], "access")})
@@ -487,15 +611,24 @@ def create_app(config=None):
             params.append(level)
         sql += " ORDER BY created_at DESC"
         courses = []
-        enrolled = {
-            row["course_id"]
-            for row in query_all("SELECT course_id FROM progress_enrollment WHERE user_id=?", (g.current_user["id"],))
-        } if table_exists("progress_enrollment") else set()
+        enrolled = (
+            {
+                row["course_id"]
+                for row in query_all(
+                    "SELECT course_id FROM progress_enrollment WHERE user_id=?",
+                    (g.current_user["id"],),
+                )
+            }
+            if table_exists("progress_enrollment")
+            else set()
+        )
         for course in query_all(sql, params):
             item = course_payload(course)
             item["is_enrolled"] = course["id"] in enrolled
             courses.append(item)
-        return jsonify(make_paginated(courses, request.args.get("page"), request.args.get("page_size")))
+        return jsonify(
+            make_paginated(courses, request.args.get("page"), request.args.get("page_size"))
+        )
 
     @route_api("/enrollments/join/", methods=["POST"])
     @require_auth
@@ -518,7 +651,9 @@ def create_app(config=None):
     @require_auth
     def enrollments():
         if not table_exists("progress_enrollment"):
-            return jsonify(make_paginated([], request.args.get("page"), request.args.get("page_size")))
+            return jsonify(
+                make_paginated([], request.args.get("page"), request.args.get("page_size"))
+            )
         rows = query_all(
             """
             SELECT c.*, e.enrolled_at, e.status AS enrollment_status
@@ -532,9 +667,17 @@ def create_app(config=None):
         items = []
         for row in rows:
             item = course_payload(row)
-            item.update({"progress": 0, "enrollment_status": row["enrollment_status"], "enrolled_at": row["enrolled_at"]})
+            item.update(
+                {
+                    "progress": 0,
+                    "enrollment_status": row["enrollment_status"],
+                    "enrolled_at": row["enrolled_at"],
+                }
+            )
             items.append(item)
-        return jsonify(make_paginated(items, request.args.get("page"), request.args.get("page_size")))
+        return jsonify(
+            make_paginated(items, request.args.get("page"), request.args.get("page_size"))
+        )
 
     @route_api("/student/courses/<int:course_id>/", methods=["GET"])
     @require_auth
@@ -550,14 +693,32 @@ def create_app(config=None):
             return json_error("Enrollment required.", 403)
         lessons = [
             lesson_payload(row, g.current_user["id"])
-            for row in query_all("SELECT * FROM courses_lesson WHERE course_id=? ORDER BY \"order\", id", (course_id,))
+            for row in query_all(
+                'SELECT * FROM courses_lesson WHERE course_id=? ORDER BY "order", id', (course_id,)
+            )
         ]
         payload = course_payload(course)
         payload.update(
             {
                 "lessons": lessons,
-                "completed_lessons": sum(1 for lesson in lessons if lesson["quiz_passed"] or lesson["lesson_officially_completed"]),
-                "progress_percent": 0 if not lessons else round(sum(1 for lesson in lessons if lesson["quiz_passed"] or lesson["lesson_officially_completed"]) / len(lessons) * 100),
+                "completed_lessons": sum(
+                    1
+                    for lesson in lessons
+                    if lesson["quiz_passed"] or lesson["lesson_officially_completed"]
+                ),
+                "progress_percent": (
+                    0
+                    if not lessons
+                    else round(
+                        sum(
+                            1
+                            for lesson in lessons
+                            if lesson["quiz_passed"] or lesson["lesson_officially_completed"]
+                        )
+                        / len(lessons)
+                        * 100
+                    )
+                ),
                 "certificate_eligible": False,
                 "certificate_reasons": ["Complete every lesson and pass each quiz."],
                 "certificate": None,
@@ -620,7 +781,9 @@ def create_app(config=None):
             (g.current_user["id"], lesson_id),
         )
         if row and not row["completed_at"] and lesson_study_complete(lesson, row):
-            execute("UPDATE progress_lessonprogress SET completed_at=? WHERE id=?", (now, row["id"]))
+            execute(
+                "UPDATE progress_lessonprogress SET completed_at=? WHERE id=?", (now, row["id"])
+            )
             row = query_one(
                 "SELECT * FROM progress_lessonprogress WHERE user_id=? AND lesson_id=?",
                 (g.current_user["id"], lesson_id),
@@ -642,14 +805,35 @@ def create_app(config=None):
         enroll_response = enrollments().get_json()
         analytics = analytics_summary().get_json()
         path = learning_path().get_json()
-        return jsonify({"enrollments": enroll_response.get("results", []), "analytics": analytics, "learning_path": path})
+        return jsonify(
+            {
+                "enrollments": enroll_response.get("results", []),
+                "analytics": analytics,
+                "learning_path": path,
+            }
+        )
 
     @route_api("/analytics/summary/", methods=["GET"])
     @require_auth
     def analytics_summary():
-        total_enrolled = query_one("SELECT COUNT(*) AS c FROM progress_enrollment WHERE user_id=?", (g.current_user["id"],))["c"] if table_exists("progress_enrollment") else 0
-        quiz_rows = query_all("SELECT score FROM quizzes_quizresult WHERE user_id=?", (g.current_user["id"],)) if table_exists("quizzes_quizresult") else []
-        avg_score = round(sum(row["score"] for row in quiz_rows) / len(quiz_rows), 1) if quiz_rows else 0
+        total_enrolled = (
+            query_one(
+                "SELECT COUNT(*) AS c FROM progress_enrollment WHERE user_id=?",
+                (g.current_user["id"],),
+            )["c"]
+            if table_exists("progress_enrollment")
+            else 0
+        )
+        quiz_rows = (
+            query_all(
+                "SELECT score FROM quizzes_quizresult WHERE user_id=?", (g.current_user["id"],)
+            )
+            if table_exists("quizzes_quizresult")
+            else []
+        )
+        avg_score = (
+            round(sum(row["score"] for row in quiz_rows) / len(quiz_rows), 1) if quiz_rows else 0
+        )
         return jsonify(
             {
                 "learning_level": g.current_user["experience_level"],
@@ -665,8 +849,9 @@ def create_app(config=None):
     @route_api("/learning-path/", methods=["GET"])
     @require_auth
     def learning_path():
-        rows = query_all(
-            """
+        rows = (
+            query_all(
+                """
             SELECT l.*, c.title AS course_title
             FROM progress_enrollment e
             JOIN courses_lesson l ON l.course_id=e.course_id
@@ -674,8 +859,11 @@ def create_app(config=None):
             WHERE e.user_id=?
             ORDER BY c.created_at DESC, l."order", l.id
             """,
-            (g.current_user["id"],),
-        ) if table_exists("progress_enrollment") else []
+                (g.current_user["id"],),
+            )
+            if table_exists("progress_enrollment")
+            else []
+        )
         path = [
             {
                 "step": index + 1,
@@ -687,7 +875,15 @@ def create_app(config=None):
             }
             for index, row in enumerate(rows)
         ]
-        return jsonify({"learning_path": path, "progress": {"percent_complete": 0, "next_lesson_id": path[0]["lesson_id"] if path else None}})
+        return jsonify(
+            {
+                "learning_path": path,
+                "progress": {
+                    "percent_complete": 0,
+                    "next_lesson_id": path[0]["lesson_id"] if path else None,
+                },
+            }
+        )
 
     @route_api("/weaknesses/", methods=["GET"])
     @require_auth
@@ -707,12 +903,18 @@ def create_app(config=None):
     @route_api("/student/lessons/<int:lesson_id>/weakness-summary/", methods=["GET"])
     @require_auth
     def lesson_weakness_summary(lesson_id):
-        return jsonify({"lesson_id": lesson_id, "topics": [], "summary": "No weak topics recorded yet."})
+        return jsonify(
+            {"lesson_id": lesson_id, "topics": [], "summary": "No weak topics recorded yet."}
+        )
 
     @route_api("/lessons/<int:lesson_id>/quiz/", methods=["GET"])
     @require_auth
     def lesson_quiz(lesson_id):
-        quiz = query_one("SELECT * FROM quizzes_quiz WHERE lesson_id=?", (lesson_id,)) if table_exists("quizzes_quiz") else None
+        quiz = (
+            query_one("SELECT * FROM quizzes_quiz WHERE lesson_id=?", (lesson_id,))
+            if table_exists("quizzes_quiz")
+            else None
+        )
         if not quiz:
             return json_error("Quiz is not ready yet.", 404)
         lesson = query_one("SELECT * FROM courses_lesson WHERE id=?", (lesson_id,))
@@ -737,9 +939,19 @@ def create_app(config=None):
                 "difficulty": row["difficulty"],
                 "bloom_level": row["bloom_level"],
             }
-            for row in query_all("SELECT * FROM quizzes_question WHERE quiz_id=? AND is_published=1 ORDER BY \"order\", id", (quiz["id"],))
+            for row in query_all(
+                'SELECT * FROM quizzes_question WHERE quiz_id=? AND is_published=1 ORDER BY "order", id',
+                (quiz["id"],),
+            )
         ]
-        return jsonify({"id": quiz["id"], "lesson_id": lesson_id, "passing_score": quiz["passing_score"], "questions": questions})
+        return jsonify(
+            {
+                "id": quiz["id"],
+                "lesson_id": lesson_id,
+                "passing_score": quiz["passing_score"],
+                "questions": questions,
+            }
+        )
 
     @route_api("/quizzes/<int:quiz_id>/submit/", methods=["POST"])
     @require_auth
@@ -759,20 +971,38 @@ def create_app(config=None):
         if lesson and not lesson_study_complete(lesson, progress):
             return json_error("Study this lesson to 100% before submitting the quiz.", 403)
         answers = (request.get_json(silent=True) or {}).get("answers") or {}
-        questions = query_all("SELECT * FROM quizzes_question WHERE quiz_id=? AND is_published=1 ORDER BY \"order\", id", (quiz_id,))
+        questions = query_all(
+            'SELECT * FROM quizzes_question WHERE quiz_id=? AND is_published=1 ORDER BY "order", id',
+            (quiz_id,),
+        )
         correct = 0
         details = []
         for row in questions:
             answer = answers.get(str(row["id"]), answers.get(row["id"]))
             is_correct = int(answer) == row["correct_index"] if answer is not None else False
             correct += 1 if is_correct else 0
-            details.append({"question_id": row["id"], "correct": is_correct, "correct_index": row["correct_index"], "explanation": row["explanation"]})
+            details.append(
+                {
+                    "question_id": row["id"],
+                    "correct": is_correct,
+                    "correct_index": row["correct_index"],
+                    "explanation": row["explanation"],
+                }
+            )
         score = round((correct / len(questions)) * 100) if questions else 0
         execute(
             "INSERT INTO quizzes_quizresult (score, answers, taken_at, quiz_id, user_id) VALUES (?, ?, ?, ?, ?)",
             (score, json.dumps(answers), utcnow(), quiz_id, g.current_user["id"]),
         )
-        return jsonify({"score": score, "passed": score >= quiz["passing_score"], "correct_count": correct, "total_questions": len(questions), "results": details})
+        return jsonify(
+            {
+                "score": score,
+                "passed": score >= quiz["passing_score"],
+                "correct_count": correct,
+                "total_questions": len(questions),
+                "results": details,
+            }
+        )
 
     @route_api("/lessons/<int:lesson_id>/notes/", methods=["GET"])
     @require_auth
@@ -780,7 +1010,14 @@ def create_app(config=None):
         lesson = query_one("SELECT * FROM courses_lesson WHERE id=?", (lesson_id,))
         if not lesson or not lesson["pdf_notes"]:
             return json_error("PDF notes are not available.", 404)
-        return jsonify({"lesson_id": lesson_id, "pdf_notes_url": f"/api/lessons/{lesson_id}/view-notes/", "ai_summary": {}, "activity": {}})
+        return jsonify(
+            {
+                "lesson_id": lesson_id,
+                "pdf_notes_url": f"/api/lessons/{lesson_id}/view-notes/",
+                "ai_summary": {},
+                "activity": {},
+            }
+        )
 
     @route_api("/lessons/<int:lesson_id>/view-notes/", methods=["GET"])
     @require_auth
@@ -801,7 +1038,16 @@ def create_app(config=None):
     @route_api("/lessons/<int:lesson_id>/generate-notes/", methods=["POST"])
     @require_admin
     def generate_notes(lesson_id):
-        return jsonify({"lesson_id": lesson_id, "status": "pending", "detail": "PDF generation is not ported to Flask yet."}), 202
+        return (
+            jsonify(
+                {
+                    "lesson_id": lesson_id,
+                    "status": "pending",
+                    "detail": "PDF generation is not ported to Flask yet.",
+                }
+            ),
+            202,
+        )
 
     @route_api("/admin/courses/", methods=["GET"])
     @require_admin
@@ -820,6 +1066,7 @@ def create_app(config=None):
         cur = execute(
             "INSERT INTO courses_course (title, level, status, created_at, created_by_id) VALUES (?, ?, 'draft', ?, ?)",
             (title, level, utcnow(), g.current_user["id"]),
+            returning_id=True,
         )
         course = query_one("SELECT * FROM courses_course WHERE id=?", (cur.lastrowid,))
         return jsonify(course_payload(course, include_admin=True)), 201
@@ -831,7 +1078,13 @@ def create_app(config=None):
         if not course:
             return json_error("Course not found.", 404)
         payload = course_payload(course, include_admin=True)
-        payload["sources"] = rows_to_dicts(query_all("SELECT * FROM courses_coursesource WHERE course_id=?", (course_id,))) if table_exists("courses_coursesource") else []
+        payload["sources"] = (
+            rows_to_dicts(
+                query_all("SELECT * FROM courses_coursesource WHERE course_id=?", (course_id,))
+            )
+            if table_exists("courses_coursesource")
+            else []
+        )
         return jsonify(payload)
 
     @route_api("/admin/courses/<int:course_id>/", methods=["PATCH"])
@@ -844,8 +1097,16 @@ def create_app(config=None):
         title = payload.get("title", course["title"])
         level = payload.get("level", course["level"])
         status = payload.get("status", course["status"])
-        execute("UPDATE courses_course SET title=?, level=?, status=? WHERE id=?", (title, level, status, course_id))
-        return jsonify(course_payload(query_one("SELECT * FROM courses_course WHERE id=?", (course_id,)), include_admin=True))
+        execute(
+            "UPDATE courses_course SET title=?, level=?, status=? WHERE id=?",
+            (title, level, status, course_id),
+        )
+        return jsonify(
+            course_payload(
+                query_one("SELECT * FROM courses_course WHERE id=?", (course_id,)),
+                include_admin=True,
+            )
+        )
 
     @route_api("/admin/courses/<int:course_id>/", methods=["DELETE"])
     @require_admin
@@ -856,7 +1117,9 @@ def create_app(config=None):
     @route_api("/admin/courses/<int:course_id>/lessons/", methods=["GET"])
     @require_admin
     def admin_lessons(course_id):
-        rows = query_all("SELECT * FROM courses_lesson WHERE course_id=? ORDER BY \"order\", id", (course_id,))
+        rows = query_all(
+            'SELECT * FROM courses_lesson WHERE course_id=? ORDER BY "order", id', (course_id,)
+        )
         return jsonify([lesson_payload(row, detail=True) for row in rows])
 
     @route_api("/admin/courses/<int:course_id>/lessons/", methods=["POST"])
@@ -866,20 +1129,24 @@ def create_app(config=None):
         title = (payload.get("title") or "").strip()
         if not title:
             return json_error("Validation failed.", 400, {"title": "This field is required."})
-        next_order = query_one("SELECT COALESCE(MAX(\"order\"), -1) + 1 AS n FROM courses_lesson WHERE course_id=?", (course_id,))["n"]
+        next_order = query_one(
+            'SELECT COALESCE(MAX("order"), -1) + 1 AS n FROM courses_lesson WHERE course_id=?',
+            (course_id,),
+        )["n"]
         cur = execute(
             """
             INSERT INTO courses_lesson
                 (title, content, "order", topic_tag, is_auto_generated, created_at, course_id,
                  source_type, resource_url, difficulty, estimated_minutes, tags, learning_objective,
                  ai_summary, embedded_url, notes_generated_at, pdf_notes, transcript_text)
-            VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, NULL, '', NULL, '', '')
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, '', NULL, '', '')
             """,
             (
                 title,
                 payload.get("content") or "",
                 next_order,
                 payload.get("topic_tag") or "",
+                False,
                 utcnow(),
                 course_id,
                 payload.get("source_type") or "youtube",
@@ -889,13 +1156,24 @@ def create_app(config=None):
                 json.dumps(payload.get("tags") or payload.get("topic_tags") or []),
                 payload.get("learning_objective") or "",
             ),
+            returning_id=True,
         )
-        return jsonify(lesson_payload(query_one("SELECT * FROM courses_lesson WHERE id=?", (cur.lastrowid,)), detail=True)), 201
+        return (
+            jsonify(
+                lesson_payload(
+                    query_one("SELECT * FROM courses_lesson WHERE id=?", (cur.lastrowid,)),
+                    detail=True,
+                )
+            ),
+            201,
+        )
 
     @route_api("/admin/courses/<int:course_id>/lessons/<int:lesson_id>/", methods=["PATCH"])
     @require_admin
     def update_lesson(course_id, lesson_id):
-        lesson = query_one("SELECT * FROM courses_lesson WHERE id=? AND course_id=?", (lesson_id, course_id))
+        lesson = query_one(
+            "SELECT * FROM courses_lesson WHERE id=? AND course_id=?", (lesson_id, course_id)
+        )
         if not lesson:
             return json_error("Lesson not found.", 404)
         payload = request.get_json(silent=True) or {}
@@ -912,14 +1190,22 @@ def create_app(config=None):
                 payload.get("source_type", lesson["source_type"]),
                 payload.get("resource_url", payload.get("video_url", lesson["resource_url"])),
                 payload.get("difficulty", payload.get("difficulty_level", lesson["difficulty"])),
-                payload.get("estimated_minutes", payload.get("estimated_time", lesson["estimated_minutes"])),
-                json.dumps(payload.get("tags", payload.get("topic_tags", parse_json(lesson["tags"], [])))),
+                payload.get(
+                    "estimated_minutes", payload.get("estimated_time", lesson["estimated_minutes"])
+                ),
+                json.dumps(
+                    payload.get("tags", payload.get("topic_tags", parse_json(lesson["tags"], [])))
+                ),
                 payload.get("learning_objective", lesson["learning_objective"]),
                 payload.get("topic_tag", lesson["topic_tag"]),
                 lesson_id,
             ),
         )
-        return jsonify(lesson_payload(query_one("SELECT * FROM courses_lesson WHERE id=?", (lesson_id,)), detail=True))
+        return jsonify(
+            lesson_payload(
+                query_one("SELECT * FROM courses_lesson WHERE id=?", (lesson_id,)), detail=True
+            )
+        )
 
     @route_api("/admin/courses/<int:course_id>/lessons/<int:lesson_id>/", methods=["DELETE"])
     @require_admin
@@ -933,8 +1219,12 @@ def create_app(config=None):
         return jsonify(
             {
                 "total_courses": query_one("SELECT COUNT(*) AS c FROM courses_course")["c"],
-                "published_courses": query_one("SELECT COUNT(*) AS c FROM courses_course WHERE status='published'")["c"],
-                "total_students": query_one("SELECT COUNT(*) AS c FROM accounts_user WHERE role='student'")["c"],
+                "published_courses": query_one(
+                    "SELECT COUNT(*) AS c FROM courses_course WHERE status='published'"
+                )["c"],
+                "total_students": query_one(
+                    "SELECT COUNT(*) AS c FROM accounts_user WHERE role='student'"
+                )["c"],
                 "total_lessons": query_one("SELECT COUNT(*) AS c FROM courses_lesson")["c"],
             }
         )
@@ -953,6 +1243,7 @@ def create_app(config=None):
         cur = execute(
             "INSERT INTO courses_course (title, level, status, created_at, created_by_id) VALUES ('Python Fundamentals', 'beginner', 'published', ?, ?)",
             (utcnow(), g.current_user["id"]),
+            returning_id=True,
         )
         return jsonify({"created_count": 1, "created_ids": [cur.lastrowid]})
 
@@ -961,30 +1252,72 @@ def create_app(config=None):
     def pipeline_status(course_id):
         return jsonify({"course_id": course_id, "status": "ready", "lessons": []})
 
-    @route_api("/admin/courses/<int:course_id>/lessons/<int:lesson_id>/processing-status/", methods=["GET"])
+    @route_api(
+        "/admin/courses/<int:course_id>/lessons/<int:lesson_id>/processing-status/", methods=["GET"]
+    )
     @require_admin
     def lesson_processing_status(course_id, lesson_id):
-        return jsonify({"course_id": course_id, "lesson_id": lesson_id, "ai_processing_status": "pending", "quiz_generation_status": "pending"})
+        return jsonify(
+            {
+                "course_id": course_id,
+                "lesson_id": lesson_id,
+                "ai_processing_status": "pending",
+                "quiz_generation_status": "pending",
+            }
+        )
 
-    @route_api("/admin/courses/<int:course_id>/lessons/<int:lesson_id>/quiz-preview/", methods=["GET"])
+    @route_api(
+        "/admin/courses/<int:course_id>/lessons/<int:lesson_id>/quiz-preview/", methods=["GET"]
+    )
     @require_admin
     def quiz_preview(course_id, lesson_id):
-        quiz = query_one("SELECT * FROM quizzes_quiz WHERE lesson_id=?", (lesson_id,)) if table_exists("quizzes_quiz") else None
-        questions = rows_to_dicts(query_all("SELECT * FROM quizzes_question WHERE quiz_id=? ORDER BY \"order\", id", (quiz["id"],))) if quiz and table_exists("quizzes_question") else []
+        quiz = (
+            query_one("SELECT * FROM quizzes_quiz WHERE lesson_id=?", (lesson_id,))
+            if table_exists("quizzes_quiz")
+            else None
+        )
+        questions = (
+            rows_to_dicts(
+                query_all(
+                    'SELECT * FROM quizzes_question WHERE quiz_id=? ORDER BY "order", id',
+                    (quiz["id"],),
+                )
+            )
+            if quiz and table_exists("quizzes_question")
+            else []
+        )
         for question in questions:
             question["choices"] = parse_json(question.get("choices"), [])
         return jsonify({"lesson_id": lesson_id, "questions": questions})
 
-    @route_api("/admin/courses/<int:course_id>/lessons/<int:lesson_id>/generate-quiz/", methods=["POST"])
-    @route_api("/admin/courses/<int:course_id>/lessons/<int:lesson_id>/regenerate-quiz/", methods=["POST"])
+    @route_api(
+        "/admin/courses/<int:course_id>/lessons/<int:lesson_id>/generate-quiz/", methods=["POST"]
+    )
+    @route_api(
+        "/admin/courses/<int:course_id>/lessons/<int:lesson_id>/regenerate-quiz/", methods=["POST"]
+    )
     @require_admin
     def generate_quiz(course_id, lesson_id):
-        return jsonify({"course_id": course_id, "lesson_id": lesson_id, "status": "pending", "detail": "AI quiz generation is not ported to Flask yet."}), 202
+        return (
+            jsonify(
+                {
+                    "course_id": course_id,
+                    "lesson_id": lesson_id,
+                    "status": "pending",
+                    "detail": "AI quiz generation is not ported to Flask yet.",
+                }
+            ),
+            202,
+        )
 
-    @route_api("/admin/courses/<int:course_id>/lessons/<int:lesson_id>/approve-quiz/", methods=["POST"])
+    @route_api(
+        "/admin/courses/<int:course_id>/lessons/<int:lesson_id>/approve-quiz/", methods=["POST"]
+    )
     @require_admin
     def approve_quiz(course_id, lesson_id):
-        return jsonify({"course_id": course_id, "lesson_id": lesson_id, "approval_status": "approved"})
+        return jsonify(
+            {"course_id": course_id, "lesson_id": lesson_id, "approval_status": "approved"}
+        )
 
     @route_api("/admin/users/", methods=["GET"])
     @require_admin
@@ -999,9 +1332,19 @@ def create_app(config=None):
         items = []
         for row in rows:
             item = user_payload(row)
-            item.update({"is_active": bool(row["is_active"]), "enrolled_count": 0, "completed_lessons": 0, "average_score": 0, "weakness_count": 0})
+            item.update(
+                {
+                    "is_active": bool(row["is_active"]),
+                    "enrolled_count": 0,
+                    "completed_lessons": 0,
+                    "average_score": 0,
+                    "weakness_count": 0,
+                }
+            )
             items.append(item)
-        return jsonify(make_paginated(items, request.args.get("page"), request.args.get("page_size")))
+        return jsonify(
+            make_paginated(items, request.args.get("page"), request.args.get("page_size"))
+        )
 
     @route_api("/admin/users/<int:user_id>/profile/", methods=["GET"])
     @require_admin
@@ -1010,7 +1353,9 @@ def create_app(config=None):
         if not user:
             return json_error("User not found.", 404)
         payload = user_payload(user)
-        payload.update({"enrolled_count": 0, "completed_lessons": 0, "average_score": 0, "quiz_attempts": 0})
+        payload.update(
+            {"enrolled_count": 0, "completed_lessons": 0, "average_score": 0, "quiz_attempts": 0}
+        )
         return jsonify(payload)
 
     @route_api("/admin/students/<int:user_id>/", methods=["PATCH"])
@@ -1030,12 +1375,16 @@ def create_app(config=None):
                 user_id,
             ),
         )
-        return jsonify(user_payload(query_one("SELECT * FROM accounts_user WHERE id=?", (user_id,))))
+        return jsonify(
+            user_payload(query_one("SELECT * FROM accounts_user WHERE id=?", (user_id,)))
+        )
 
     @route_api("/admin/students/<int:user_id>/", methods=["DELETE"])
     @require_admin
     def deactivate_student(user_id):
-        execute("UPDATE accounts_user SET is_active=0 WHERE id=? AND role='student'", (user_id,))
+        execute(
+            "UPDATE accounts_user SET is_active=? WHERE id=? AND role='student'", (False, user_id)
+        )
         return jsonify({"detail": "Student deactivated."})
 
     @route_api("/admin/students/<int:user_id>/purge/", methods=["POST"])
@@ -1056,7 +1405,10 @@ def create_app(config=None):
     def my_certificates():
         if not table_exists("progress_certificate"):
             return jsonify([])
-        rows = query_all("SELECT * FROM progress_certificate WHERE student_id=? ORDER BY issue_date DESC", (g.current_user["id"],))
+        rows = query_all(
+            "SELECT * FROM progress_certificate WHERE student_id=? ORDER BY issue_date DESC",
+            (g.current_user["id"],),
+        )
         return jsonify(rows_to_dicts(rows))
 
     @route_api("/certificates/<int:certificate_id>/", methods=["GET"])
@@ -1080,7 +1432,13 @@ def create_app(config=None):
 
     @route_api("/certificates/verify/<verification_code>/", methods=["GET"])
     def certificate_verify(verification_code):
-        cert = query_one("SELECT * FROM progress_certificate WHERE verification_code=?", (verification_code,)) if table_exists("progress_certificate") else None
+        cert = (
+            query_one(
+                "SELECT * FROM progress_certificate WHERE verification_code=?", (verification_code,)
+            )
+            if table_exists("progress_certificate")
+            else None
+        )
         if not cert:
             return json_error("Certificate not found.", 404)
         return jsonify(dict(cert))
@@ -1088,7 +1446,13 @@ def create_app(config=None):
     @route_api("/student/courses/<int:course_id>/certificate/eligibility/", methods=["GET"])
     @require_auth
     def certificate_eligibility(course_id):
-        return jsonify({"eligible": False, "reasons": ["Complete every lesson and pass each quiz."], "certificate": None})
+        return jsonify(
+            {
+                "eligible": False,
+                "reasons": ["Complete every lesson and pass each quiz."],
+                "certificate": None,
+            }
+        )
 
     @route_api("/student/courses/<int:course_id>/certificate/", methods=["POST"])
     @require_auth
@@ -1098,7 +1462,17 @@ def create_app(config=None):
     @route_api("/playground/challenge/", methods=["GET"])
     @require_auth
     def playground_challenge():
-        return jsonify({"id": None, "title": "Python Warmup", "description": "Write a function named solve.", "difficulty": "beginner", "starter_code": "def solve():\n    pass\n", "test_cases": [], "xp_reward": 0})
+        return jsonify(
+            {
+                "id": None,
+                "title": "Python Warmup",
+                "description": "Write a function named solve.",
+                "difficulty": "beginner",
+                "starter_code": "def solve():\n    pass\n",
+                "test_cases": [],
+                "xp_reward": 0,
+            }
+        )
 
     @route_api("/playground/challenge/generate/", methods=["POST"])
     @require_auth
@@ -1108,7 +1482,9 @@ def create_app(config=None):
     @route_api("/playground/challenge/<int:challenge_id>/submit/", methods=["POST"])
     @require_auth
     def playground_submit(challenge_id):
-        return jsonify({"challenge_id": challenge_id, "passed": False, "test_results": [], "xp_earned": 0})
+        return jsonify(
+            {"challenge_id": challenge_id, "passed": False, "test_results": [], "xp_earned": 0}
+        )
 
     @route_api("/playground/leaderboard/", methods=["GET"])
     @require_auth
@@ -1117,7 +1493,11 @@ def create_app(config=None):
 
     def report_response(name):
         csv = "section,value\nstatus,Flask report endpoint active\n"
-        return Response(csv, mimetype="text/csv", headers={"Content-Disposition": f"attachment; filename={name}.csv"})
+        return Response(
+            csv,
+            mimetype="text/csv",
+            headers={"Content-Disposition": f"attachment; filename={name}.csv"},
+        )
 
     for report_path in (
         "/admin/reports/summary/",
@@ -1131,8 +1511,24 @@ def create_app(config=None):
         "/reports/my-learning-path/",
     ):
         endpoint = "report_" + report_path.strip("/").replace("/", "_").replace("-", "_")
-        app.add_url_rule(f"/api{report_path}", endpoint + "_legacy", require_auth(lambda report_path=report_path: report_response(report_path.strip("/").replace("/", "_"))))
-        app.add_url_rule(f"/api/v1{report_path}", endpoint + "_v1", require_auth(lambda report_path=report_path: report_response(report_path.strip("/").replace("/", "_"))))
+        app.add_url_rule(
+            f"/api{report_path}",
+            endpoint + "_legacy",
+            require_auth(
+                lambda report_path=report_path: report_response(
+                    report_path.strip("/").replace("/", "_")
+                )
+            ),
+        )
+        app.add_url_rule(
+            f"/api/v1{report_path}",
+            endpoint + "_v1",
+            require_auth(
+                lambda report_path=report_path: report_response(
+                    report_path.strip("/").replace("/", "_")
+                )
+            ),
+        )
 
     @app.errorhandler(404)
     def not_found(_error):

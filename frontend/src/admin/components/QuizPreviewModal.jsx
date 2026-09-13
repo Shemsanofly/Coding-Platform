@@ -59,8 +59,7 @@ export default function QuizPreviewModal({ courseId, lesson, onClose }) {
   });
 
   const questions = data?.questions || [];
-  const canApprove =
-    data?.generation_status === "done" && questions.some((q) => !q.is_published);
+  const canApprove = data?.generation_status === "done" && questions.some((q) => !q.is_published);
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-ocean-900/50 p-0 sm:items-center sm:p-4">
@@ -76,7 +75,8 @@ export default function QuizPreviewModal({ courseId, lesson, onClose }) {
               Quiz preview — {lesson?.title}
             </h2>
             <p className="mt-1 text-xs text-muted">
-              Unpublished questions are visible here only. Students see published questions after approval.
+              Unpublished questions are visible here only. Students see published questions after
+              approval.
             </p>
           </div>
           <button
@@ -102,7 +102,9 @@ export default function QuizPreviewModal({ courseId, lesson, onClose }) {
                 <p className="mt-2 text-ocean-800">{data?.summary || "No summary yet."}</p>
                 {data?.learning_objectives?.length ? (
                   <div className="mt-3">
-                    <p className="text-xs font-semibold uppercase text-muted">Learning objectives</p>
+                    <p className="text-xs font-semibold uppercase text-muted">
+                      Learning objectives
+                    </p>
                     <ul className="mt-1 list-inside list-disc text-ocean-800">
                       {data.learning_objectives.map((item) => (
                         <li key={item}>{item}</li>
@@ -132,7 +134,10 @@ export default function QuizPreviewModal({ courseId, lesson, onClose }) {
                   </div>
                 ) : null}
                 <div className="mt-3">
-                  <StatusBadge status={data?.generation_status} label={`Generation: ${data?.generation_status || "pending"}`} />
+                  <StatusBadge
+                    status={data?.generation_status}
+                    label={`Generation: ${data?.generation_status || "pending"}`}
+                  />
                 </div>
               </section>
 
@@ -147,7 +152,9 @@ export default function QuizPreviewModal({ courseId, lesson, onClose }) {
                     >
                       <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
                         <span className="font-semibold text-ocean-800">Q{index + 1}</span>
-                        <span className="rounded bg-sand px-2 py-0.5">{question.question_type || "mcq"}</span>
+                        <span className="rounded bg-sand px-2 py-0.5">
+                          {question.question_type || "mcq"}
+                        </span>
                         {question.difficulty ? (
                           <span className="rounded bg-sand px-2 py-0.5">{question.difficulty}</span>
                         ) : null}

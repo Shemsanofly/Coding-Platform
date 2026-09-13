@@ -18,14 +18,19 @@ Students register with a learning level, enroll in courses, study embedded lesso
 
 ### Learning Experience
 - **Embedded YouTube lessons** inside the platform
-- **AI-generated PDF study notes** from YouTube transcript text (Gemini or rule-based fallback)
 - **In-platform PDF reader** with scroll-depth and engagement tracking
 - PDF download for offline revision
+- **AI-generated PDF study notes** from YouTube transcript text (Gemini or rule-based fallback) —
+  designed and implemented against the original Django backend; **not yet ported** to the live
+  Flask backend (`POST /lessons/<id>/generate-notes/` currently returns `202 pending`). See
+  [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ### Assessment
-- **Automatic quiz generation** from transcript text via Google Gemini
 - **Admin quiz approval** before questions are published to students
 - Quiz result analysis with per-question explanations
+- **Automatic quiz generation** from transcript text via Google Gemini — same status as above:
+  built against Django, **not yet ported** to Flask (`generate-quiz`/`regenerate-quiz` currently
+  return `202 pending`).
 
 ### Adaptive Learning
 - **Progress tracking** — watch time, PDF engagement, completion status
@@ -38,7 +43,7 @@ Students register with a learning level, enroll in courses, study embedded lesso
 
 | Layer | Tools |
 |-------|--------|
-| Backend | Flask 3 runtime, SQLite3 |
+| Backend | Flask 3 runtime, SQLite for development, PostgreSQL for production |
 | Frontend | React 18, Vite, Tailwind CSS, React Query, Zustand |
 | AI | Google Gemini API |
 | PDF | ReportLab |
@@ -47,6 +52,12 @@ Students register with a learning level, enroll in courses, study embedded lesso
 | Task queue | Celery + Redis (optional, for async AI generation) |
 
 AI features process **YouTube transcript text only** — not raw video frames.
+
+> **Architecture note:** this project migrated from Django + DRF to a hand-rolled Flask backend
+> (`backend/flask_app.py`), which now serves all live traffic. Django is retained only to own
+> database migrations/schema (`python manage.py migrate`); its views, serializers, and DRF routing
+> are unused. See [ARCHITECTURE.md](ARCHITECTURE.md) for the full picture, including which
+> features (PDF notes, AI quiz generation) haven't been ported to Flask yet.
 
 ## Installation
 
@@ -68,6 +79,7 @@ cd Coding-Platform
 cd backend
 cp .env.example .env
 pip install -r requirements.txt
+python manage.py migrate
 python app.py
 ```
 
@@ -91,7 +103,9 @@ Frontend runs at `http://localhost:5173/` with API requests proxied to the Flask
 |----------|----------|-------------|
 | `SECRET_KEY` | Yes | Backend signing secret |
 | `DEBUG` | No | Enable debug mode (default: `True`) |
-| `DATABASE_PATH` | No | SQLite database path (defaults to `backend/db.sqlite3`) |
+| `DATABASE_URL` | No | Leave empty for SQLite development; set to `postgresql://user:password@host:5432/dbname` in production |
+| `DATABASE_PATH` | No | Optional custom SQLite database path when `DATABASE_URL` is empty; defaults to `backend/db.sqlite3` |
+| `DATABASE_CONN_MAX_AGE` | No | Django persistent connection lifetime in seconds; useful for production PostgreSQL |
 | `GEMINI_API_KEY` | Recommended | Google Gemini API key for quiz and PDF notes |
 | `GEMINI_MODEL` | No | Gemini model name (default: `gemini-3.5-flash`) |
 | `ADMIN_REGISTRATION_CODE` | No | Code required for admin signup (default: `Admin2026`) |
@@ -100,6 +114,20 @@ Frontend runs at `http://localhost:5173/` with API requests proxied to the Flask
 | `CELERY_BROKER_URL` | No | Redis URL for Celery (default: `redis://localhost:6379/0`) |
 | `CORS_ALLOWED_ORIGINS` | No | Comma-separated frontend origins |
 | `ALLOWED_HOSTS` | No | Comma-separated allowed hosts |
+
+### Database Selection
+
+The backend switches database by environment:
+
+- Local development: leave `DATABASE_URL` unset or empty. The app uses SQLite at `backend/db.sqlite3`.
+- Production: set `DATABASE_URL` to a PostgreSQL URL, for example `postgresql://user:password@host:5432/learncode`.
+
+Run migrations after changing databases:
+
+```bash
+cd backend
+python manage.py migrate
+```
 
 ### Frontend (`frontend/.env`)
 
@@ -116,11 +144,14 @@ Coding_Platform/
 │   ├── accounts/          # User auth, roles, experience level
 │   ├── ai_engine/         # Gemini, transcripts, quiz pipeline, learning path
 │   ├── app.py             # Flask development server entrypoint
-│   ├── flask_app.py       # Flask app factory and API routes
-│   ├── core/              # Historical tests and compatibility files
-│   ├── courses/           # Courses, lessons, enrollment, PDF notes views
-│   ├── progress/          # Enrollments, lesson progress, weaknesses, reports
-│   ├── quizzes/           # Quiz models, student fetch/submit
+│   ├── flask_app.py       # Live backend: Flask app factory + all API routes (raw SQL)
+│   ├── core/              # Django settings/migrations wiring + live Flask tests (core/tests/test_flask_runtime.py)
+│   ├── courses/           # Django app: models.py drives migrations; views/serializers unused
+│   ├── progress/          # Django app: models.py drives migrations; views/serializers unused
+│   ├── quizzes/           # Django app: models.py drives migrations; views/serializers unused
+│   ├── ai_engine/         # Django app: Gemini/transcript/quiz pipeline — not called by flask_app.py yet
+│   ├── accounts/          # Django app: models.py drives migrations; views/serializers unused
+│   ├── _legacy/           # Quarantined DRF test suites (see backend/_legacy/README.md)
 │   └── requirements.txt
 ├── frontend/
 │   ├── src/
@@ -143,12 +174,33 @@ cd backend
 python -m unittest core.tests.test_flask_runtime -v
 ```
 
+This is the only test suite covering the live Flask backend. `backend/_legacy/` holds older
+Django/DRF test suites that are not run by CI — see `backend/_legacy/README.md`.
+
 ### Frontend production build
 
 ```bash
 cd frontend
 npm run build
 ```
+
+## Code Quality
+
+```bash
+# Backend — from backend/, with the virtualenv active
+pip install -r requirements-dev.txt
+ruff check .
+black .
+
+# Frontend — from frontend/
+npm run lint
+npm run format:check
+```
+
+A [pre-commit](https://pre-commit.com/) config (`.pre-commit-config.yaml`) runs all four checks
+automatically on `git commit` once installed with `pre-commit install`. CI
+(`.github/workflows/ci.yml`) enforces the same checks plus the backend test suite and a frontend
+production build on every push and pull request.
 
 ## Main Workflow
 

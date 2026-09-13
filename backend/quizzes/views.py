@@ -2,10 +2,10 @@ import logging
 
 from django.utils import timezone
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from accounts.permissions import STUDENT_ACCESS
 from ai_engine.services.generation_mode import get_ai_generation_mode
 from ai_engine.services.task_queue import run_or_enqueue
 from ai_engine.tasks import detect_weaknesses
@@ -13,7 +13,6 @@ from courses.services import lesson_unlocked
 from progress.models import Enrollment, LessonProgress
 from progress.services import engagement_met, refresh_lesson_official_completion
 from progress.services.certificates import maybe_generate_certificate_for_lesson
-from accounts.permissions import STUDENT_ACCESS
 from quizzes.models import Quiz, QuizResult
 
 logger = logging.getLogger(__name__)
@@ -56,9 +55,7 @@ class LessonQuizView(APIView):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        published = list(
-            quiz.questions.filter(is_published=True).order_by("order", "pk")
-        )
+        published = list(quiz.questions.filter(is_published=True).order_by("order", "pk"))
         if not published:
             return Response(
                 {"detail": "Quiz not available for this lesson."},
@@ -146,9 +143,7 @@ class QuizSubmitView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        correct_count = sum(
-            1 for i, q in enumerate(questions) if answers[i] == q.correct_index
-        )
+        correct_count = sum(1 for i, q in enumerate(questions) if answers[i] == q.correct_index)
         score = round((correct_count / total) * 100)
         passed = score >= quiz.passing_score
 

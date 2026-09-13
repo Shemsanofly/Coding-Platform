@@ -135,8 +135,9 @@ export default function Playground({ compact = false }) {
               {challenge?.title ?? "Ready to code?"}
             </h2>
             <p className="mt-1 text-sm text-muted">
-              Gemini generates a challenge — implement <code className="rounded bg-reef/60 px-1">solution()</code> and
-              pass all tests to earn XP.
+              Gemini generates a challenge — implement{" "}
+              <code className="rounded bg-reef/60 px-1">solution()</code> and pass all tests to earn
+              XP.
             </p>
           </div>
           <button
@@ -145,7 +146,11 @@ export default function Playground({ compact = false }) {
             onClick={() => generateMutation.mutate()}
             className="lc-btn-primary shrink-0"
           >
-            {generateMutation.isPending ? "Generating…" : challenge ? "New challenge" : "Generate challenge"}
+            {generateMutation.isPending
+              ? "Generating…"
+              : challenge
+                ? "New challenge"
+                : "Generate challenge"}
           </button>
         </div>
 
@@ -165,7 +170,9 @@ export default function Playground({ compact = false }) {
           <div className="mt-5 space-y-4">
             <article className="rounded-2xl border border-ocean-600/10 bg-white/90 p-4 dark:border-line/30 dark:bg-ocean-950/70">
               <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-wide text-ocean-800 dark:text-reef">
-                <span className="rounded-full bg-reef px-2 py-0.5 capitalize dark:bg-ocean-900">{challenge.difficulty}</span>
+                <span className="rounded-full bg-reef px-2 py-0.5 capitalize dark:bg-ocean-900">
+                  {challenge.difficulty}
+                </span>
                 <span className="text-coral">{challenge.xp_reward} XP reward</span>
                 {challenge.status === "solved" ? (
                   <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-100">
@@ -179,7 +186,10 @@ export default function Playground({ compact = false }) {
             </article>
 
             <div>
-              <label htmlFor="playground-code" className="mb-2 block text-sm font-semibold text-ocean-800 dark:text-reef">
+              <label
+                htmlFor="playground-code"
+                className="mb-2 block text-sm font-semibold text-ocean-800 dark:text-reef"
+              >
                 Your Python solution
               </label>
               <textarea
@@ -232,11 +242,15 @@ export default function Playground({ compact = false }) {
               <div className="mt-4 grid grid-cols-2 gap-3">
                 <div className="rounded-xl bg-reef/40 p-3 dark:bg-ocean-900/50">
                   <p className="text-xs text-muted">Playground XP</p>
-                  <p className="text-xl font-bold text-ocean-950 dark:text-sand">{me.practice_xp}</p>
+                  <p className="text-xl font-bold text-ocean-950 dark:text-sand">
+                    {me.practice_xp}
+                  </p>
                 </div>
                 <div className="rounded-xl bg-reef/40 p-3 dark:bg-ocean-900/50">
                   <p className="text-xs text-muted">Solved</p>
-                  <p className="text-xl font-bold text-ocean-950 dark:text-sand">{me.challenges_solved}</p>
+                  <p className="text-xl font-bold text-ocean-950 dark:text-sand">
+                    {me.challenges_solved}
+                  </p>
                 </div>
               </div>
               <div className="mt-4">
@@ -273,7 +287,9 @@ export default function Playground({ compact = false }) {
                           : "border-line bg-cream dark:border-line/30 dark:bg-ocean-950/50"
                       }`}
                     >
-                      <span className="w-8 text-center text-sm font-bold">{rankBadge(entry.rank)}</span>
+                      <span className="w-8 text-center text-sm font-bold">
+                        {rankBadge(entry.rank)}
+                      </span>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-semibold text-ink dark:text-sand">
                           {entry.display_name}
@@ -281,7 +297,9 @@ export default function Playground({ compact = false }) {
                         </p>
                         <p className="text-xs text-muted">{entry.challenges_solved} solved</p>
                       </div>
-                      <span className="text-sm font-bold text-ocean-800 dark:text-reef">{entry.practice_xp} XP</span>
+                      <span className="text-sm font-bold text-ocean-800 dark:text-reef">
+                        {entry.practice_xp} XP
+                      </span>
                     </li>
                   );
                 })}

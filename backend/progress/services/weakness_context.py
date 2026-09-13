@@ -110,7 +110,7 @@ def build_topic_context_index(user_id: int, course_ids: list[int] | None = None)
                     }
                 )
 
-    for tag, bucket in index.items():
+    for _tag, bucket in index.items():
         bucket.pop("lesson_ids_seen", None)
         bucket["courses"] = list(bucket["courses"].values())
         bucket["recent_lessons"] = bucket["recent_lessons"][:5]
@@ -120,8 +120,7 @@ def build_topic_context_index(user_id: int, course_ids: list[int] | None = None)
 def build_lesson_weakness_groups(user_id: int, course_ids: list[int] | None = None) -> list[dict]:
     """Group quiz attempts by lesson with weak topics discovered in each attempt."""
     weak_lookup = {
-        normalize_topic_tag(wt.topic_tag): wt
-        for wt in WeakTopic.objects.filter(user_id=user_id)
+        normalize_topic_tag(wt.topic_tag): wt for wt in WeakTopic.objects.filter(user_id=user_id)
     }
 
     results_qs = (
@@ -151,9 +150,11 @@ def build_lesson_weakness_groups(user_id: int, course_ids: list[int] | None = No
                 {
                     "topic_tag": tag,
                     "weakness_level": wt.weakness_level if wt else None,
-                    "accuracy": round((wt.correct_count / wt.attempt_count) * 100, 1)
-                    if wt and wt.attempt_count
-                    else accuracy,
+                    "accuracy": (
+                        round((wt.correct_count / wt.attempt_count) * 100, 1)
+                        if wt and wt.attempt_count
+                        else accuracy
+                    ),
                     "attempt_count": wt.attempt_count if wt else counts["total"],
                     "correct_count": wt.correct_count if wt else counts["correct"],
                 }
@@ -174,7 +175,9 @@ def build_lesson_weakness_groups(user_id: int, course_ids: list[int] | None = No
             "weak_topics": sorted(
                 weak_in_attempt,
                 key=lambda row: (
-                    {"HIGH": 0, "MEDIUM": 1, "LOW": 2}.get((row.get("weakness_level") or "").upper(), 99),
+                    {"HIGH": 0, "MEDIUM": 1, "LOW": 2}.get(
+                        (row.get("weakness_level") or "").upper(), 99
+                    ),
                     row["topic_tag"],
                 ),
             ),
@@ -283,7 +286,9 @@ def enrich_weak_topic_payload(
     topic: WeakTopic,
     context_index: dict[str, dict],
 ) -> dict[str, Any]:
-    accuracy = round((topic.correct_count / topic.attempt_count) * 100, 1) if topic.attempt_count else 0
+    accuracy = (
+        round((topic.correct_count / topic.attempt_count) * 100, 1) if topic.attempt_count else 0
+    )
     tag_key = normalize_topic_tag(topic.topic_tag)
     ctx = context_index.get(tag_key, {})
     recent = ctx.get("recent_lessons") or []
@@ -351,7 +356,9 @@ def enrich_recommendation_payload(
     return rec_row
 
 
-def _enrich_recommendation_weakness_fields(rec_row: dict, weakness_lookup: dict[str, WeakTopic]) -> dict:
+def _enrich_recommendation_weakness_fields(
+    rec_row: dict, weakness_lookup: dict[str, WeakTopic]
+) -> dict:
     weak_tag = (rec_row.get("weak_topic_tag") or rec_row.get("triggered_by") or "").strip()
     if weak_tag.lower() in ("adaptive_engine", "learning_path", "weakness_overlap", ""):
         weak_tag = rec_row.get("weak_topic_tag") or ""
@@ -411,8 +418,7 @@ def lesson_weakness_summary(user_id: int, lesson: Lesson) -> dict[str, Any]:
         }
 
     weak_lookup = {
-        normalize_topic_tag(wt.topic_tag): wt
-        for wt in WeakTopic.objects.filter(user_id=user_id)
+        normalize_topic_tag(wt.topic_tag): wt for wt in WeakTopic.objects.filter(user_id=user_id)
     }
     outcomes = _topic_outcomes_for_result(result)
     weak_topics = []
@@ -427,9 +433,11 @@ def lesson_weakness_summary(user_id: int, lesson: Lesson) -> dict[str, Any]:
             {
                 "topic_tag": tag,
                 "weakness_level": wt.weakness_level if wt else None,
-                "accuracy": round((wt.correct_count / wt.attempt_count) * 100, 1)
-                if wt and wt.attempt_count
-                else accuracy,
+                "accuracy": (
+                    round((wt.correct_count / wt.attempt_count) * 100, 1)
+                    if wt and wt.attempt_count
+                    else accuracy
+                ),
             }
         )
 
