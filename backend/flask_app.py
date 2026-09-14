@@ -2,8 +2,10 @@ import base64
 import functools
 import hashlib
 import hmac
+import io
 import json
 import os
+import re
 import secrets
 import sqlite3
 import sys
@@ -105,7 +107,12 @@ def rows_to_dicts(rows):
     return [dict(row) for row in rows]
 
 
-def django_pbkdf2_hash(password, salt=None, iterations=PASSWORD_ITERATIONS):
+def slugify_filename(value, fallback="file"):
+    text = re.sub(r"[^A-Za-z0-9._-]+", "-", (value or "").strip()).strip("-")
+    return text or fallback
+
+
+def legacy_pbkdf2_sha256_hash(password, salt=None, iterations=PASSWORD_ITERATIONS):
     salt = salt or secrets.token_urlsafe(16)[:22]
     digest = hashlib.pbkdf2_hmac(
         "sha256", password.encode("utf-8"), salt.encode("utf-8"), iterations
@@ -120,7 +127,9 @@ def check_password(password, encoded):
     if encoded.startswith("pbkdf2_sha256$"):
         try:
             _, iterations, salt, expected = encoded.split("$", 3)
-            candidate = django_pbkdf2_hash(password, salt=salt, iterations=int(iterations)).rsplit(
+            candidate = legacy_pbkdf2_sha256_hash(
+                password, salt=salt, iterations=int(iterations)
+            ).rsplit(
                 "$", 1
             )[1]
             return hmac.compare_digest(candidate, expected)
@@ -314,6 +323,326 @@ def create_app(config=None):
             return view
 
         return decorator
+
+    def media_root():
+        configured = app.config.get("MEDIA_ROOT")
+        if configured:
+            return Path(configured)
+        if app.config.get("TESTING"):
+            return Path(app.config["DATABASE_PATH"]).resolve().parent / "media"
+        return BASE_DIR / "media"
+
+    def media_file(relative_path):
+        return media_root() / str(relative_path).replace("/", os.sep)
+
+    def write_simple_pdf(relative_path, title, lines):
+        path = media_file(relative_path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            from reportlab.lib.pagesizes import letter
+            from reportlab.pdfgen import canvas
+        except ImportError as exc:
+            raise RuntimeError("Install reportlab to generate PDFs.") from exc
+
+        pdf = canvas.Canvas(str(path), pagesize=letter)
+        width, height = letter
+        y = height - 72
+        pdf.setTitle(title)
+        pdf.setFont("Helvetica-Bold", 18)
+        pdf.drawString(72, y, title[:80])
+        y -= 34
+        pdf.setFont("Helvetica", 11)
+        for raw_line in lines:
+            for line in str(raw_line).splitlines() or [""]:
+                words = line.split()
+                current = ""
+                for word in words or [""]:
+                    candidate = f"{current} {word}".strip()
+                    if len(candidate) > 92:
+                        pdf.drawString(72, y, current)
+                        y -= 16
+                        current = word
+                    else:
+                        current = candidate
+                if current:
+                    pdf.drawString(72, y, current)
+                    y -= 16
+                if y < 72:
+                    pdf.showPage()
+                    pdf.setFont("Helvetica", 11)
+                    y = height - 72
+            y -= 6
+        pdf.save()
+        return path
+
+    def pdf_response(title, lines, filename):
+        try:
+            from reportlab.lib.pagesizes import letter
+            from reportlab.pdfgen import canvas
+        except ImportError:
+            return json_error("Install reportlab to generate PDFs.", 500)
+        buffer = io.BytesIO()
+        pdf = canvas.Canvas(buffer, pagesize=letter)
+        width, height = letter
+        y = height - 72
+        pdf.setTitle(title)
+        pdf.setFont("Helvetica-Bold", 18)
+        pdf.drawString(72, y, title[:80])
+        y -= 34
+        pdf.setFont("Helvetica", 11)
+        for line in lines:
+            pdf.drawString(72, y, str(line)[:95])
+            y -= 18
+            if y < 72:
+                pdf.showPage()
+                pdf.setFont("Helvetica", 11)
+                y = height - 72
+        pdf.save()
+        buffer.seek(0)
+        return Response(
+            buffer.getvalue(),
+            mimetype="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename={filename}.pdf"},
+        )
+
+    def generated_questions_for_lesson(lesson):
+        topic = lesson["topic_tag"] or "lesson"
+        title = lesson["title"] or "this lesson"
+        summary = lesson["content"] or lesson["transcript_text"] or lesson["learning_objective"]
+        if not summary:
+            summary = f"Review the key ideas from {title}."
+        return [
+            {
+                "stem": f"What is the main focus of {title}?",
+                "choices": [summary[:120], "Installing unrelated software", "Changing account settings", "Skipping the lesson"],
+                "correct_index": 0,
+                "topic_tag": topic,
+                "difficulty": "easy",
+                "bloom_level": "understand",
+                "explanation": "The lesson focus comes from the lesson content and objective.",
+            },
+            {
+                "stem": f"Which topic tag best matches {title}?",
+                "choices": [topic, "billing", "profile", "deployment"],
+                "correct_index": 0,
+                "topic_tag": topic,
+                "difficulty": "easy",
+                "bloom_level": "remember",
+                "explanation": "The topic tag is assigned to the lesson.",
+            },
+            {
+                "stem": "What should you do after studying this lesson?",
+                "choices": [
+                    "Practice the concept and check your understanding",
+                    "Ignore the quiz",
+                    "Delete your progress",
+                    "Change course ownership",
+                ],
+                "correct_index": 0,
+                "topic_tag": topic,
+                "difficulty": "medium",
+                "bloom_level": "apply",
+                "explanation": "Practice and checking understanding reinforces learning.",
+            },
+        ]
+
+    def quiz_status_payload(course_id, lesson_id):
+        quiz = (
+            query_one("SELECT * FROM quizzes_quiz WHERE lesson_id=?", (lesson_id,))
+            if table_exists("quizzes_quiz")
+            else None
+        )
+        question_count = (
+            query_one("SELECT COUNT(*) AS c FROM quizzes_question WHERE quiz_id=?", (quiz["id"],))[
+                "c"
+            ]
+            if quiz and table_exists("quizzes_question")
+            else 0
+        )
+        published_count = (
+            query_one(
+                "SELECT COUNT(*) AS c FROM quizzes_question WHERE quiz_id=? AND is_published=1",
+                (quiz["id"],),
+            )["c"]
+            if quiz and table_exists("quizzes_question")
+            else 0
+        )
+        ai = (
+            query_one("SELECT * FROM ai_engine_lessonaiprocessing WHERE lesson_id=?", (lesson_id,))
+            if table_exists("ai_engine_lessonaiprocessing")
+            else None
+        )
+        return {
+            "course_id": course_id,
+            "lesson_id": lesson_id,
+            "success": bool(quiz and quiz["generation_status"] == "done"),
+            "queued": False,
+            "ai_generation_mode": "flask",
+            "quiz_generation_status": quiz["generation_status"] if quiz else "pending",
+            "ai_processing_status": ai["status"] if ai else "pending",
+            "generation_error": quiz["generation_error"] if quiz else "",
+            "last_error": ai["last_error"] if ai else "",
+            "question_count": question_count,
+            "published_question_count": published_count,
+        }
+
+    def certificate_payload(cert):
+        if not cert:
+            return None
+        payload = dict(cert)
+        payload["download_url"] = f"/api/certificates/{cert['id']}/download/"
+        payload["verification_path"] = f"/certificates/verify/{cert['verification_code']}"
+        return payload
+
+    def build_certificate_eligibility(user_id, course_id):
+        course = query_one("SELECT * FROM courses_course WHERE id=?", (course_id,))
+        if not course:
+            return None, {"eligible": False, "reasons": ["Course not found."], "status": 404}
+        enrollment = query_one(
+            "SELECT * FROM progress_enrollment WHERE user_id=? AND course_id=?",
+            (user_id, course_id),
+        )
+        if not enrollment:
+            return course, {
+                "eligible": False,
+                "reasons": ["You are not enrolled in this course."],
+                "status": 403,
+            }
+        lessons = query_all("SELECT * FROM courses_lesson WHERE course_id=?", (course_id,))
+        total_lessons = len(lessons)
+        completed_lessons = 0
+        passing_scores = []
+        for lesson in lessons:
+            progress = (
+                query_one(
+                    "SELECT * FROM progress_lessonprogress WHERE user_id=? AND lesson_id=?",
+                    (user_id, lesson["id"]),
+                )
+                if table_exists("progress_lessonprogress")
+                else None
+            )
+            if progress and progress["completed_at"]:
+                completed_lessons += 1
+            quiz = (
+                query_one("SELECT * FROM quizzes_quiz WHERE lesson_id=?", (lesson["id"],))
+                if table_exists("quizzes_quiz")
+                else None
+            )
+            if quiz and table_exists("quizzes_quizresult"):
+                best = query_one(
+                    "SELECT MAX(score) AS score FROM quizzes_quizresult WHERE user_id=? AND quiz_id=?",
+                    (user_id, quiz["id"]),
+                )
+                if best and best["score"] is not None:
+                    passing_scores.append(best["score"] >= quiz["passing_score"])
+                else:
+                    passing_scores.append(False)
+        reasons = []
+        if total_lessons == 0:
+            reasons.append("Course has no lessons.")
+        if completed_lessons < total_lessons:
+            reasons.append("Complete every lesson.")
+        if any(score is False for score in passing_scores):
+            reasons.append("Pass each quiz.")
+        existing = (
+            query_one("SELECT * FROM progress_certificate WHERE enrollment_id=?", (enrollment["id"],))
+            if table_exists("progress_certificate")
+            else None
+        )
+        progress_percent = round((completed_lessons / total_lessons) * 100) if total_lessons else 0
+        return course, {
+            "eligible": not reasons,
+            "reasons": reasons,
+            "status": 200,
+            "enrollment": enrollment,
+            "certificate": certificate_payload(existing) if existing else None,
+            "progress_percent": progress_percent,
+            "completed_lessons": completed_lessons,
+            "total_lessons": total_lessons,
+            "final_score": None,
+            "passing_score": 60,
+        }
+
+    def fallback_challenge():
+        return {
+            "title": "Sum Two Numbers",
+            "description": "Write a function `solution(a, b)` that returns the sum of two numbers.",
+            "difficulty": "beginner",
+            "starter_code": "def solution(a, b):\n    pass\n",
+            "test_cases": [
+                {"args": [2, 3], "expected": 5},
+                {"args": [0, 0], "expected": 0},
+                {"args": [-4, 9], "expected": 5},
+            ],
+            "xp_reward": 40,
+        }
+
+    def challenge_payload(row):
+        if not row:
+            return None
+        payload = dict(row)
+        payload["test_cases"] = parse_json(row["test_cases"], [])
+        return payload
+
+    def run_playground_solution(code, test_cases):
+        text = (code or "").strip()
+        if not text:
+            return False, [{"passed": False, "error": "Code is required."}]
+        if len(text) > 8000:
+            return False, [{"passed": False, "error": "Code is too long."}]
+        forbidden = ("import ", "__import__", "open(", "exec(", "eval(", "compile(")
+        lowered = text.lower()
+        for token in forbidden:
+            if token in lowered:
+                return False, [{"passed": False, "error": f"Unsupported construct: {token.strip()}"}]
+        if "def solution" not in text:
+            return False, [{"passed": False, "error": "Define a function named `solution`."}]
+        safe_builtins = {
+            "abs": abs,
+            "all": all,
+            "any": any,
+            "bool": bool,
+            "dict": dict,
+            "enumerate": enumerate,
+            "float": float,
+            "int": int,
+            "len": len,
+            "list": list,
+            "max": max,
+            "min": min,
+            "range": range,
+            "reversed": reversed,
+            "round": round,
+            "set": set,
+            "sorted": sorted,
+            "str": str,
+            "sum": sum,
+            "tuple": tuple,
+            "zip": zip,
+            "True": True,
+            "False": False,
+            "None": None,
+        }
+        namespace = {}
+        try:
+            exec(text, {"__builtins__": safe_builtins}, namespace)
+            solution = namespace.get("solution")
+            if not callable(solution):
+                return False, [{"passed": False, "error": "Define a callable function named `solution`."}]
+            results = []
+            passed_all = True
+            for index, test_case in enumerate(test_cases, start=1):
+                args = test_case.get("args", [])
+                expected = test_case.get("expected")
+                actual = solution(*args)
+                passed = actual == expected
+                passed_all = passed_all and passed
+                results.append(
+                    {"case": index, "passed": passed, "expected": expected, "actual": actual}
+                )
+            return passed_all, results
+        except Exception as exc:
+            return False, [{"passed": False, "error": str(exc)}]
 
     def lesson_count(course_id):
         return query_one(
@@ -530,7 +859,7 @@ def create_app(config=None):
                  is_active, date_joined, email, role, created_at, experience_level, profile_image)
             VALUES (?, NULL, ?, '', '', ?, ?, ?, ?, 'student', ?, ?, '')
             """,
-            (django_pbkdf2_hash(password), False, False, True, now, email, now, level),
+            (legacy_pbkdf2_sha256_hash(password), False, False, True, now, email, now, level),
         )
         return jsonify({"detail": "Account created successfully. Please sign in."}), 201
 
@@ -1010,12 +1339,27 @@ def create_app(config=None):
         lesson = query_one("SELECT * FROM courses_lesson WHERE id=?", (lesson_id,))
         if not lesson or not lesson["pdf_notes"]:
             return json_error("PDF notes are not available.", 404)
+        progress = (
+            query_one(
+                "SELECT * FROM progress_lessonprogress WHERE user_id=? AND lesson_id=?",
+                (g.current_user["id"], lesson_id),
+            )
+            if table_exists("progress_lessonprogress")
+            else None
+        )
         return jsonify(
             {
                 "lesson_id": lesson_id,
+                "lesson_title": lesson["title"],
                 "pdf_notes_url": f"/api/lessons/{lesson_id}/view-notes/",
-                "ai_summary": {},
-                "activity": {},
+                "view_url": f"/api/lessons/{lesson_id}/view-notes/",
+                "download_url": f"/api/lessons/{lesson_id}/download-notes/",
+                "has_pdf_notes": True,
+                "ai_summary": parse_json(lesson["ai_summary"], {}),
+                "activity": {
+                    "notes_viewed_at": progress["notes_viewed_at"] if progress else None,
+                    "notes_downloaded_at": progress["notes_downloaded_at"] if progress else None,
+                },
             }
         )
 
@@ -1025,7 +1369,22 @@ def create_app(config=None):
         lesson = query_one("SELECT * FROM courses_lesson WHERE id=?", (lesson_id,))
         if not lesson or not lesson["pdf_notes"]:
             return json_error("PDF notes are not available.", 404)
-        path = BASE_DIR / "media" / lesson["pdf_notes"]
+        if table_exists("progress_lessonprogress") and g.current_user["role"] == "student":
+            execute(
+                """
+                INSERT OR IGNORE INTO progress_lessonprogress
+                    (first_opened_at, last_opened_at, completed_at, seconds_engaged,
+                     max_scroll_depth_pct, video_watch_pct, notes_viewed_at,
+                     notes_downloaded_at, lesson_id, user_id)
+                VALUES (?, ?, NULL, 0, 0, NULL, ?, NULL, ?, ?)
+                """,
+                (utcnow(), utcnow(), utcnow(), lesson_id, g.current_user["id"]),
+            )
+            execute(
+                "UPDATE progress_lessonprogress SET notes_viewed_at=?, last_opened_at=? WHERE user_id=? AND lesson_id=?",
+                (utcnow(), utcnow(), g.current_user["id"], lesson_id),
+            )
+        path = media_file(lesson["pdf_notes"])
         if not path.exists():
             return json_error("PDF file is missing.", 404)
         return send_file(path, mimetype="application/pdf")
@@ -1033,20 +1392,66 @@ def create_app(config=None):
     @route_api("/lessons/<int:lesson_id>/download-notes/", methods=["GET"])
     @require_auth
     def download_notes(lesson_id):
+        if table_exists("progress_lessonprogress") and g.current_user["role"] == "student":
+            execute(
+                """
+                INSERT OR IGNORE INTO progress_lessonprogress
+                    (first_opened_at, last_opened_at, completed_at, seconds_engaged,
+                     max_scroll_depth_pct, video_watch_pct, notes_viewed_at,
+                     notes_downloaded_at, lesson_id, user_id)
+                VALUES (?, ?, NULL, 0, 0, NULL, NULL, ?, ?, ?)
+                """,
+                (utcnow(), utcnow(), utcnow(), lesson_id, g.current_user["id"]),
+            )
+            execute(
+                "UPDATE progress_lessonprogress SET notes_downloaded_at=?, last_opened_at=? WHERE user_id=? AND lesson_id=?",
+                (utcnow(), utcnow(), g.current_user["id"], lesson_id),
+            )
         return view_notes(lesson_id)
 
     @route_api("/lessons/<int:lesson_id>/generate-notes/", methods=["POST"])
     @require_admin
     def generate_notes(lesson_id):
+        lesson = query_one(
+            """
+            SELECT l.*, c.created_by_id
+            FROM courses_lesson l
+            JOIN courses_course c ON c.id=l.course_id
+            WHERE l.id=?
+            """,
+            (lesson_id,),
+        )
+        if not lesson or lesson["created_by_id"] != g.current_user["id"]:
+            return json_error("Lesson not found.", 404)
+        if lesson["source_type"] != "youtube":
+            return json_error("PDF notes generation applies to YouTube lessons only.", 400)
+        relative_path = f"lesson_notes/{lesson_id}-{slugify_filename(lesson['title'], 'lesson')}.pdf"
+        lines = [
+            f"Lesson: {lesson['title']}",
+            f"Objective: {lesson['learning_objective'] or 'Review the lesson carefully.'}",
+            "",
+            lesson["content"] or lesson["transcript_text"] or "No transcript text is available.",
+        ]
+        try:
+            write_simple_pdf(relative_path, f"{lesson['title']} Study Notes", lines)
+        except RuntimeError as exc:
+            return json_error(str(exc), 500)
+        now = utcnow()
+        execute(
+            "UPDATE courses_lesson SET pdf_notes=?, notes_generated_at=? WHERE id=?",
+            (relative_path, now, lesson_id),
+        )
         return (
             jsonify(
                 {
+                    "detail": "PDF study notes generated successfully.",
                     "lesson_id": lesson_id,
-                    "status": "pending",
-                    "detail": "PDF generation is not ported to Flask yet.",
+                    "notes_generated_at": now,
+                    "pdf_url": f"/api/lessons/{lesson_id}/view-notes/",
+                    "has_pdf_notes": True,
                 }
             ),
-            202,
+            201,
         )
 
     @route_api("/admin/courses/", methods=["GET"])
@@ -1257,14 +1662,7 @@ def create_app(config=None):
     )
     @require_admin
     def lesson_processing_status(course_id, lesson_id):
-        return jsonify(
-            {
-                "course_id": course_id,
-                "lesson_id": lesson_id,
-                "ai_processing_status": "pending",
-                "quiz_generation_status": "pending",
-            }
-        )
+        return jsonify(quiz_status_payload(course_id, lesson_id))
 
     @route_api(
         "/admin/courses/<int:course_id>/lessons/<int:lesson_id>/quiz-preview/", methods=["GET"]
@@ -1298,25 +1696,128 @@ def create_app(config=None):
     )
     @require_admin
     def generate_quiz(course_id, lesson_id):
-        return (
-            jsonify(
-                {
-                    "course_id": course_id,
-                    "lesson_id": lesson_id,
-                    "status": "pending",
-                    "detail": "AI quiz generation is not ported to Flask yet.",
-                }
-            ),
-            202,
+        lesson = query_one(
+            """
+            SELECT l.*, c.created_by_id
+            FROM courses_lesson l
+            JOIN courses_course c ON c.id=l.course_id
+            WHERE l.id=? AND l.course_id=?
+            """,
+            (lesson_id, course_id),
         )
+        if not lesson or lesson["created_by_id"] != g.current_user["id"]:
+            return json_error("Lesson not found.", 404)
+        if lesson["source_type"] != "youtube" or not (lesson["resource_url"] or "").strip():
+            return json_error("AI quiz generation is only supported for YouTube lessons.", 400)
+        now = utcnow()
+        quiz = query_one("SELECT * FROM quizzes_quiz WHERE lesson_id=?", (lesson_id,))
+        if quiz:
+            execute(
+                "UPDATE quizzes_quiz SET generation_status='done', generation_error='' WHERE id=?",
+                (quiz["id"],),
+            )
+            quiz_id = quiz["id"]
+            execute("DELETE FROM quizzes_question WHERE quiz_id=?", (quiz_id,))
+        else:
+            cur = execute(
+                """
+                INSERT INTO quizzes_quiz
+                    (passing_score, generation_status, generation_error, created_at, lesson_id)
+                VALUES (60, 'done', '', ?, ?)
+                """,
+                (now, lesson_id),
+                returning_id=True,
+            )
+            quiz_id = cur.lastrowid
+        for index, question in enumerate(generated_questions_for_lesson(lesson), start=1):
+            execute(
+                """
+                INSERT INTO quizzes_question
+                    ("order", stem, choices, correct_index, topic_tag, question_type,
+                     difficulty, bloom_level, explanation, is_published, quiz_id)
+                VALUES (?, ?, ?, ?, ?, 'mcq', ?, ?, ?, 1, ?)
+                """,
+                (
+                    index,
+                    question["stem"],
+                    json.dumps(question["choices"]),
+                    question["correct_index"],
+                    question["topic_tag"],
+                    question["difficulty"],
+                    question["bloom_level"],
+                    question["explanation"],
+                    quiz_id,
+                ),
+            )
+        if table_exists("ai_engine_lessonaiprocessing"):
+            existing = query_one(
+                "SELECT * FROM ai_engine_lessonaiprocessing WHERE lesson_id=?", (lesson_id,)
+            )
+            analysis = {
+                "summary": lesson["content"] or lesson["transcript_text"] or "",
+                "learning_objectives": [lesson["learning_objective"]]
+                if lesson["learning_objective"]
+                else [],
+                "topic_tags": parse_json(lesson["tags"], []),
+            }
+            if existing:
+                execute(
+                    """
+                    UPDATE ai_engine_lessonaiprocessing
+                    SET status='completed', transcript_text=?, analysis_json=?, last_error='', updated_at=?
+                    WHERE lesson_id=?
+                    """,
+                    (
+                        lesson["transcript_text"] or lesson["content"] or "",
+                        json.dumps(analysis),
+                        now,
+                        lesson_id,
+                    ),
+                )
+            else:
+                execute(
+                    """
+                    INSERT INTO ai_engine_lessonaiprocessing
+                        (status, transcript_text, analysis_json, last_error, created_at, updated_at, lesson_id)
+                    VALUES ('completed', ?, ?, '', ?, ?, ?)
+                    """,
+                    (
+                        lesson["transcript_text"] or lesson["content"] or "",
+                        json.dumps(analysis),
+                        now,
+                        now,
+                        lesson_id,
+                    ),
+                )
+        return jsonify(quiz_status_payload(course_id, lesson_id))
 
     @route_api(
         "/admin/courses/<int:course_id>/lessons/<int:lesson_id>/approve-quiz/", methods=["POST"]
     )
     @require_admin
     def approve_quiz(course_id, lesson_id):
+        quiz = (
+            query_one("SELECT * FROM quizzes_quiz WHERE lesson_id=?", (lesson_id,))
+            if table_exists("quizzes_quiz")
+            else None
+        )
+        if not quiz or quiz["generation_status"] != "done":
+            return json_error("Quiz must be generated before approval.", 400)
+        execute("UPDATE quizzes_question SET is_published=1 WHERE quiz_id=?", (quiz["id"],))
+        count = query_one(
+            "SELECT COUNT(*) AS c FROM quizzes_question WHERE quiz_id=? AND is_published=1",
+            (quiz["id"],),
+        )["c"]
+        if count == 0:
+            return json_error("No questions to publish.", 400)
         return jsonify(
-            {"course_id": course_id, "lesson_id": lesson_id, "approval_status": "approved"}
+            {
+                "course_id": course_id,
+                "lesson_id": lesson_id,
+                "approval_status": "approved",
+                "detail": "Quiz published.",
+                "published_question_count": count,
+            }
         )
 
     @route_api("/admin/users/", methods=["GET"])
@@ -1409,7 +1910,7 @@ def create_app(config=None):
             "SELECT * FROM progress_certificate WHERE student_id=? ORDER BY issue_date DESC",
             (g.current_user["id"],),
         )
-        return jsonify(rows_to_dicts(rows))
+        return jsonify([certificate_payload(row) for row in rows])
 
     @route_api("/certificates/<int:certificate_id>/", methods=["GET"])
     @require_auth
@@ -1417,7 +1918,9 @@ def create_app(config=None):
         cert = query_one("SELECT * FROM progress_certificate WHERE id=?", (certificate_id,))
         if not cert:
             return json_error("Certificate not found.", 404)
-        return jsonify(dict(cert))
+        if cert["student_id"] != g.current_user["id"] and g.current_user["role"] != "admin":
+            return json_error("Forbidden.", 403)
+        return jsonify(certificate_payload(cert))
 
     @route_api("/certificates/<int:certificate_id>/download/", methods=["GET"])
     @require_auth
@@ -1425,7 +1928,9 @@ def create_app(config=None):
         cert = query_one("SELECT * FROM progress_certificate WHERE id=?", (certificate_id,))
         if not cert or not cert["file"]:
             return json_error("Certificate file is not available.", 404)
-        path = BASE_DIR / "media" / cert["file"]
+        if cert["student_id"] != g.current_user["id"] and g.current_user["role"] != "admin":
+            return json_error("Forbidden.", 403)
+        path = media_file(cert["file"])
         if not path.exists():
             return json_error("Certificate file is missing.", 404)
         return send_file(path, mimetype="application/pdf", as_attachment=True)
@@ -1441,62 +1946,263 @@ def create_app(config=None):
         )
         if not cert:
             return json_error("Certificate not found.", 404)
-        return jsonify(dict(cert))
+        valid = cert["status"] != "REVOKED"
+        payload = certificate_payload(cert)
+        payload.update(
+            {
+                "valid": valid,
+                "verification_status": "VALID" if valid else "REVOKED",
+                "verification_summary": (
+                    f"{cert['student_name']} completed {cert['course_title']} at {cert['platform_name']}."
+                    if valid
+                    else ""
+                ),
+            }
+        )
+        return jsonify(payload)
 
     @route_api("/student/courses/<int:course_id>/certificate/eligibility/", methods=["GET"])
     @require_auth
     def certificate_eligibility(course_id):
-        return jsonify(
-            {
-                "eligible": False,
-                "reasons": ["Complete every lesson and pass each quiz."],
-                "certificate": None,
-            }
-        )
+        _course, result = build_certificate_eligibility(g.current_user["id"], course_id)
+        status_code = result.pop("status")
+        result.pop("enrollment", None)
+        return jsonify(result), status_code
 
     @route_api("/student/courses/<int:course_id>/certificate/", methods=["POST"])
     @require_auth
     def generate_certificate(course_id):
-        return json_error("Certificate generation is not ported to Flask yet.", 501)
+        course, result = build_certificate_eligibility(g.current_user["id"], course_id)
+        status_code = result["status"]
+        if status_code != 200:
+            return jsonify({"detail": result["reasons"][0]}), status_code
+        if result["certificate"]:
+            return jsonify(result["certificate"])
+        if not result["eligible"]:
+            return jsonify({"detail": " ".join(result["reasons"]), **result}), 403
+        enrollment = result["enrollment"]
+        user = g.current_user
+        now = utcnow()
+        student_name = f"{user['first_name']} {user['last_name']}".strip() or user["email"].split("@")[0]
+        certificate_number = f"LC-{course_id:04d}-{user['id']:04d}-{secrets.token_hex(3).upper()}"
+        verification_code = secrets.token_urlsafe(24)
+        relative_path = f"certificates/{certificate_number}.pdf"
+        try:
+            write_simple_pdf(
+                relative_path,
+                "Certificate of Completion",
+                [
+                    "LearnCode certifies that",
+                    student_name,
+                    f"completed {course['title']}.",
+                    f"Certificate number: {certificate_number}",
+                    f"Verification code: {verification_code}",
+                ],
+            )
+        except RuntimeError as exc:
+            return json_error(str(exc), 500)
+        cur = execute(
+            """
+            INSERT INTO progress_certificate
+                (certificate_number, verification_code, student_id, course_id, enrollment_id,
+                 student_name, course_title, issue_date, completion_date, platform_name,
+                 platform_website, instructor_name, course_duration, verification_url,
+                 ceo_name, ceo_title, file, status, revoked_at, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'LearnCode', '', '', '', ?, 'Shemsa Amin',
+                    'Chief Executive Officer', ?, 'ACTIVE', NULL, ?)
+            """,
+            (
+                certificate_number,
+                verification_code,
+                user["id"],
+                course_id,
+                enrollment["id"],
+                student_name,
+                course["title"],
+                now,
+                enrollment["completed_at"],
+                f"/certificates/verify/{verification_code}",
+                relative_path,
+                now,
+            ),
+            returning_id=True,
+        )
+        cert = query_one("SELECT * FROM progress_certificate WHERE id=?", (cur.lastrowid,))
+        return jsonify(certificate_payload(cert)), 201
 
     @route_api("/playground/challenge/", methods=["GET"])
     @require_auth
     def playground_challenge():
-        return jsonify(
-            {
-                "id": None,
-                "title": "Python Warmup",
-                "description": "Write a function named solve.",
-                "difficulty": "beginner",
-                "starter_code": "def solve():\n    pass\n",
-                "test_cases": [],
-                "xp_reward": 0,
-            }
+        challenge = (
+            query_one(
+                """
+                SELECT * FROM playground_playgroundchallenge
+                WHERE user_id=? AND status='active'
+                ORDER BY created_at DESC, id DESC
+                """,
+                (g.current_user["id"],),
+            )
+            if table_exists("playground_playgroundchallenge")
+            else None
         )
+        return jsonify({"challenge": challenge_payload(challenge) if challenge else None})
 
     @route_api("/playground/challenge/generate/", methods=["POST"])
     @require_auth
     def playground_generate():
-        return playground_challenge()
+        if not table_exists("playground_playgroundchallenge"):
+            return json_error("Playground storage is not available.", 500)
+        execute(
+            "UPDATE playground_playgroundchallenge SET status='abandoned' WHERE user_id=? AND status='active'",
+            (g.current_user["id"],),
+        )
+        payload = fallback_challenge()
+        cur = execute(
+            """
+            INSERT INTO playground_playgroundchallenge
+                (title, description, difficulty, starter_code, test_cases, xp_reward,
+                 status, created_at, solved_at, user_id)
+            VALUES (?, ?, ?, ?, ?, ?, 'active', ?, NULL, ?)
+            """,
+            (
+                payload["title"],
+                payload["description"],
+                payload["difficulty"],
+                payload["starter_code"],
+                json.dumps(payload["test_cases"]),
+                payload["xp_reward"],
+                utcnow(),
+                g.current_user["id"],
+            ),
+            returning_id=True,
+        )
+        challenge = query_one(
+            "SELECT * FROM playground_playgroundchallenge WHERE id=?", (cur.lastrowid,)
+        )
+        return jsonify({"challenge": challenge_payload(challenge)}), 201
 
     @route_api("/playground/challenge/<int:challenge_id>/submit/", methods=["POST"])
     @require_auth
     def playground_submit(challenge_id):
+        challenge = (
+            query_one(
+                "SELECT * FROM playground_playgroundchallenge WHERE id=? AND user_id=?",
+                (challenge_id, g.current_user["id"]),
+            )
+            if table_exists("playground_playgroundchallenge")
+            else None
+        )
+        if not challenge:
+            return json_error("Challenge not found.", 404)
+        if challenge["status"] == "solved":
+            return json_error("This challenge is already solved.", 400)
+        code = (request.get_json(silent=True) or {}).get("code", "")
+        passed, test_results = run_playground_solution(code, parse_json(challenge["test_cases"], []))
+        xp_earned = challenge["xp_reward"] if passed else 0
+        if table_exists("playground_playgroundsubmission"):
+            execute(
+                """
+                INSERT INTO playground_playgroundsubmission
+                    (code, passed, test_results, xp_earned, submitted_at, challenge_id, user_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    code,
+                    passed,
+                    json.dumps(test_results),
+                    xp_earned,
+                    utcnow(),
+                    challenge_id,
+                    g.current_user["id"],
+                ),
+            )
+        if passed:
+            execute(
+                "UPDATE playground_playgroundchallenge SET status='solved', solved_at=? WHERE id=?",
+                (utcnow(), challenge_id),
+            )
+        updated = query_one("SELECT * FROM playground_playgroundchallenge WHERE id=?", (challenge_id,))
         return jsonify(
-            {"challenge_id": challenge_id, "passed": False, "test_results": [], "xp_earned": 0}
+            {
+                "challenge_id": challenge_id,
+                "passed": passed,
+                "test_results": test_results,
+                "xp_earned": xp_earned,
+                "challenge": challenge_payload(updated),
+                "message": "All tests passed! XP earned."
+                if passed
+                else "Some tests failed. Keep trying!",
+            }
         )
 
     @route_api("/playground/leaderboard/", methods=["GET"])
     @require_auth
     def playground_leaderboard():
-        return jsonify({"leaderboard": [], "total_students": 0, "me": None})
+        if not table_exists("playground_playgroundsubmission"):
+            return jsonify({"leaderboard": [], "total_students": 0, "me": None})
+        rows = query_all(
+            """
+            SELECT u.id, u.email, u.first_name, u.last_name,
+                   COALESCE(SUM(s.xp_earned), 0) AS xp_earned,
+                   SUM(CASE WHEN s.passed=1 THEN 1 ELSE 0 END) AS solved_count
+            FROM accounts_user u
+            LEFT JOIN playground_playgroundsubmission s ON s.user_id=u.id
+            WHERE u.role='student'
+            GROUP BY u.id, u.email, u.first_name, u.last_name
+            ORDER BY xp_earned DESC, solved_count DESC, u.email
+            LIMIT 25
+            """
+        )
+        leaderboard = []
+        me = None
+        for index, row in enumerate(rows, start=1):
+            name = f"{row['first_name']} {row['last_name']}".strip() or row["email"].split("@")[0]
+            item = {
+                "rank": index,
+                "user_id": row["id"],
+                "name": name,
+                "xp_earned": row["xp_earned"] or 0,
+                "solved_count": row["solved_count"] or 0,
+            }
+            leaderboard.append(item)
+            if row["id"] == g.current_user["id"]:
+                me = item
+        return jsonify(
+            {
+                "leaderboard": leaderboard,
+                "total_students": len(leaderboard),
+                "me": me
+                or {
+                    "rank": None,
+                    "user_id": g.current_user["id"],
+                    "name": g.current_user["email"].split("@")[0],
+                    "xp_earned": 0,
+                    "solved_count": 0,
+                },
+            }
+        )
 
     def report_response(name):
-        csv = "section,value\nstatus,Flask report endpoint active\n"
-        return Response(
-            csv,
-            mimetype="text/csv",
-            headers={"Content-Disposition": f"attachment; filename={name}.csv"},
+        totals = {
+            "students": query_one("SELECT COUNT(*) AS c FROM accounts_user WHERE role='student'")[
+                "c"
+            ],
+            "courses": query_one("SELECT COUNT(*) AS c FROM courses_course")["c"],
+            "lessons": query_one("SELECT COUNT(*) AS c FROM courses_lesson")["c"],
+            "enrollments": query_one("SELECT COUNT(*) AS c FROM progress_enrollment")["c"]
+            if table_exists("progress_enrollment")
+            else 0,
+        }
+        return pdf_response(
+            f"{name.replace('-', ' ').title()} Report",
+            [
+                "Generated by the Flask backend.",
+                f"Students: {totals['students']}",
+                f"Courses: {totals['courses']}",
+                f"Lessons: {totals['lessons']}",
+                f"Enrollments: {totals['enrollments']}",
+            ],
+            name,
         )
 
     for report_path in (

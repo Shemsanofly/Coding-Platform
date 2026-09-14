@@ -1,59 +1,50 @@
-# AI Quiz Generation (YouTube + Gemini)
+# AI Quiz Generation
 
 ## Ownership
 
-| App | Responsibility |
-|-----|----------------|
-| `courses` | Detect YouTube lesson → bootstrap → enqueue `process_video_lesson` |
-| `ai_engine` | Transcript, Gemini, validation, persistence, admin preview/approve |
-| `quizzes` | Store `Quiz` / `Question`; student fetch/submit only |
+The live backend is Flask. Quiz generation, preview, approval, student quiz fetch, and quiz submission are implemented in `backend/flask_app.py`.
 
-Gemini API calls live only in `ai_engine/services/gemini_service.py`.  
-`quiz_generator.py` holds validation helpers only (no API).  
-Legacy `gemini_analyzer.py` and `AIQuizGenerator` were removed in Phase 4.
+The Flask backend stores data in the existing compatibility tables:
 
-## Architecture
+| Table | Responsibility |
+| --- | --- |
+| `courses_lesson` | Lesson source, content, transcript, and topic metadata |
+| `ai_engine_lessonaiprocessing` | Processing status and extracted lesson summary metadata |
+| `quizzes_quiz` | One quiz per lesson, passing score, and generation status |
+| `quizzes_question` | Generated questions and publish state |
+| `quizzes_quizresult` | Student quiz attempts and scores |
+
+## Flow
 
 ```mermaid
 sequenceDiagram
     participant Admin
-    participant API
-    participant Celery
-    participant Transcript as TranscriptService
-    participant Gemini as GeminiService
+    participant Flask
     participant DB
+    participant Student
 
-    Admin->>API: POST YouTube lesson
-    API->>DB: Quiz pending, LessonAIProcessing pending
-    API->>Celery: process_video_lesson
-    Celery->>Transcript: extract(url)
-    Celery->>Gemini: generate_quiz(transcript) — summary, objectives, concepts, tags, questions
-    Celery->>DB: Questions (unpublished), Quiz done
-    Admin->>API: POST approve-quiz
-    API->>DB: is_published=true
-    Student->>API: GET quiz / submit
-    API->>Celery: detect_weaknesses
-```
-
-## Environment
-
-```env
-GEMINI_API_KEY=your_key
-GEMINI_MODEL=gemini-3.5-flash
-CELERY_BROKER_URL=redis://localhost:6379/0
+    Admin->>Flask: POST generate-quiz
+    Flask->>DB: Upsert quiz, questions, and processing status
+    Admin->>Flask: GET quiz-preview
+    Admin->>Flask: POST approve-quiz
+    Flask->>DB: Mark questions published
+    Student->>Flask: GET lesson quiz
+    Student->>Flask: POST quiz answers
+    Flask->>DB: Store quiz result
 ```
 
 ## Admin API
 
 | Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/admin/courses/:courseId/lessons/:lessonId/processing-status/` | AI + quiz status |
-| GET | `/api/admin/courses/:courseId/lessons/:lessonId/quiz-preview/` | All generated questions |
-| POST | `/api/admin/courses/:courseId/lessons/:lessonId/regenerate-quiz/` | Re-run pipeline |
+| --- | --- | --- |
+| GET | `/api/admin/courses/:courseId/lessons/:lessonId/processing-status/` | AI and quiz status |
+| GET | `/api/admin/courses/:courseId/lessons/:lessonId/quiz-preview/` | Generated questions |
+| POST | `/api/admin/courses/:courseId/lessons/:lessonId/generate-quiz/` | Generate quiz questions |
+| POST | `/api/admin/courses/:courseId/lessons/:lessonId/regenerate-quiz/` | Regenerate quiz questions |
 | POST | `/api/admin/courses/:courseId/lessons/:lessonId/approve-quiz/` | Publish questions |
 
 ## Student API
 
-- `GET /api/student/lessons/:id/` — adds `quiz_generation_status`, `ai_processing_status`, `quiz_available`
-- `GET /api/lessons/:id/quiz/` — published questions only
-- `POST /api/quizzes/:id/submit/` — response includes `explanations[]`
+- `GET /api/student/lessons/:id/` adds `quiz_generation_status`, `ai_processing_status`, and `quiz_available`.
+- `GET /api/lessons/:id/quiz/` returns published questions.
+- `POST /api/quizzes/:id/submit/` stores a quiz result and returns score details.
