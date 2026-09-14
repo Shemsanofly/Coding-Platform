@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import toast from "react-hot-toast";
-import { useAuth } from "@/context/AuthProvider";
+import { useAuth } from "@/hooks/useAuth";
 import BrandMark from "@/shared/components/BrandMark";
 import Input from "@/shared/components/ui/Input";
 import PasswordField from "@/shared/components/ui/PasswordField";

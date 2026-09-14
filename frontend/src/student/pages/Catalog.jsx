@@ -2,14 +2,14 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { useAuth } from "@/context/AuthProvider";
+import { useAuth } from "@/hooks/useAuth";
 import { getCourseCatalog, joinCourse } from "@/api/studentLearning";
 import CourseCard from "@/student/components/CourseCard";
 import EmptyState from "@/student/components/EmptyState";
 import ErrorState from "@/shared/components/ErrorState";
 import PageHeader from "@/shared/components/ui/PageHeader";
 import Button from "@/shared/components/ui/Button";
-import { formatCourseLevel } from "@/shared/components/course/CourseBadges";
+import { formatCourseLevel } from "@/shared/utils/courseFormatting";
 
 const LEVEL_OPTIONS = [
   { value: "matched", label: "My level" },
@@ -31,13 +31,14 @@ export default function Catalog() {
   const [joiningId, setJoiningId] = useState(null);
   const [levelFilter, setLevelFilter] = useState("matched");
   const [search, setSearch] = useState("");
+  const userExperienceLevel = user?.experience_level;
 
   const catalogLevel = useMemo(() => {
     if (levelFilter === "matched") {
-      return user?.experience_level || "beginner";
+      return userExperienceLevel || "beginner";
     }
     return levelFilter;
-  }, [levelFilter, user?.experience_level]);
+  }, [levelFilter, userExperienceLevel]);
 
   const {
     data = [],
@@ -76,13 +77,13 @@ export default function Catalog() {
   const enrolledCount = allCourses.filter((course) => course.is_enrolled).length;
 
   const subtitle = useMemo(() => {
-    if (levelFilter === "matched" && user?.experience_level) {
+    if (levelFilter === "matched" && userExperienceLevel) {
       return `${formatCourseLevel(
-        user.experience_level,
+        userExperienceLevel,
       )} courses matched to your profile. You can switch levels anytime.`;
     }
     return "Find a course, enroll, and continue directly into the lesson path.";
-  }, [levelFilter, user?.experience_level]);
+  }, [levelFilter, userExperienceLevel]);
 
   return (
     <div className="space-y-5 p-4 md:p-6">

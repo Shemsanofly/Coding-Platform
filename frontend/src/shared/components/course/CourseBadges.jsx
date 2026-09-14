@@ -1,3 +1,5 @@
+import { formatCourseLevel } from "@/shared/utils/courseFormatting";
+
 const levelStyles = {
   beginner:
     "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-400/30 dark:bg-emerald-500/15 dark:text-emerald-100",
@@ -15,12 +17,6 @@ const statusStyles = {
   published:
     "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-400/30 dark:bg-emerald-500/15 dark:text-emerald-100",
 };
-
-export function formatCourseLevel(level) {
-  if (!level) return "Beginner";
-  const text = String(level).replace(/_/g, " ");
-  return `${text.charAt(0).toUpperCase()}${text.slice(1)}`;
-}
 
 export function CourseLevelBadge({ level, className = "" }) {
   return (

@@ -125,7 +125,6 @@ function LessonRow({ lesson, index, previousLesson, onStudy, onQuiz }) {
 }
 
 function CertificatePanel({
-  course,
   courseProgress,
   certificate,
   eligible,
@@ -369,7 +368,6 @@ export default function CourseDetail() {
       </section>
 
       <CertificatePanel
-        course={course}
         courseProgress={courseProgress}
         certificate={certificate}
         eligible={certificateEligible}

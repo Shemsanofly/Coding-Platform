@@ -129,9 +129,7 @@ def check_password(password, encoded):
             _, iterations, salt, expected = encoded.split("$", 3)
             candidate = legacy_pbkdf2_sha256_hash(
                 password, salt=salt, iterations=int(iterations)
-            ).rsplit(
-                "$", 1
-            )[1]
+            ).rsplit("$", 1)[1]
             return hmac.compare_digest(candidate, expected)
         except (TypeError, ValueError):
             return False
@@ -414,7 +412,12 @@ def create_app(config=None):
         return [
             {
                 "stem": f"What is the main focus of {title}?",
-                "choices": [summary[:120], "Installing unrelated software", "Changing account settings", "Skipping the lesson"],
+                "choices": [
+                    summary[:120],
+                    "Installing unrelated software",
+                    "Changing account settings",
+                    "Skipping the lesson",
+                ],
                 "correct_index": 0,
                 "topic_tag": topic,
                 "difficulty": "easy",
@@ -545,7 +548,9 @@ def create_app(config=None):
         if any(score is False for score in passing_scores):
             reasons.append("Pass each quiz.")
         existing = (
-            query_one("SELECT * FROM progress_certificate WHERE enrollment_id=?", (enrollment["id"],))
+            query_one(
+                "SELECT * FROM progress_certificate WHERE enrollment_id=?", (enrollment["id"],)
+            )
             if table_exists("progress_certificate")
             else None
         )
@@ -594,7 +599,9 @@ def create_app(config=None):
         lowered = text.lower()
         for token in forbidden:
             if token in lowered:
-                return False, [{"passed": False, "error": f"Unsupported construct: {token.strip()}"}]
+                return False, [
+                    {"passed": False, "error": f"Unsupported construct: {token.strip()}"}
+                ]
         if "def solution" not in text:
             return False, [{"passed": False, "error": "Define a function named `solution`."}]
         safe_builtins = {
@@ -628,7 +635,9 @@ def create_app(config=None):
             exec(text, {"__builtins__": safe_builtins}, namespace)
             solution = namespace.get("solution")
             if not callable(solution):
-                return False, [{"passed": False, "error": "Define a callable function named `solution`."}]
+                return False, [
+                    {"passed": False, "error": "Define a callable function named `solution`."}
+                ]
             results = []
             passed_all = True
             for index, test_case in enumerate(test_cases, start=1):
@@ -1425,7 +1434,9 @@ def create_app(config=None):
             return json_error("Lesson not found.", 404)
         if lesson["source_type"] != "youtube":
             return json_error("PDF notes generation applies to YouTube lessons only.", 400)
-        relative_path = f"lesson_notes/{lesson_id}-{slugify_filename(lesson['title'], 'lesson')}.pdf"
+        relative_path = (
+            f"lesson_notes/{lesson_id}-{slugify_filename(lesson['title'], 'lesson')}.pdf"
+        )
         lines = [
             f"Lesson: {lesson['title']}",
             f"Objective: {lesson['learning_objective'] or 'Review the lesson carefully.'}",
@@ -1755,9 +1766,9 @@ def create_app(config=None):
             )
             analysis = {
                 "summary": lesson["content"] or lesson["transcript_text"] or "",
-                "learning_objectives": [lesson["learning_objective"]]
-                if lesson["learning_objective"]
-                else [],
+                "learning_objectives": (
+                    [lesson["learning_objective"]] if lesson["learning_objective"] else []
+                ),
                 "topic_tags": parse_json(lesson["tags"], []),
             }
             if existing:
@@ -1983,7 +1994,9 @@ def create_app(config=None):
         enrollment = result["enrollment"]
         user = g.current_user
         now = utcnow()
-        student_name = f"{user['first_name']} {user['last_name']}".strip() or user["email"].split("@")[0]
+        student_name = (
+            f"{user['first_name']} {user['last_name']}".strip() or user["email"].split("@")[0]
+        )
         certificate_number = f"LC-{course_id:04d}-{user['id']:04d}-{secrets.token_hex(3).upper()}"
         verification_code = secrets.token_urlsafe(24)
         relative_path = f"certificates/{certificate_number}.pdf"
@@ -2097,7 +2110,9 @@ def create_app(config=None):
         if challenge["status"] == "solved":
             return json_error("This challenge is already solved.", 400)
         code = (request.get_json(silent=True) or {}).get("code", "")
-        passed, test_results = run_playground_solution(code, parse_json(challenge["test_cases"], []))
+        passed, test_results = run_playground_solution(
+            code, parse_json(challenge["test_cases"], [])
+        )
         xp_earned = challenge["xp_reward"] if passed else 0
         if table_exists("playground_playgroundsubmission"):
             execute(
@@ -2121,7 +2136,9 @@ def create_app(config=None):
                 "UPDATE playground_playgroundchallenge SET status='solved', solved_at=? WHERE id=?",
                 (utcnow(), challenge_id),
             )
-        updated = query_one("SELECT * FROM playground_playgroundchallenge WHERE id=?", (challenge_id,))
+        updated = query_one(
+            "SELECT * FROM playground_playgroundchallenge WHERE id=?", (challenge_id,)
+        )
         return jsonify(
             {
                 "challenge_id": challenge_id,
@@ -2129,9 +2146,9 @@ def create_app(config=None):
                 "test_results": test_results,
                 "xp_earned": xp_earned,
                 "challenge": challenge_payload(updated),
-                "message": "All tests passed! XP earned."
-                if passed
-                else "Some tests failed. Keep trying!",
+                "message": (
+                    "All tests passed! XP earned." if passed else "Some tests failed. Keep trying!"
+                ),
             }
         )
 
@@ -2140,8 +2157,7 @@ def create_app(config=None):
     def playground_leaderboard():
         if not table_exists("playground_playgroundsubmission"):
             return jsonify({"leaderboard": [], "total_students": 0, "me": None})
-        rows = query_all(
-            """
+        rows = query_all("""
             SELECT u.id, u.email, u.first_name, u.last_name,
                    COALESCE(SUM(s.xp_earned), 0) AS xp_earned,
                    SUM(CASE WHEN s.passed=1 THEN 1 ELSE 0 END) AS solved_count
@@ -2151,8 +2167,7 @@ def create_app(config=None):
             GROUP BY u.id, u.email, u.first_name, u.last_name
             ORDER BY xp_earned DESC, solved_count DESC, u.email
             LIMIT 25
-            """
-        )
+            """)
         leaderboard = []
         me = None
         for index, row in enumerate(rows, start=1):
@@ -2189,9 +2204,11 @@ def create_app(config=None):
             ],
             "courses": query_one("SELECT COUNT(*) AS c FROM courses_course")["c"],
             "lessons": query_one("SELECT COUNT(*) AS c FROM courses_lesson")["c"],
-            "enrollments": query_one("SELECT COUNT(*) AS c FROM progress_enrollment")["c"]
-            if table_exists("progress_enrollment")
-            else 0,
+            "enrollments": (
+                query_one("SELECT COUNT(*) AS c FROM progress_enrollment")["c"]
+                if table_exists("progress_enrollment")
+                else 0
+            ),
         }
         return pdf_response(
             f"{name.replace('-', ' ').title()} Report",

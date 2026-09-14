@@ -224,9 +224,13 @@ class FlaskRuntimeTests(unittest.TestCase):
         return user_id
 
     def login_headers(self, email, password):
-        response = self.app().test_client().post(
-            "/auth/login/",
-            json={"email": email, "password": password},
+        response = (
+            self.app()
+            .test_client()
+            .post(
+                "/auth/login/",
+                json={"email": email, "password": password},
+            )
         )
         self.assertEqual(response.status_code, 200)
         return {"Authorization": f"Bearer {response.get_json()['access']}"}
@@ -514,9 +518,13 @@ class FlaskRuntimeTests(unittest.TestCase):
         con.close()
         headers = self.login_headers("student@example.com", "Student2026!")
 
-        response = self.app().test_client().post(
-            f"/api/student/courses/{course_id}/certificate/",
-            headers=headers,
+        response = (
+            self.app()
+            .test_client()
+            .post(
+                f"/api/student/courses/{course_id}/certificate/",
+                headers=headers,
+            )
         )
 
         self.assertEqual(response.status_code, 201)

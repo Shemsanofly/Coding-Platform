@@ -1,5 +1,5 @@
 import { Navigate, Outlet } from "react-router-dom";
-import { useAuth } from "@/context/AuthProvider";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function RoleGuard({ allowedRoles = [], redirectTo = "/" }) {
   const { user, isBootstrapping } = useAuth();

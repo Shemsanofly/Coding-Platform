@@ -78,9 +78,9 @@ export default function WeakAreasPanel({ courseFilter, onCourseFilterChange }) {
   });
 
   const showLoading = isLoading || isPending;
-  const topics = data?.topics ?? [];
-  const lessonGroups = data?.lesson_groups ?? [];
-  const courses = data?.courses ?? [];
+  const topics = useMemo(() => data?.topics ?? [], [data?.topics]);
+  const lessonGroups = useMemo(() => data?.lesson_groups ?? [], [data?.lesson_groups]);
+  const courses = useMemo(() => data?.courses ?? [], [data?.courses]);
 
   const groupedByCourse = useMemo(() => {
     const map = new Map();

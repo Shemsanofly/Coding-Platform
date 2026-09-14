@@ -90,7 +90,10 @@ export default function SuggestionsPanel({ courseFilter, onCourseFilterChange })
     weaknessesQuery.isLoading ||
     weaknessesQuery.isPending;
 
-  const items = Array.isArray(recsQuery.data) ? recsQuery.data : [];
+  const items = useMemo(
+    () => (Array.isArray(recsQuery.data) ? recsQuery.data : []),
+    [recsQuery.data],
+  );
   const weaknessPayload = weaknessesQuery.data ?? {};
   const courses = weaknessPayload.courses ?? [];
   const weaknesses = weaknessPayload.topics ?? [];

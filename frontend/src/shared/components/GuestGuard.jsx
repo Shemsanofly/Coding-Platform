@@ -1,5 +1,5 @@
 import { Navigate, Outlet } from "react-router-dom";
-import { useAuth } from "@/context/AuthProvider";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function GuestGuard() {
   const { user, isBootstrapping } = useAuth();

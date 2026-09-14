@@ -9,10 +9,11 @@ import {
   postLessonProgress,
 } from "@/api/studentLearning";
 import { getLearningPath } from "@/api/studentDashboard";
-import LessonYouTubeEmbed, { extractYoutubeVideoId } from "@/student/components/LessonYouTubeEmbed";
+import LessonYouTubeEmbed from "@/student/components/LessonYouTubeEmbed";
 import PdfNotesReader from "@/student/components/PdfNotesReader";
 import ProgressBar from "@/student/components/ProgressBar";
 import { triggerBlobDownload } from "@/shared/utils/downloadBlob";
+import { extractYoutubeVideoId } from "@/student/utils/youtube";
 
 export default function LessonDetail() {
   const { lessonId } = useParams();
@@ -197,7 +198,6 @@ export default function LessonDetail() {
   const timePct = requiredSec ? Math.min(100, Math.round((engaged / requiredSec) * 100)) : 0;
 
   const quizStatus = lesson.quiz_generation_status || "pending";
-  const aiStatus = lesson.ai_processing_status || "pending";
   const quizProcessing = quizStatus === "pending" || quizStatus === "processing";
   const quizFailed = quizStatus === "failed";
   const studyComplete = Boolean(lesson.lesson_officially_completed || lesson.engagement_satisfied);

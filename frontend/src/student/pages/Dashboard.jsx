@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { useAuth } from "@/context/AuthProvider";
+import { useAuth } from "@/hooks/useAuth";
 import { getDisplayName } from "@/shared/utils/userDisplay";
 import { getStudentDashboard } from "@/api/studentDashboard";
 import MetricCard from "@/student/components/MetricCard";
@@ -109,9 +109,18 @@ export default function Dashboard() {
     queryFn: getStudentDashboard,
   });
 
-  const enrollments = dashboardQuery.data?.enrollments ?? [];
-  const analytics = dashboardQuery.data?.analytics ?? {};
-  const learningPath = dashboardQuery.data?.learning_path ?? {};
+  const enrollments = useMemo(
+    () => dashboardQuery.data?.enrollments ?? [],
+    [dashboardQuery.data?.enrollments],
+  );
+  const analytics = useMemo(
+    () => dashboardQuery.data?.analytics ?? {},
+    [dashboardQuery.data?.analytics],
+  );
+  const learningPath = useMemo(
+    () => dashboardQuery.data?.learning_path ?? {},
+    [dashboardQuery.data?.learning_path],
+  );
 
   const isLoading = dashboardQuery.isLoading;
   const isError = dashboardQuery.isError;

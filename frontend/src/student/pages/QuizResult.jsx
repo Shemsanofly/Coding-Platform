@@ -18,7 +18,10 @@ export default function QuizResult() {
   const correct = Number(result?.correct_answers ?? result?.correct ?? 0);
   const wrong = Math.max(0, total - correct);
   const passed = typeof result?.passed === "boolean" ? result.passed : score >= PASS_THRESHOLD;
-  const explanations = Array.isArray(result?.explanations) ? result.explanations : [];
+  const explanations = useMemo(
+    () => (Array.isArray(result?.explanations) ? result.explanations : []),
+    [result?.explanations],
+  );
 
   const affectedTopics = useMemo(() => {
     const tags = new Set();

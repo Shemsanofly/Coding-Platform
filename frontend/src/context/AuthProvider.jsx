@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   fetchMe,
@@ -8,8 +8,7 @@ import {
   refreshAccessToken,
 } from "@/api/auth";
 import { setAccessToken } from "@/api/client";
-
-const AuthContext = createContext(null);
+import { AuthContext } from "@/context/AuthContext";
 
 export function AuthProvider({ children }) {
   const navigate = useNavigate();
@@ -89,12 +88,4 @@ export function AuthProvider({ children }) {
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
-
-export function useAuth() {
-  const ctx = useContext(AuthContext);
-  if (!ctx) {
-    throw new Error("useAuth must be used within AuthProvider");
-  }
-  return ctx;
 }

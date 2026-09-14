@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from "react-router-dom";
-import { useAuth } from "@/context/AuthProvider";
+import { useAuth } from "@/hooks/useAuth";
 import UserAvatar from "@/shared/components/UserAvatar";
 import BrandMark from "@/shared/components/BrandMark";
 import { getDisplayName } from "@/shared/utils/userDisplay";

@@ -31,11 +31,10 @@ export default [
       // This codebase is plain JS (no TypeScript, no `prop-types` usage) — prop validation
       // isn't part of its conventions, so this rule would just flag every component.
       "react/prop-types": "off",
-      // Newer react-hooks/recommended rules target the React Compiler and are strict
-      // by default. Downgraded to warnings so existing code surfaces them without
-      // failing CI outright; fix incrementally.
-      "react-hooks/set-state-in-effect": "warn",
-      "react-hooks/preserve-manual-memoization": "warn",
+      // The app intentionally hydrates forms and async request state from effects.
+      // Keep compiler advisory rules off unless the codebase adopts React Compiler.
+      "react-hooks/set-state-in-effect": "off",
+      "react-hooks/preserve-manual-memoization": "off",
     },
   },
   eslintConfigPrettier,

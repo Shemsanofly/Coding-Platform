@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import toast from "react-hot-toast";
-import { useAuth } from "@/context/AuthProvider";
+import { useAuth } from "@/hooks/useAuth";
 import { updateProfile } from "@/api/auth";
 import UserAvatar from "@/shared/components/UserAvatar";
 
